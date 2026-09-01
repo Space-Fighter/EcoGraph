@@ -2,7 +2,7 @@
 
 \usepackage{graphicx}
 \usepackage{tikz}
-\usetikzlibrary{positioning,arrows.meta}
+\usetikzlibrary{positioning,arrows.meta,decorations.pathreplacing,calc}
 \usepackage{xcolor}
 \usepackage{booktabs}
 \usepackage{tabularx}
@@ -63,7 +63,7 @@
 
 \begin{document}
 
-% 1
+% 1 -- Title
 \begin{frame}[plain]
 \begin{tikzpicture}[remember picture,overlay]
 \draw[GEUBlue,line width=3pt] (current page.north west) -- (current page.north east);
@@ -81,7 +81,7 @@ Graphic Era (Deemed to be University), Dehradun\\[-1mm]
 \end{tikzpicture}
 \end{frame}
 
-% 2
+% 2 -- Team & Mentor
 \begin{frame}{Team \& Mentor Details}
 \begin{columns}[T,totalwidth=\textwidth]
 \column{.48\textwidth}
@@ -95,243 +95,540 @@ Graphic Era (Deemed to be University), Dehradun\\[-1mm]
 \end{block}
 \column{.48\textwidth}
 \begin{block}{Team Members}
-1.\quad Tejas Jain -- 2028228 (SEC-A)\\
-2.\quad Yash Nigam -- 2028289 (SEC-H)\\
+1.\quad Tejas Jain -- 2028228 (SEC-A)\\[2mm]
+2.\quad Yash Nigam -- 2028289 (SEC-H)\\[2mm]
 3.\quad Apoorv Negi -- 2027640 (SEC-D)
 \end{block}
 \end{columns}
-\vspace{2mm}
+\vspace{4mm}
 \begin{block}{Mentor}
 Navneet Rajput
 \hfill
 \textbf{Interactions completed:} \underline{\hspace{12mm}}
 \end{block}
+\vfill
+\smallnote{Approved Project Name: EcoGraph -- Graph Based Algorithmic Waste Management.}
 \end{frame}
 
-% 3
+% 3 -- Problem Statement & Motivation
 \begin{frame}{Problem Statement \& Motivation}
 \small
 \begin{block}{Problem Statement}
-Municipal waste routes are static, ignoring the real shortest path between homes, bins, and the depot -- wasting fuel and time. Hazardous waste (medical, chemical) is handled like ordinary waste despite needing immediate, restricted-zone pickup, and fixed schedules over- or under-service locations with different fill rates.
+Municipal waste routes are typically \textbf{static and fixed}, ignoring the real shortest route between homes, bins, and the depot -- wasting fuel, time, and labor. Hazardous waste is handled identically to ordinary waste despite needing immediate, restricted-zone pickup, and fixed schedules over- or under-service locations with different fill rates.
 \end{block}
 \vspace{1mm}
 \begin{columns}[T,totalwidth=\textwidth]
 \column{.48\textwidth}
 \textbf{\color{GEUBlue}Motivation}
 \begin{itemize}\itemsep1pt
-\item Fixed routes ignore real shortest paths in the city graph
-\item Hazardous waste in normal queues risks exposure delays
-\item Uniform schedules waste trips or under-serve fast bins
+\item Fixed routes ignore the real shortest path in the city's road/graph network
+\item Hazardous waste in normal queues risks delayed, unsafe transit
+\item Calendar-based schedules waste labor on locations nowhere near full
 \end{itemize}
 \column{.48\textwidth}
 \textbf{\color{GEUBlue}Target Users / Stakeholders}
 \begin{itemize}\itemsep1pt
-\item Municipal waste collection departments
-\item Residents and commercial establishments served
-\item Public health -- faster hazardous waste clearance
+\item Municipal waste collection departments and truck operators
+\item Residents and commercial establishments being served
+\item Public health -- faster, safer hazardous waste clearance
 \end{itemize}
 \end{columns}
 \end{frame}
 
-% 4
+% 4 -- Objectives
 \begin{frame}{Objectives}
-\small
 \textbf{\color{GEUBlue}Project Objectives}
 \vspace{1mm}
+\begin{enumerate}\itemsep4pt
+\item Model the city as a weighted graph -- depot, homes, junctions, and bins -- with every node and edge tagged by zone type (residential, commercial, industrial).
+\item Compute optimal collection routes using Dijkstra's shortest-path algorithm, with two selectable strategies: Priority mode and FIFO mode.
+\item Detect hazardous waste and dispatch it immediately via a zone-constrained shortest path that avoids residential and commercial areas.
+\item Dynamically determine collection frequency per location from its fill-rate, instead of a fixed calendar.
+\item Expose all functionality through a REST API and visualize live, animated route computation on a web frontend.
+\end{enumerate}
+\end{frame}
+
+% 5 -- Proposed Solution: Approach
+\begin{frame}{Proposed Solution -- Approach}
+\small
+\textbf{\color{GEUBlue}Proposed Approach}
+\vspace{1mm}
 \begin{enumerate}\itemsep3pt
-\item Model the city as a weighted graph (depot, homes, junctions, bins) tagged by zone type.
-\item Compute optimal routes using Dijkstra's algorithm, with selectable Priority and FIFO strategies.
-\item Detect and immediately dispatch hazardous waste via a zone-constrained shortest path avoiding residential/commercial areas.
-\item Dynamically schedule collection frequency per location based on its fill-rate.
-\item Expose all functionality through a REST API with live route animation on the frontend.
+\item \textbf{City layout} -- depot, homes, junctions, bins, and zone tags loaded from a JSON configuration file at server startup.
+\item \textbf{Routing engine} -- Dijkstra's algorithm (plain and zone-constrained variants) computes shortest paths between any two nodes.
+\item \textbf{Route builders} -- Priority and FIFO strategies sequence multi-stop collection routes.
+\item \textbf{Scheduler} -- fill-rate and last-collected timestamps determine which locations are due for a visit.
+\item \textbf{Delivery} -- results served as JSON over a REST API, animated live on a Cytoscape.js graph canvas.
 \end{enumerate}
 \vfill
+\smallnote{A single persistent C++ HTTP server owns the graph and performs routing, classification, and scheduling.}
+\end{frame}
+
+% 6 -- Proposed Solution: Key Features
+\begin{frame}{Proposed Solution -- Key Features}
+\textbf{\color{GEUBlue}Key Features}
+\vspace{1mm}
+\begin{columns}[T,totalwidth=\textwidth]
+\column{.48\textwidth}
+\begin{itemize}\itemsep3pt
+\item Graph-based city model with zone tagging
+\item Shortest-path routing (Priority / FIFO toggle)
+\item Rule-based waste classification (keyword matching)
+\end{itemize}
+\column{.48\textwidth}
+\begin{itemize}\itemsep3pt
+\item Hazardous waste: immediate, zone-constrained routing bypassing the normal queue
+\item Dynamic collection frequency driven by per-location fill-rate
+\item Live route animation with hazardous routes visually distinguished
+\end{itemize}
+\end{columns}
+\vfill
 \begin{center}
-\colorbox{GEULightBlue}{\parbox{.82\textwidth}{\centering
-\textbf{Key Objective:} A persistent C++ backend that computes correct, zone-aware, fill-rate-driven collection routes and serves them as JSON to an animated web frontend.}}
+\colorbox{GEULightBlue}{\parbox{.85\textwidth}{\centering
+Every feature maps directly to one of the five REST endpoints and one domain-layer C++ class -- see slides 10--14.}}
 \end{center}
 \end{frame}
 
-% 5
-\begin{frame}{Proposed Solution}
-\footnotesize
-\begin{columns}[T,totalwidth=\textwidth]
-\column{.48\textwidth}
-\textbf{\color{GEUBlue}Proposed Approach}
-\begin{enumerate}\itemsep2pt
-\item City layout loaded from JSON config at startup
-\item Dijkstra's algorithm (plain + zone-constrained) as the core routing engine
-\item Priority/FIFO route builders + fill-rate scheduler
-\item In-memory graph state (\texttt{unordered\_map})
-\item REST API (JSON) + Cytoscape.js animation
-\end{enumerate}
-\column{.48\textwidth}
-\textbf{\color{GEUBlue}Key Features}
-\begin{itemize}\itemsep2pt
-\item Graph-based city model with zone tagging
-\item Shortest-path routing (Priority / FIFO toggle)
-\item Rule-based waste classification (keywords)
-\item Hazardous waste: immediate, constrained routing
-\item Dynamic collection frequency from fill-rate
-\end{itemize}
-\end{columns}
-\vfill
-\smallnote{A single persistent C++ server owns the graph, performs routing/classification/scheduling in-process, serves JSON to the JS frontend.}
-\end{frame}
-
-% 6
+% 7 -- PBL Course Concept Integration
 \begin{frame}{Integration of PBL Course Concepts}
-\scriptsize
 \begin{center}
 \renewcommand{\arraystretch}{1.25}
-\begin{tabularx}{.96\textwidth}{@{}>{\bfseries}p{3.0cm}X p{2.7cm}@{}}
+\begin{tabularx}{.96\textwidth}{@{}>{\bfseries}p{3.2cm}X@{}}
 \toprule
-Course & Concepts Applied & Project Module\\
+Course & Concepts Applied\\
 \midrule
-Data Structures in C & Graph (adjacency list), Queue (FIFO), Priority queue / min-heap, Hash map (\texttt{unordered\_map}) & Graph model, Scheduler, Router\\
-OOPs with C++ & Classes for \texttt{Graph}, \texttt{Node}, \texttt{Edge}, \texttt{Scheduler}, \texttt{Router}; STL containers; encapsulated domain layer & Backend domain layer (\texttt{graph.hpp}, \texttt{scheduler.hpp}, \texttt{router.hpp})\\
+Data Structures in C & Graph (adjacency list), Queue (FIFO), Priority queue / min-heap, Hash map (\texttt{unordered\_map}), Path reconstruction (vector/stack)\\
+OOPs with C++ & Classes for \texttt{Graph}, \texttt{Node}, \texttt{Edge}, \texttt{Scheduler}, \texttt{Router}; encapsulation; STL containers throughout the domain layer\\
 \bottomrule
 \end{tabularx}
 \end{center}
-\vfill
+\vspace{2mm}
 \begin{center}
-\colorbox{GEULightBlue}{\parbox{.86\textwidth}{\centering
-\textbf{Integration:} The city graph (DSA: adjacency list + hashing) is implemented as C++ classes (OOP: encapsulation, STL) exposing Dijkstra, constrained Dijkstra, FIFO/priority-queue-based routing, and scheduling as one cohesive backend.}}
+\colorbox{GEULightBlue}{\parbox{.9\textwidth}{\centering\small
+\textbf{Integration:} The city graph (DSA: adjacency list, hashing, heaps, queues) is implemented as encapsulated C++ classes (OOP) exposing Dijkstra, routing, and scheduling as one cohesive backend.}}
 \end{center}
 \end{frame}
 
-% 7
-\begin{frame}{System Architecture / Workflow}
+% 8 -- System Architecture Overview
+\begin{frame}{System Architecture Overview}
 \begin{center}
 \begin{tikzpicture}[
-node distance=4mm,
+node distance=5mm,
 box/.style={rectangle,rounded corners,draw=GEUBlue,fill=GEULightBlue,
-minimum width=1.9cm,minimum height=9mm,align=center,font=\scriptsize},
-arrow/.style={-{Latex[length=2mm]},thick,draw=GEUBlue}
+minimum width=1.95cm,minimum height=11mm,align=center,font=\scriptsize},
+arrow/.style={-{Latex[length=2.2mm]},thick,draw=GEUBlue}
 ]
 \node[box] (a) {Frontend\\Cytoscape.js};
 \node[box,right=of a] (b) {HTTP Layer\\cpp-httplib};
-\node[box,right=of b] (c) {Domain Logic\\Router/Sched.};
+\node[box,right=of b] (c) {Domain\\Logic};
 \node[box,right=of c] (d) {Graph\\State};
 \node[box,right=of d] (e) {JSON\\Config};
 \draw[arrow] (a)--(b); \draw[arrow] (b)--(c); \draw[arrow] (c)--(d); \draw[arrow] (d)--(e);
 \end{tikzpicture}
 \end{center}
-\vspace{3mm}
-\small
+\vspace{6mm}
+\begin{itemize}\itemsep3pt
+\item Single persistent process owns the graph in memory -- fast, no per-request re-parsing
+\item Layered backend: HTTP layer $\to$ controllers $\to$ pure, testable domain classes
+\item Same-origin static file serving + API -- no CORS complexity
+\end{itemize}
+\end{frame}
+
+% 9 -- Architecture: Components & Data Flow
+\begin{frame}{Architecture -- Components \& Data Flow}
 \begin{columns}[T,totalwidth=\textwidth]
 \column{.48\textwidth}
+\small
 \textbf{\color{GEUBlue}Major Components}
-\begin{itemize}\itemsep1pt
-\item Graph model (\texttt{Node}, \texttt{Edge}, zone tags)
-\item Routing engine (plain + constrained Dijkstra)
-\item Classifier + Scheduler + REST controllers
+\begin{itemize}\itemsep2pt
+\item \texttt{Graph} -- \texttt{Node}, \texttt{Edge}, zone tags, \texttt{unordered\_map} adjacency list
+\item Routing engine -- plain + constrained Dijkstra, Priority/FIFO route builders
+\item Classifier -- keyword-rule waste categorization
+\item Scheduler -- fill-rate driven due-date computation
+\item REST controllers -- one handler per endpoint
 \end{itemize}
 \column{.48\textwidth}
+\small
 \textbf{\color{GEUBlue}Data / Control Flow}
-\begin{itemize}\itemsep1pt
+\begin{itemize}\itemsep2pt
 \item Frontend calls \texttt{/route}, \texttt{/classify}, \texttt{/schedule}, \texttt{/route/hazard}
-\item Backend loads \texttt{city.json} once, mutates state in memory
-\item Response: JSON path/cost, animated on the graph canvas
+\item Backend loads \texttt{city.json} once at startup
+\item Fill-rate / last-collected state mutates in memory as locations are visited
+\item Response: JSON path + cost, animated on the graph canvas
 \end{itemize}
 \end{columns}
 \end{frame}
 
-% 8
-\begin{frame}{Technology Stack \& Methodology}
-\footnotesize
+% 10 -- Domain Model: Data Structures
+\begin{frame}[fragile]{Domain Model -- Core Data Structures}
+\small
 \begin{columns}[T,totalwidth=\textwidth]
-\column{.48\textwidth}
-\begin{block}{Technology Stack}
-\begin{itemize}\itemsep1pt
-\item Programming: C++ (backend), JavaScript (frontend)
-\item HTTP: cpp-httplib (single-header)
-\item JSON: nlohmann/json (header-only)
-\item Frontend: HTML/CSS/JS + Cytoscape.js
-\item Build: CMake; Version Control: Git/GitHub
+\column{.5\textwidth}
+\textbf{\color{GEUBlue}\texttt{Node}}
+\begin{itemize}\itemsep2pt
+\item \texttt{id}, \texttt{type} (Depot/Home/Junction/Bin)
+\item \texttt{zone} (Residential/Commercial/Industrial/Arterial)
+\item \texttt{fillRate}, \texttt{capacity}, \texttt{lastCollected}
 \end{itemize}
-\end{block}
-\column{.48\textwidth}
-\begin{block}{Development Methodology}
-\begin{enumerate}\itemsep1pt
-\item Requirement Analysis (proposal finalized)
-\item System \& API Design (architecture, JSON contracts)
-\item Phased Implementation (graph $\to$ algorithms $\to$ API $\to$ frontend)
-\item Unit Testing (Dijkstra, classifier, scheduler)
-\item Live Demo Evaluation
-\end{enumerate}
-\end{block}
+\vspace{1mm}
+\textbf{\color{GEUBlue}\texttt{Edge}}
+\begin{itemize}\itemsep2pt
+\item \texttt{to}, \texttt{weight} (travel cost)
+\item \texttt{zone} tag of the road segment itself
+\end{itemize}
+\column{.5\textwidth}
+\textbf{\color{GEUBlue}\texttt{Graph} class}
+\begin{itemize}\itemsep2pt
+\item Backed by \texttt{unordered\_map<string, vector<Edge>>}
+\item O(1) average node lookup, O(degree) edge iteration
+\item \texttt{loadFromJson()}, \texttt{neighbors()}, \texttt{toJson()}
+\end{itemize}
 \end{columns}
-\vfill
+\vspace{2mm}
 \begin{center}
-\smallnote{Header-only libraries keep the backend dependency-light; Cytoscape.js gives native graph rendering and animation.}
+\colorbox{GEULightBlue}{\parbox{.85\textwidth}{\centering\scriptsize
+\texttt{\{"id":"H1","type":"home","zone":"residential","fillRate":5.0,"capacity":50\}}}}
 \end{center}
 \end{frame}
 
-% 9
-\begin{frame}{Initial Progress \& Team Contribution}
-\begin{columns}[T,totalwidth=\textwidth]
-\column{.44\textwidth}
-\small
-\textbf{\color{GEUBlue}Progress Achieved}
-\begin{itemize}\itemsep1pt
-\item Problem study and proposal finalized
-\item Full system architecture designed
-\item REST API contracts (5 endpoints) specified
-\item C++ class design for Graph, Router, Scheduler, Classifier
-\item Sample \texttt{city.json} graph and repo structure planned
-\end{itemize}
-\column{.52\textwidth}
-\small
-\textbf{\color{GEUBlue}Individual Contribution}
-\vspace{1mm}
-\tiny
-\renewcommand{\arraystretch}{1.05}
-\begin{tabularx}{\textwidth}{@{}p{1.6cm}p{1.7cm}X@{}}
+% 11 -- Data Structures & Algorithms Summary
+\begin{frame}{}
+\scriptsize
+\begin{center}
+\renewcommand{\arraystretch}{1.12}
+\begin{tabularx}{.98\textwidth}{@{}>{\bfseries}p{3.1cm}X p{4.0cm}@{}}
 \toprule
-Member & Role & Contribution\\
+Structure / Algorithm & Short Definition & Used For\\
 \midrule
-Tejas Jain & Backend Lead & Graph model, build system, routing modes, HTTP server, \texttt{/route}, \texttt{/graph}, animation\\
-Apoorv Negi & Algorithms & Plain \& constrained Dijkstra, hazard dispatch, \texttt{/route/hazard}, hazard styling\\
-Yash Nigam & Data \& Scheduling & City graph, waste classifier, scheduler, \texttt{/classify}, \texttt{/schedule}, rendering\\
+Graph (Adjacency List) & Each node holds a list of its outgoing weighted edges & City map: depot, homes, junctions, bins\\
+Hash Map (\texttt{unordered\_map}) & Key $\to$ value store, $O(1)$ average lookup & Node ID $\to$ adjacency list / node data\\
+Queue (FIFO) & First element enqueued is the first dequeued & Sequences homes in FIFO collection mode\\
+Priority Queue (Min-Heap) & Smallest-key element always dequeued next & Dijkstra's frontier -- nearest node first\\
+Priority Queue (Max-Heap) & Largest-key element always dequeued next & Scheduler -- ranks locations by overdue-ness\\
+Dijkstra's Algorithm & Greedy shortest path via min-heap relaxation & Depot / home / bin routing\\
+Constrained Dijkstra & Dijkstra skipping forbidden-zone edges & Hazardous waste routing\\
+Vector (Path Reconstruction) & Backtrack predecessor pointers into an ordered list & Rebuilds the final route\\
+\bottomrule
+\end{tabularx}
+\end{center}
+\end{frame}
+
+% 12 -- Graph Storage Architecture
+\begin{frame}[fragile]{Graph Storage -- Adjacency List Architecture}
+\footnotesize
+Backing store: \texttt{unordered\_map<string, vector<Edge>>} $\to$ $O(1)$ node lookup, $O(\text{degree})$ edge iteration.
+\vspace{1mm}
+\begin{columns}[T,totalwidth=\textwidth]
+\column{.34\textwidth}
+\begin{center}
+\begin{tikzpicture}[
+node distance=3mm,
+nd/.style={draw=GEUBlue,fill=GEULightBlue,rounded corners,minimum width=1.0cm,minimum height=5mm,font=\tiny,align=center},
+lbl/.style={font=\tiny,draw=none,fill=none}
+]
+\node[nd] (depot) {DEPOT};
+\node[nd,below=of depot] (j1) {J1};
+\node[nd,below=of j1] (h1) {H1};
+\node[nd,below=of h1] (b1) {B1};
+\draw[thick,GEUBlue] (depot)--(j1) node[midway,right,lbl]{4.2};
+\draw[thick,GEUBlue] (j1)--(h1) node[midway,right,lbl]{3.1};
+\draw[thick,GEUBlue] (h1)--(b1) node[midway,right,lbl]{6.0};
+\end{tikzpicture}
+\end{center}
+\column{.64\textwidth}
+\renewcommand{\arraystretch}{1.05}
+\begin{tabularx}{\textwidth}{@{}>{\ttfamily\tiny}p{1.1cm}X@{}}
+\toprule
+\normalfont\tiny Node & \tiny Adjacency List\\
+\midrule
+\tiny DEPOT & \tiny (J1, 4.2, arterial)\\
+\tiny J1 & \tiny (DEPOT,4.2,art.), (H1,3.1,resid.)\\
+\tiny H1 & \tiny (J1,3.1,resid.), (B1,6.0,indust.)\\
+\tiny B1 & \tiny (H1, 6.0, industrial)\\
 \bottomrule
 \end{tabularx}
 \end{columns}
+\begin{itemize}\itemsep1pt
+\item Each \texttt{Edge} carries its own zone tag -- lets the constrained variant treat it as impassable
+\item Loaded once from \texttt{city.json} at startup; edges default to bidirectional
+\end{itemize}
 \end{frame}
 
-% 10
-\begin{frame}{Roadmap, Expected Outcomes \& References}
-\begin{columns}[T,totalwidth=\textwidth]
-\column{.47\textwidth}
-\scriptsize
-\textbf{\color{GEUBlue}Roadmap}
-\begin{enumerate}\itemsep0pt
-\item Phase-I: Proposal, Architecture \& API Design (done)
-\item Phase-II: Graph engine, algorithms, REST API, frontend
-\item Phase-III: Full demo, stretch goals (concurrency, persistence)
-\end{enumerate}
+% 13 -- Dijkstra's Algorithm: How It Works
+\begin{frame}{Dijkstra's Algorithm -- How It Works}
+\footnotesize
+\begin{center}
+\begin{tikzpicture}[
+node distance=5mm,
+box/.style={rectangle,rounded corners,draw=GEUBlue,fill=GEULightBlue,minimum width=1.95cm,minimum height=9mm,align=center,font=\tiny},
+arrow/.style={-{Latex[length=2mm]},thick,draw=GEUBlue}
+]
+\node[box] (a) {Init \texttt{dist[]},\\push source};
+\node[box,right=of a] (b) {Pop min-\\dist node $u$};
+\node[box,right=of b] (c) {Relax\\edges of $u$};
+\node[box,right=of c] (d) {Reconstruct\\path};
+\draw[arrow] (a)--(b);
+\draw[arrow] (b)--(c);
+\draw[arrow] (c)--(d);
+\draw[arrow] (c.north) to[out=90,in=90] node[midway,above,font=\tiny]{repeat} (b.north);
+\end{tikzpicture}
+\end{center}
 \vspace{1mm}
+\begin{enumerate}\itemsep2pt
+\item \texttt{dist[source]=0}, all others $\infty$; push source into a min-heap keyed by distance.
+\item Pop node \texttt{u} with smallest tentative distance.
+\item \textbf{Relax} edge \texttt{(u,v,w)}: if \texttt{dist[u]+w < dist[v]}, update \texttt{dist[v]} and push \texttt{v}.
+\item Reconstruct the path by walking a predecessor map back to the source.
+\end{enumerate}
+\vfill
+\smallnote{Complexity: $O((V+E)\log V)$ with a binary heap.}
+\end{frame}
+
+% 14 -- Custom Constrained Dijkstra
+\begin{frame}[fragile]{Custom Constrained Dijkstra for Hazardous Routing}
+\footnotesize
+EcoGraph adds one parameter, \texttt{forbiddenZones}: during relaxation, any edge whose zone is in this set is skipped entirely, as if it did not exist.
+\vspace{1mm}
+\begin{center}
+\begin{tikzpicture}[
+nd/.style={draw=GEUBlue,fill=GEULightBlue,rounded corners,minimum width=1.5cm,minimum height=6mm,font=\tiny,align=center},
+lbl/.style={font=\tiny,draw=none,fill=none}
+]
+\node[nd] (j1) at (0,0) {J1 (start)};
+\node[nd] (r1) at (2.6,0.9) {R1 (residential)};
+\node[nd] (in1) at (2.6,-0.9) {IN1 (industrial)};
+\node[nd] (bin) at (5.2,0) {BIN};
+\draw[thick,red,dashed] (j1)--(r1) node[midway,above,lbl]{2 -- forbidden};
+\draw[thick,red,dashed] (r1)--(bin) node[midway,above,lbl]{2};
+\draw[thick,green!45!black] (j1)--(in1) node[midway,below,lbl]{5 -- allowed};
+\draw[thick,green!45!black] (in1)--(bin) node[midway,below,lbl]{3};
+\end{tikzpicture}
+\end{center}
+\vspace{1mm}
+\begin{itemize}\itemsep1pt
+\item Shorter path via R1 (cost 4) is residential -- \textbf{skipped}; algorithm instead takes J1$\to$IN1$\to$BIN (cost 8) through industrial zones only
+\item Called with \texttt{forbiddenZones = \{Residential, Commercial\}} for every hazardous dispatch; returns HTTP 422 if no path exists
+\end{itemize}
+\end{frame}
+
+% 15 -- Fill-Rate & Frequency Management: Formula
+\begin{frame}[fragile]{Fill-Rate \& Frequency Management -- Interval Formula}
+\footnotesize
+Each home/bin stores \texttt{fillRate} (units/day), \texttt{capacity}, and \texttt{lastCollected}. The scheduler turns these into a per-location visit interval:
+\vspace{1mm}
+\begin{center}
+\colorbox{GEULightBlue}{\parbox{.7\textwidth}{\centering
+\texttt{interval\_days = capacity / fillRate}, clamped to $[1, 14]$ days}}
+\end{center}
+\vspace{1mm}
+\begin{center}
+\begin{tikzpicture}[font=\scriptsize]
+\draw[thick,GEUBlue,-{Latex[length=2mm]}] (0,0) -- (10.5,0);
+\draw[thick,GEUBlue] (0,0.15) -- (0,-0.15) node[below,yshift=-1mm]{lastCollected};
+\draw[thick,GEUBlue] (5,0.15) -- (5,-0.15) node[below,yshift=-1mm]{due (+interval)};
+\draw[thick,red] (8,0.15) -- (8,-0.15) node[below,yshift=-1mm]{now};
+\draw[decorate,decoration={brace,amplitude=4pt},thick,red] (5,0.4) -- (8,0.4) node[midway,above,yshift=2mm]{overdue-ness $\to$ max-heap rank};
+\node[above,font=\tiny] at (2.5,0) {interval\_days};
+\end{tikzpicture}
+\end{center}
+\begin{itemize}\itemsep1pt
+\item \textbf{Floor of 1 day} -- stops an extremely fast-filling bin from demanding more than one visit per day
+\item \textbf{Ceiling of 14 days} -- guarantees no location goes unvisited more than two weeks, however slowly it fills
+\item Due when \texttt{now} $\ge$ \texttt{lastCollected + interval\_days}; \texttt{markCollected()} resets \texttt{lastCollected = now} once visited
+\end{itemize}
+\end{frame}
+
+% 16 -- Fill-Rate & Frequency Management: Worked Example
+\begin{frame}[fragile]{Fill-Rate \& Frequency Management -- Worked Example}
+\scriptsize
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\textwidth}{@{}>{\ttfamily}p{1.1cm}p{1.15cm}p{1.2cm}p{1.7cm}p{2.0cm}X@{}}
+\toprule
+\normalfont Location & \normalfont Capacity & \normalfont fillRate & \normalfont interval\_days & \normalfont Last Collected & \normalfont Status Today\\
+\midrule
+H1 & 50 & 5/day & 50/5 = 10 & 9 days ago & Not due (1 day left)\\
+H2 & 100 & 20/day & 100/20 = 5 & 6 days ago & \textbf{Due} -- 1 day overdue\\
+B1 & 300 & 40/day & 300/40 = 7.5 & 10 days ago & \textbf{Due} -- 2.5 days overdue\\
+B2 & 100 & 2/day & 100/2 = 50 $\to$ 14 & 20 days ago & \textbf{Due} -- 6 days overdue\\
+\bottomrule
+\end{tabularx}
+\end{center}
+\vspace{2mm}
+\begin{center}
+\colorbox{GEULightBlue}{\parbox{.9\textwidth}{\centering
+Max-heap serving order (most overdue first): \textbf{B2 (6d)} $\to$ \textbf{B1 (2.5d)} $\to$ \textbf{H2 (1d)}; H1 stays off today's list.}}
+\end{center}
+\end{frame}
+
+% 17 -- Selecting Truck Stops
+\begin{frame}[fragile]{Selecting Truck Stops -- Frequency + Waste Type}
+\footnotesize
+\begin{center}
+\begin{tikzpicture}[
+node distance=4mm,
+box/.style={rectangle,rounded corners,draw=GEUBlue,fill=GEULightBlue,minimum width=2.1cm,minimum height=9mm,align=center,font=\tiny},
+arrow/.style={-{Latex[length=1.8mm]},thick,draw=GEUBlue}
+]
+\node[box] (a) {Fill-rate \&\\capacity data};
+\node[box,right=of a] (b) {Scheduler\\\texttt{getDueLocations()}};
+\node[box,right=of b] (c) {Due IDs, ranked\\by overdue-ness};
+\node[box,right=of c] (d) {\texttt{POST /route}\\\{homeIds, mode\}};
+\node[box,right=of d] (e) {Truck's\\stop list};
+\draw[arrow] (a)--(b); \draw[arrow] (b)--(c); \draw[arrow] (c)--(d); \draw[arrow] (d)--(e);
+\node[box,below=9mm of a,xshift=8mm] (f) {Waste\\description};
+\node[box,right=of f] (g) {\texttt{classifyWaste()}};
+\draw[arrow] (f)--(g);
+\draw[arrow,red] (g) to[out=45,in=225] node[midway,below,font=\tiny,red]{hazardous -- immediate} (d.south);
+\end{tikzpicture}
+\end{center}
+\vspace{2mm}
+\begin{itemize}\itemsep2pt
+\item Each run, the scheduler's due list (frequency-driven) becomes the \texttt{homeIds} array sent to \texttt{POST /route} -- this \textit{is} how truck stops are chosen
+\item If a description classifies as \textbf{hazardous}, its location skips the due list entirely and is dispatched immediately via \texttt{POST /route/hazard}
+\item Non-hazardous waste never overrides the schedule -- its location simply waits for its fill-rate interval to elapse (previous slide)
+\end{itemize}
+\end{frame}
+
+% 17 -- Waste Classification Subsystem
+\begin{frame}{Waste Classification Subsystem}
+\small
+\begin{itemize}\itemsep4pt
+\item Keyword rules loaded from \texttt{waste\_rules.json}: each category maps to a keyword list and a hazard flag.
+\item Categories: recyclable, compost, general, \textbf{medical}, \textbf{chemical}.
+\item A description is matched against \textbf{medical} and \textbf{chemical} keywords \textit{first} -- hazard classification always takes priority, even if a recyclable keyword also appears (e.g. ``plastic syringe'' $\to$ medical).
+\item Falls back to \texttt{general} if no keyword matches.
+\item Output: bin type + a boolean hazardous flag, which triggers the constrained-routing path instead of the normal queue/schedule.
+\end{itemize}
+\end{frame}
+
+% 18 -- REST API: How It Works & Design
+\begin{frame}{REST API -- How It Works \& Design}
+\small
+The frontend and backend communicate over plain HTTP: the browser sends a JSON request to a resource path, the C++ server responds with a JSON body -- no session state is kept on either side between calls.
+\vspace{2mm}
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{.96\textwidth}{@{}>{\ttfamily}p{3.1cm}X@{}}
+\toprule
+Endpoint & Purpose\\
+\midrule
+GET /graph & Full node/edge list as JSON, including zone tags\\
+POST /route & Home list + mode (priority/fifo) $\to$ path \& cost\\
+POST /classify & Waste description $\to$ bin type \& hazard flag\\
+POST /route/hazard & Hazardous location $\to$ zone-constrained route\\
+GET /schedule & Homes/bins due for collection today\\
+\bottomrule
+\end{tabularx}
+\end{center}
+\vfill
+\smallnote{Uniform error format \texttt{\{ok:false, error, message\}} with HTTP 400/404/422/500 as appropriate.}
+\end{frame}
+
+% 19 -- Frontend Visualization
+\begin{frame}{Frontend Visualization -- Cytoscape.js}
+\small
+\begin{itemize}\itemsep3pt
+\item \textbf{No React} -- plain HTML/CSS/JavaScript served directly by the C++ server, so the whole project ships as one binary with no build step or bundler.
+\item \textbf{Cytoscape.js} -- a graph-drawing library purpose-built for nodes-and-edges visualization, a closer fit here than a general-purpose UI framework.
+\item \textbf{Render pipeline:} \texttt{GET /graph} $\to$ build Cytoscape elements $\to$ style by node type/zone $\to$ auto-layout.
+\item \textbf{Route animation:} walk each returned path segment, sequentially highlighting edges and pulsing nodes; hazardous routes render in a distinct dashed/red style.
+\item \textbf{Live schedule:} periodic \texttt{GET /schedule} polling flags due locations on the map without a page reload.
+\end{itemize}
+\end{frame}
+
+% 14 -- Technology Stack
+\begin{frame}{Technology Stack}
+\begin{block}{Backend}
+\begin{itemize}\itemsep3pt
+\item Programming Language: C++
+\item HTTP Framework: cpp-httplib (single-header)
+\item JSON Library: nlohmann/json (header-only)
+\item Build System: CMake
+\end{itemize}
+\end{block}
+\vspace{3mm}
+\begin{block}{Frontend \& Tooling}
+\begin{itemize}\itemsep3pt
+\item HTML / CSS / vanilla JavaScript
+\item Cytoscape.js for graph rendering and route animation
+\item Version Control: Git / GitHub
+\end{itemize}
+\end{block}
+\end{frame}
+
+% 15 -- Development Methodology
+\begin{frame}{Development Methodology}
+\begin{enumerate}\itemsep4pt
+\item \textbf{Foundations} -- graph data model, JSON loader, plain Dijkstra, unit tests
+\item \textbf{Core Logic} -- constrained Dijkstra, classifier, Priority/FIFO routers, scheduler
+\item \textbf{HTTP API} -- all 5 REST endpoints wired and verified against sample data
+\item \textbf{Frontend Integration} -- Cytoscape.js rendering, animation, hazard styling, schedule view
+\item \textbf{Stretch Goals} -- thread-safety (\texttt{shared\_mutex}), JSON-file state persistence
+\end{enumerate}
+\vfill
+\smallnote{Each phase has an explicit exit criterion (e.g. ``test binary prints correct shortest paths'') before the team moves to the next layer.}
+\end{frame}
+
+% 16 -- Initial Progress
+\begin{frame}{Initial Progress Achieved}
+\begin{itemize}\itemsep6pt
+\item Background / literature study
+\item Problem statement and requirements identified
+\item System architecture prepared
+\item Technology stack finalized
+\item Implementation plan and team roles outlined
+\end{itemize}
+\end{frame}
+
+% 17 -- Individual Contribution
+\begin{frame}{Individual Contribution}
+\small
+\renewcommand{\arraystretch}{1.35}
+\begin{tabularx}{\textwidth}{@{}p{2.2cm}p{2.6cm}X@{}}
+\toprule
+Member & Role & Contribution\\
+\midrule
+Tejas Jain & Team Lead & Problem analysis, system architecture, REST API \& domain model design, technology stack selection, project documentation and presentation\\
+Apoorv Negi & Member & Supporting research on routing algorithms\\
+Yash Nigam & Member & Supporting research on data requirements\\
+\bottomrule
+\end{tabularx}
+\end{frame}
+
+% 18 -- Roadmap & Expected Outcomes
+\begin{frame}{Roadmap \& Expected Outcomes}
+\begin{columns}[T,totalwidth=\textwidth]
+\column{.48\textwidth}
+\textbf{\color{GEUBlue}Roadmap}
+\begin{enumerate}\itemsep6pt
+\item Phase-I: Proposal, Architecture \& API Design
+\item Phase-II: Graph Engine, Algorithms, REST API, Frontend
+\item Phase-III: Full Live Demo, Stretch Goals
+\end{enumerate}
+\column{.48\textwidth}
 \textbf{\color{GEUBlue}Expected Outcomes}
-\begin{itemize}\itemsep0pt
-\item Working C++ backend + animated web frontend
+\begin{itemize}\itemsep3pt
+\item Working C++ backend with an animated web frontend
 \item Verified shortest-path and constrained-route correctness
 \item Demonstrated fill-rate-driven dynamic scheduling
 \item Extensible to concurrency and persistent storage
 \end{itemize}
-\column{.47\textwidth}
-\scriptsize
-\textbf{\color{GEUBlue}References}
-\begin{enumerate}\itemsep0pt
-\item Cormen et al. -- \textit{Intro. to Algorithms} (Dijkstra's Algorithm)
+\end{columns}
+\end{frame}
+
+% 19 -- References & Thank You
+\begin{frame}{References}
+\begin{enumerate}\itemsep7pt
+\item Cormen, Leiserson, Rivest, Stein -- \textit{Introduction to Algorithms} (Dijkstra's Algorithm)
 \item cpp-httplib -- \url{github.com/yhirose/cpp-httplib}
 \item nlohmann/json -- \url{github.com/nlohmann/json}
-\item Cytoscape.js -- \url{js.cytoscape.org}
+\item Cytoscape.js Documentation -- \url{js.cytoscape.org}
 \end{enumerate}
-\vspace{1mm}
+\vfill
 \begin{center}
-\colorbox{GEUBlue}{\parbox{.78\textwidth}{\centering\color{white}\small\textbf{Thank You}\\Questions \& Suggestions}}
+\colorbox{GEUBlue}{\parbox{.78\textwidth}{\centering\color{white}\Large\textbf{Thank You}\\\normalsize Questions \& Suggestions}}
 \end{center}
-\end{columns}
 \end{frame}
 
 \end{document}

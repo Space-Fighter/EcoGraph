@@ -102,7 +102,7 @@ Graphic Era (Deemed to be University), Dehradun\\[-1mm]
 \end{columns}
 \vspace{4mm}
 \begin{block}{Mentor}
-Navneet Rajput
+Mr. Navneet Rajpoot
 \hfill
 \textbf{Interactions completed:} \underline{\hspace{12mm}}
 \end{block}
@@ -158,7 +158,7 @@ Municipal waste routes are typically \textbf{static and fixed}, ignoring the rea
 \item \textbf{Routing engine} -- Dijkstra's algorithm (plain and zone-constrained variants) computes shortest paths between any two nodes.
 \item \textbf{Route builders} -- Priority and FIFO strategies sequence multi-stop collection routes.
 \item \textbf{Scheduler} -- fill-rate and last-collected timestamps determine which locations are due for a visit.
-\item \textbf{Delivery} -- results served as JSON over a REST API, animated live on a Cytoscape.js graph canvas.
+\item \textbf{Delivery} -- results served as JSON over a REST API, animated live in a React frontend using Cytoscape.js.
 \end{enumerate}
 \vfill
 \smallnote{A single persistent C++ HTTP server owns the graph and performs routing, classification, and scheduling.}
@@ -193,19 +193,20 @@ Every feature maps directly to one of the five REST endpoints and one domain-lay
 \begin{frame}{Integration of PBL Course Concepts}
 \begin{center}
 \renewcommand{\arraystretch}{1.25}
-\begin{tabularx}{.96\textwidth}{@{}>{\bfseries}p{3.2cm}X@{}}
+\scriptsize
+\begin{tabularx}{.98\textwidth}{@{}>{\bfseries}p{2.4cm}X@{}}
 \toprule
 Course & Concepts Applied\\
 \midrule
 Data Structures in C & Graph (adjacency list), Queue (FIFO), Priority queue / min-heap, Hash map (\texttt{unordered\_map}), Path reconstruction (vector/stack)\\
-OOPs with C++ & Classes for \texttt{Graph}, \texttt{Node}, \texttt{Edge}, \texttt{Scheduler}, \texttt{Router}; encapsulation; STL containers throughout the domain layer\\
+OOPs with C++ & \textbf{Encapsulation} -- \texttt{Graph}'s node/adjacency maps are private, accessed only via public methods; \textbf{Abstraction} -- \texttt{Scheduler}/\texttt{Classifier} expose simple calls (\texttt{getDueLocations()}, \texttt{classifyWaste()}) that hide the underlying heap/keyword logic; \textbf{Inheritance} -- \texttt{PriorityRouteBuilder} and \texttt{FIFORouteBuilder} derive from a common \texttt{RouteStrategy} base; \textbf{Polymorphism} -- each overrides a virtual \texttt{buildRoute()} differently at runtime\\
 \bottomrule
 \end{tabularx}
 \end{center}
 \vspace{2mm}
 \begin{center}
 \colorbox{GEULightBlue}{\parbox{.9\textwidth}{\centering\small
-\textbf{Integration:} The city graph (DSA: adjacency list, hashing, heaps, queues) is implemented as encapsulated C++ classes (OOP) exposing Dijkstra, routing, and scheduling as one cohesive backend.}}
+\textbf{Integration:} The city graph (DSA: adjacency list, hashing, heaps, queues) is implemented as C++ classes applying all four OOP pillars, exposing Dijkstra, routing, and scheduling as one cohesive backend.}}
 \end{center}
 \end{frame}
 
@@ -218,7 +219,7 @@ box/.style={rectangle,rounded corners,draw=GEUBlue,fill=GEULightBlue,
 minimum width=1.95cm,minimum height=11mm,align=center,font=\scriptsize},
 arrow/.style={-{Latex[length=2.2mm]},thick,draw=GEUBlue}
 ]
-\node[box] (a) {Frontend\\Cytoscape.js};
+\node[box] (a) {Frontend\\(React)};
 \node[box,right=of a] (b) {HTTP Layer\\cpp-httplib};
 \node[box,right=of b] (c) {Domain\\Logic};
 \node[box,right=of c] (d) {Graph\\State};
@@ -526,12 +527,12 @@ GET /schedule & Homes/bins due for collection today\\
 \end{frame}
 
 % 19 -- Frontend Visualization
-\begin{frame}{Frontend Visualization -- Cytoscape.js}
+\begin{frame}{Frontend Visualization -- React + Cytoscape.js}
 \small
 \begin{itemize}\itemsep3pt
-\item \textbf{No React} -- plain HTML/CSS/JavaScript served directly by the C++ server, so the whole project ships as one binary with no build step or bundler.
-\item \textbf{Cytoscape.js} -- a graph-drawing library purpose-built for nodes-and-edges visualization, a closer fit here than a general-purpose UI framework.
-\item \textbf{Render pipeline:} \texttt{GET /graph} $\to$ build Cytoscape elements $\to$ style by node type/zone $\to$ auto-layout.
+\item \textbf{React} -- component-based UI (controls, mode toggle, waste-input form, schedule sidebar) with state managed via hooks; built with Vite into a static bundle.
+\item \textbf{Cytoscape.js} -- wrapped inside a dedicated React component for the graph canvas; a graph-drawing library purpose-built for nodes-and-edges visualization.
+\item \textbf{Render pipeline:} \texttt{GET /graph} $\to$ build Cytoscape elements $\to$ style by node type/zone $\to$ auto-layout, all inside a \texttt{useEffect}.
 \item \textbf{Route animation:} walk each returned path segment, sequentially highlighting edges and pulsing nodes; hazardous routes render in a distinct dashed/red style.
 \item \textbf{Live schedule:} periodic \texttt{GET /schedule} polling flags due locations on the map without a page reload.
 \end{itemize}
@@ -550,11 +551,36 @@ GET /schedule & Homes/bins due for collection today\\
 \vspace{3mm}
 \begin{block}{Frontend \& Tooling}
 \begin{itemize}\itemsep3pt
-\item HTML / CSS / vanilla JavaScript
+\item React (Vite) for the UI, built to a static bundle
 \item Cytoscape.js for graph rendering and route animation
 \item Version Control: Git / GitHub
 \end{itemize}
 \end{block}
+\end{frame}
+
+% 15a -- Deployment
+\begin{frame}{Deployment -- Hosting the Live Demo}
+\small
+\begin{center}
+\begin{tikzpicture}[
+node distance=5mm,
+box/.style={rectangle,rounded corners,draw=GEUBlue,fill=GEULightBlue,minimum width=2.3cm,minimum height=10mm,align=center,font=\scriptsize},
+arrow/.style={-{Latex[length=2mm]},thick,draw=GEUBlue}
+]
+\node[box] (a) {React source\\(\texttt{npm run build})};
+\node[box,right=of a] (b) {Static bundle\\served by C++ server};
+\node[box,right=of b] (c) {Docker\\image};
+\node[box,right=of c] (d) {Cloud host +\\reverse proxy (HTTPS)};
+\draw[arrow] (a)--(b); \draw[arrow] (b)--(c); \draw[arrow] (c)--(d);
+\end{tikzpicture}
+\end{center}
+\vspace{2mm}
+\begin{itemize}\itemsep3pt
+\item \texttt{npm run build} produces a static bundle; the C++ server's static mount serves it directly -- single-origin preserved, no CORS
+\item Backend binary + built frontend packaged into a Docker image for a reproducible deploy
+\item Hosted on a small cloud VM / free-tier PaaS (Render, Railway, Fly.io), reverse-proxied through Nginx/Caddy for HTTPS
+\item \texttt{city.json} / schedule state persisted via a mounted volume so restarts don't lose data
+\end{itemize}
 \end{frame}
 
 % 15 -- Development Methodology
@@ -563,8 +589,8 @@ GET /schedule & Homes/bins due for collection today\\
 \item \textbf{Foundations} -- graph data model, JSON loader, plain Dijkstra, unit tests
 \item \textbf{Core Logic} -- constrained Dijkstra, classifier, Priority/FIFO routers, scheduler
 \item \textbf{HTTP API} -- all 5 REST endpoints wired and verified against sample data
-\item \textbf{Frontend Integration} -- Cytoscape.js rendering, animation, hazard styling, schedule view
-\item \textbf{Stretch Goals} -- thread-safety (\texttt{shared\_mutex}), JSON-file state persistence
+\item \textbf{Frontend Integration} -- React UI, Cytoscape.js rendering, animation, hazard styling, schedule view
+\item \textbf{Deployment} -- containerize backend + built frontend, host for a live demo
 \end{enumerate}
 \vfill
 \smallnote{Each phase has an explicit exit criterion (e.g. ``test binary prints correct shortest paths'') before the team moves to the next layer.}
@@ -589,9 +615,9 @@ GET /schedule & Homes/bins due for collection today\\
 \toprule
 Member & Role & Contribution\\
 \midrule
-Tejas Jain & Team Lead & Problem analysis, system architecture, REST API \& domain model design, technology stack selection, project documentation and presentation\\
-Apoorv Negi & Member & Supporting research on routing algorithms\\
-Yash Nigam & Member & Supporting research on data requirements\\
+Tejas Jain & Team Lead & Problem analysis, system architecture, REST API \& domain model design, modified (constrained) Dijkstra algorithm, frequency-handling logic, waste classification, technology stack selection, and PPT preparation\\
+Apoorv Negi & Member & Analysis and research on the modified (constrained) Dijkstra algorithm, technology stack selection, and report preparation\\
+Yash Nigam & Member & Analysis and research on frequency-handling logic, waste classification, technology stack selection, and report preparation\\
 \bottomrule
 \end{tabularx}
 \end{frame}
@@ -604,7 +630,7 @@ Yash Nigam & Member & Supporting research on data requirements\\
 \begin{enumerate}\itemsep6pt
 \item Phase-I: Proposal, Architecture \& API Design
 \item Phase-II: Graph Engine, Algorithms, REST API, Frontend
-\item Phase-III: Full Live Demo, Stretch Goals
+\item Phase-III: Full Live Demo, Deployment
 \end{enumerate}
 \column{.48\textwidth}
 \textbf{\color{GEUBlue}Expected Outcomes}
@@ -612,7 +638,7 @@ Yash Nigam & Member & Supporting research on data requirements\\
 \item Working C++ backend with an animated web frontend
 \item Verified shortest-path and constrained-route correctness
 \item Demonstrated fill-rate-driven dynamic scheduling
-\item Extensible to concurrency and persistent storage
+\item Deployed and reachable as a live, hosted demo
 \end{itemize}
 \end{columns}
 \end{frame}
@@ -623,6 +649,7 @@ Yash Nigam & Member & Supporting research on data requirements\\
 \item Cormen, Leiserson, Rivest, Stein -- \textit{Introduction to Algorithms} (Dijkstra's Algorithm)
 \item cpp-httplib -- \url{github.com/yhirose/cpp-httplib}
 \item nlohmann/json -- \url{github.com/nlohmann/json}
+\item React Documentation -- \url{react.dev}
 \item Cytoscape.js Documentation -- \url{js.cytoscape.org}
 \end{enumerate}
 \vfill

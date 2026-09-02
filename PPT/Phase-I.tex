@@ -114,25 +114,26 @@ Mr. Navneet Rajpoot
 \begin{frame}{Problem Statement \& Motivation}
 \small
 \begin{block}{Problem Statement}
-Municipal waste routes are typically \textbf{static and fixed}, ignoring the real shortest route between homes, bins, and the depot -- wasting fuel, time, and labor. Hazardous waste is handled identically to ordinary waste despite needing immediate, restricted-zone pickup, and fixed schedules over- or under-service locations with different fill rates.
+Most municipal waste routes are \textbf{fixed in advance} and never actually reflect the shortest path between homes, bins, and the depot -- so trucks burn extra fuel, take longer, and tie up more staff than they need to. Hazardous waste rides along on the same route as ordinary trash, even though it really needs immediate, zone-restricted pickup, and because schedules run on a fixed calendar, some bins get emptied too often while others overflow between visits.
 \end{block}
-\vspace{1mm}
-\begin{columns}[T,totalwidth=\textwidth]
-\column{.48\textwidth}
+\vspace{0.7mm}
 \textbf{\color{GEUBlue}Motivation}
-\begin{itemize}\itemsep1pt
-\item Fixed routes ignore the real shortest path in the city's road/graph network
-\item Hazardous waste in normal queues risks delayed, unsafe transit
-\item Calendar-based schedules waste labor on locations nowhere near full
+\begin{itemize}\itemsep2pt
+\item Fixed routes don't account for the city's actual road network, so trucks aren't taking the shortest path
+\item Hazardous waste needs to be disposed of immediately, not left to wait its turn, and routed clear of residential areas rather than trucked straight through them
+\item Calendar-based pickups send labor to bins that aren't even close to full
 \end{itemize}
-\column{.48\textwidth}
-\textbf{\color{GEUBlue}Target Users / Stakeholders}
-\begin{itemize}\itemsep1pt
-\item Municipal waste collection departments and truck operators
-\item Residents and commercial establishments being served
-\item Public health -- faster, safer hazardous waste clearance
+\end{frame}
+
+% 3b -- Target Users / Stakeholders
+\begin{frame}{Target Users \& Stakeholders}
+\textbf{\color{GEUBlue}Who This Is Built For}
+\vspace{2mm}
+\begin{itemize}\itemsep6pt
+\item Municipal waste departments and truck operators
+\item Residents and commercial establishments on the route
+\item Public health -- getting hazardous waste cleared faster and more safely
 \end{itemize}
-\end{columns}
 \end{frame}
 
 % 4 -- Objectives
@@ -140,11 +141,11 @@ Municipal waste routes are typically \textbf{static and fixed}, ignoring the rea
 \textbf{\color{GEUBlue}Project Objectives}
 \vspace{1mm}
 \begin{enumerate}\itemsep4pt
-\item Model the city as a weighted graph -- depot, homes, junctions, and bins -- with every node and edge tagged by zone type (residential, commercial, industrial).
-\item Compute optimal collection routes using Dijkstra's shortest-path algorithm, with two selectable strategies: Priority mode and FIFO mode.
-\item Detect hazardous waste and dispatch it immediately via a zone-constrained shortest path that avoids residential and commercial areas.
-\item Dynamically determine collection frequency per location from its fill-rate, instead of a fixed calendar.
-\item Expose all functionality through a REST API and visualize live, animated route computation on a web frontend.
+\item Represent the city as a weighted graph, with the depot, homes, junctions, and bins as nodes, each one tagged by zone type -- residential, commercial, or industrial.
+\item Work out collection routes with Dijkstra's algorithm, letting the truck switch between two modes as needed: Priority or FIFO.
+\item Flag hazardous waste the moment it's detected and send it straight out on a zone-constrained path that steers clear of residential and commercial areas.
+\item Base collection frequency on how full a bin actually is, not on a fixed calendar.
+\item Put all of this behind a REST API, with the route computation playing out live and animated on the web frontend.
 \end{enumerate}
 \end{frame}
 
@@ -154,14 +155,14 @@ Municipal waste routes are typically \textbf{static and fixed}, ignoring the rea
 \textbf{\color{GEUBlue}Proposed Approach}
 \vspace{1mm}
 \begin{enumerate}\itemsep3pt
-\item \textbf{City layout} -- depot, homes, junctions, bins, and zone tags loaded from a JSON configuration file at server startup.
-\item \textbf{Routing engine} -- Dijkstra's algorithm (plain and zone-constrained variants) computes shortest paths between any two nodes.
-\item \textbf{Route builders} -- Priority and FIFO strategies sequence multi-stop collection routes.
-\item \textbf{Scheduler} -- fill-rate and last-collected timestamps determine which locations are due for a visit.
-\item \textbf{Delivery} -- results served as JSON over a REST API, animated live in a React frontend using Cytoscape.js.
+\item \textbf{City layout} -- at startup, the server reads the depot, homes, junctions, bins, and their zone tags straight from a JSON config file.
+\item \textbf{Routing engine} -- shortest paths between any two nodes come from Dijkstra's algorithm, run in either a plain or a zone-constrained variant.
+\item \textbf{Route builders} -- multi-stop collection runs get sequenced by whichever strategy is active, Priority or FIFO.
+\item \textbf{Scheduler} -- a location's fill-rate and how long it's been since its last pickup decide whether it's due for a visit.
+\item \textbf{Delivery} -- everything comes back as JSON over a REST API and plays out live in a React frontend built with Cytoscape.js.
 \end{enumerate}
 \vfill
-\smallnote{A single persistent C++ HTTP server owns the graph and performs routing, classification, and scheduling.}
+\smallnote{One persistent C++ HTTP server holds the graph and handles routing, classification, and scheduling end to end.}
 \end{frame}
 
 % 6 -- Proposed Solution: Key Features
@@ -171,21 +172,21 @@ Municipal waste routes are typically \textbf{static and fixed}, ignoring the rea
 \begin{columns}[T,totalwidth=\textwidth]
 \column{.48\textwidth}
 \begin{itemize}\itemsep3pt
-\item Graph-based city model with zone tagging
-\item Shortest-path routing (Priority / FIFO toggle)
-\item Rule-based waste classification (keyword matching)
+\item A city model built as a graph, with every node tagged by zone
+\item Shortest-path routing that toggles between Priority and FIFO
+\item Waste gets classified through rule-based keyword matching
 \end{itemize}
 \column{.48\textwidth}
 \begin{itemize}\itemsep3pt
-\item Hazardous waste: immediate, zone-constrained routing bypassing the normal queue
-\item Dynamic collection frequency driven by per-location fill-rate
-\item Live route animation with hazardous routes visually distinguished
+\item Hazardous waste skips the normal queue entirely and routes out on a zone-constrained path right away
+\item Collection frequency adjusts on its own based on how full each location is
+\item Routes animate live, with hazardous ones visually called out
 \end{itemize}
 \end{columns}
 \vfill
 \begin{center}
 \colorbox{GEULightBlue}{\parbox{.85\textwidth}{\centering
-Every feature maps directly to one of the five REST endpoints and one domain-layer C++ class -- see slides 10--14.}}
+Each of these maps to one of the five REST endpoints and a matching domain-layer C++ class -- see slides 10--14.}}
 \end{center}
 \end{frame}
 
@@ -198,15 +199,15 @@ Every feature maps directly to one of the five REST endpoints and one domain-lay
 \toprule
 Course & Concepts Applied\\
 \midrule
-Data Structures in C & Graph (adjacency list), Queue (FIFO), Priority queue / min-heap, Hash map (\texttt{unordered\_map}), Path reconstruction (vector/stack)\\
-OOPs with C++ & \textbf{Encapsulation} -- \texttt{Graph}'s node/adjacency maps are private, accessed only via public methods; \textbf{Abstraction} -- \texttt{Scheduler}/\texttt{Classifier} expose simple calls (\texttt{getDueLocations()}, \texttt{classifyWaste()}) that hide the underlying heap/keyword logic; \textbf{Inheritance} -- \texttt{PriorityRouteBuilder} and \texttt{FIFORouteBuilder} derive from a common \texttt{RouteStrategy} base; \textbf{Polymorphism} -- each overrides a virtual \texttt{buildRoute()} differently at runtime\\
+Data Structures in C & Graph (adjacency list), queue (FIFO), priority queue / min-heap, hash map (\texttt{unordered\_map}), and path reconstruction via vector/stack\\
+OOPs with C++ & \textbf{Encapsulation} -- \texttt{Graph} keeps its node/adjacency maps private and only reachable through public methods; \textbf{Abstraction} -- \texttt{Scheduler} and \texttt{Classifier} hide their heap and keyword logic behind simple calls like \texttt{getDueLocations()} and \texttt{classifyWaste()}; \textbf{Inheritance} -- \texttt{PriorityRouteBuilder} and \texttt{FIFORouteBuilder} both derive from a shared \texttt{RouteStrategy} base; \textbf{Polymorphism} -- each one overrides a virtual \texttt{buildRoute()} to behave differently at runtime\\
 \bottomrule
 \end{tabularx}
 \end{center}
 \vspace{2mm}
 \begin{center}
 \colorbox{GEULightBlue}{\parbox{.9\textwidth}{\centering\small
-\textbf{Integration:} The city graph (DSA: adjacency list, hashing, heaps, queues) is implemented as C++ classes applying all four OOP pillars, exposing Dijkstra, routing, and scheduling as one cohesive backend.}}
+\textbf{Integration:} The city graph -- built on adjacency lists, hashing, heaps, and queues from DSA -- comes together as a set of C++ classes that put all four OOP pillars to use, tying Dijkstra, routing, and scheduling into one working backend.}}
 \end{center}
 \end{frame}
 
@@ -229,9 +230,9 @@ arrow/.style={-{Latex[length=2.2mm]},thick,draw=GEUBlue}
 \end{center}
 \vspace{6mm}
 \begin{itemize}\itemsep3pt
-\item Single persistent process owns the graph in memory -- fast, no per-request re-parsing
-\item Layered backend: HTTP layer $\to$ controllers $\to$ pure, testable domain classes
-\item Same-origin static file serving + API -- no CORS complexity
+\item The graph lives in memory inside one persistent process, so there's no re-parsing on every request
+\item The backend is layered -- HTTP layer $\to$ controllers $\to$ pure, testable domain classes
+\item Static files and the API share the same origin, so CORS never becomes an issue
 \end{itemize}
 \end{frame}
 
@@ -242,20 +243,20 @@ arrow/.style={-{Latex[length=2.2mm]},thick,draw=GEUBlue}
 \small
 \textbf{\color{GEUBlue}Major Components}
 \begin{itemize}\itemsep2pt
-\item \texttt{Graph} -- \texttt{Node}, \texttt{Edge}, zone tags, \texttt{unordered\_map} adjacency list
-\item Routing engine -- plain + constrained Dijkstra, Priority/FIFO route builders
-\item Classifier -- keyword-rule waste categorization
-\item Scheduler -- fill-rate driven due-date computation
-\item REST controllers -- one handler per endpoint
+\item \texttt{Graph} -- \texttt{Node}, \texttt{Edge}, zone tags, held in an \texttt{unordered\_map} adjacency list
+\item Routing engine, covering plain and constrained Dijkstra plus the Priority/FIFO route builders
+\item Classifier, which sorts waste using keyword rules
+\item Scheduler, which works out due dates from fill-rate
+\item REST controllers, one per endpoint
 \end{itemize}
 \column{.48\textwidth}
 \small
 \textbf{\color{GEUBlue}Data / Control Flow}
 \begin{itemize}\itemsep2pt
-\item Frontend calls \texttt{/route}, \texttt{/classify}, \texttt{/schedule}, \texttt{/route/hazard}
-\item Backend loads \texttt{city.json} once at startup
-\item Fill-rate / last-collected state mutates in memory as locations are visited
-\item Response: JSON path + cost, animated on the graph canvas
+\item The frontend calls \texttt{/route}, \texttt{/classify}, \texttt{/schedule}, and \texttt{/route/hazard}
+\item The backend loads \texttt{city.json} just once, at startup
+\item Fill-rate and last-collected values change in memory as locations get visited
+\item Every response comes back as a JSON path plus cost, then animates on the graph canvas
 \end{itemize}
 \end{columns}
 \end{frame}
@@ -267,22 +268,22 @@ arrow/.style={-{Latex[length=2.2mm]},thick,draw=GEUBlue}
 \column{.5\textwidth}
 \textbf{\color{GEUBlue}\texttt{Node}}
 \begin{itemize}\itemsep2pt
-\item \texttt{id}, \texttt{type} (Depot/Home/Junction/Bin)
+\item \texttt{id} and \texttt{type} (Depot/Home/Junction/Bin)
 \item \texttt{zone} (Residential/Commercial/Industrial/Arterial)
 \item \texttt{fillRate}, \texttt{capacity}, \texttt{lastCollected}
 \end{itemize}
 \vspace{1mm}
 \textbf{\color{GEUBlue}\texttt{Edge}}
 \begin{itemize}\itemsep2pt
-\item \texttt{to}, \texttt{weight} (travel cost)
-\item \texttt{zone} tag of the road segment itself
+\item \texttt{to} and \texttt{weight} (travel cost)
+\item Its own \texttt{zone} tag, separate from either endpoint's
 \end{itemize}
 \column{.5\textwidth}
 \textbf{\color{GEUBlue}\texttt{Graph} class}
 \begin{itemize}\itemsep2pt
 \item Backed by \texttt{unordered\_map<string, vector<Edge>>}
-\item O(1) average node lookup, O(degree) edge iteration
-\item \texttt{loadFromJson()}, \texttt{neighbors()}, \texttt{toJson()}
+\item Node lookup runs O(1) on average, edge iteration O(degree)
+\item Exposes \texttt{loadFromJson()}, \texttt{neighbors()}, \texttt{toJson()}
 \end{itemize}
 \end{columns}
 \vspace{2mm}
@@ -317,7 +318,7 @@ Vector (Path Reconstruction) & Backtrack predecessor pointers into an ordered li
 % 12 -- Graph Storage Architecture
 \begin{frame}[fragile]{Graph Storage -- Adjacency List Architecture}
 \footnotesize
-Backing store: \texttt{unordered\_map<string, vector<Edge>>} $\to$ $O(1)$ node lookup, $O(\text{degree})$ edge iteration.
+The graph sits on an \texttt{unordered\_map<string, vector<Edge>>}, which keeps node lookup at $O(1)$ and edge iteration at $O(\text{degree})$.
 \vspace{1mm}
 \begin{columns}[T,totalwidth=\textwidth]
 \column{.34\textwidth}
@@ -350,8 +351,8 @@ lbl/.style={font=\tiny,draw=none,fill=none}
 \end{tabularx}
 \end{columns}
 \begin{itemize}\itemsep1pt
-\item Each \texttt{Edge} carries its own zone tag -- lets the constrained variant treat it as impassable
-\item Loaded once from \texttt{city.json} at startup; edges default to bidirectional
+\item Every \texttt{Edge} carries its own zone tag, which is what lets the constrained variant treat it as impassable
+\item Everything loads once from \texttt{city.json} at startup, and edges default to bidirectional
 \end{itemize}
 \end{frame}
 
@@ -376,10 +377,10 @@ arrow/.style={-{Latex[length=2mm]},thick,draw=GEUBlue}
 \end{center}
 \vspace{1mm}
 \begin{enumerate}\itemsep2pt
-\item \texttt{dist[source]=0}, all others $\infty$; push source into a min-heap keyed by distance.
-\item Pop node \texttt{u} with smallest tentative distance.
-\item \textbf{Relax} edge \texttt{(u,v,w)}: if \texttt{dist[u]+w < dist[v]}, update \texttt{dist[v]} and push \texttt{v}.
-\item Reconstruct the path by walking a predecessor map back to the source.
+\item Set \texttt{dist[source]=0} and everything else to $\infty$, then push the source into a min-heap keyed by distance.
+\item Pop whichever node \texttt{u} currently has the smallest tentative distance.
+\item \textbf{Relax} edge \texttt{(u,v,w)}: if \texttt{dist[u]+w} beats \texttt{dist[v]}, update \texttt{dist[v]} and push \texttt{v}.
+\item Walk the predecessor map back to the source to reconstruct the path.
 \end{enumerate}
 \vfill
 \smallnote{Complexity: $O((V+E)\log V)$ with a binary heap.}
@@ -388,7 +389,7 @@ arrow/.style={-{Latex[length=2mm]},thick,draw=GEUBlue}
 % 14 -- Custom Constrained Dijkstra
 \begin{frame}[fragile]{Custom Constrained Dijkstra for Hazardous Routing}
 \footnotesize
-EcoGraph adds one parameter, \texttt{forbiddenZones}: during relaxation, any edge whose zone is in this set is skipped entirely, as if it did not exist.
+EcoGraph adds a single extra parameter, \texttt{forbiddenZones}. During relaxation, any edge whose zone falls in that set gets skipped entirely -- as far as the algorithm's concerned, it isn't even there.
 \vspace{1mm}
 \begin{center}
 \begin{tikzpicture}[
@@ -407,15 +408,15 @@ lbl/.style={font=\tiny,draw=none,fill=none}
 \end{center}
 \vspace{1mm}
 \begin{itemize}\itemsep1pt
-\item Shorter path via R1 (cost 4) is residential -- \textbf{skipped}; algorithm instead takes J1$\to$IN1$\to$BIN (cost 8) through industrial zones only
-\item Called with \texttt{forbiddenZones = \{Residential, Commercial\}} for every hazardous dispatch; returns HTTP 422 if no path exists
+\item The shorter path through R1 costs only 4, but it's residential, so it's \textbf{skipped} -- the algorithm takes J1$\to$IN1$\to$BIN instead, cost 8, staying entirely in industrial zones
+\item Every hazardous dispatch calls this with \texttt{forbiddenZones = \{Residential, Commercial\}}; if no path clears those zones, it returns HTTP 422
 \end{itemize}
 \end{frame}
 
 % 15 -- Fill-Rate & Frequency Management: Formula
 \begin{frame}[fragile]{Fill-Rate \& Frequency Management -- Interval Formula}
 \footnotesize
-Each home/bin stores \texttt{fillRate} (units/day), \texttt{capacity}, and \texttt{lastCollected}. The scheduler turns these into a per-location visit interval:
+Each home or bin stores \texttt{fillRate} (units/day), \texttt{capacity}, and \texttt{lastCollected}. From these, the scheduler works out a visit interval per location:
 \vspace{1mm}
 \begin{center}
 \colorbox{GEULightBlue}{\parbox{.7\textwidth}{\centering
@@ -433,9 +434,9 @@ Each home/bin stores \texttt{fillRate} (units/day), \texttt{capacity}, and \text
 \end{tikzpicture}
 \end{center}
 \begin{itemize}\itemsep1pt
-\item \textbf{Floor of 1 day} -- stops an extremely fast-filling bin from demanding more than one visit per day
-\item \textbf{Ceiling of 14 days} -- guarantees no location goes unvisited more than two weeks, however slowly it fills
-\item Due when \texttt{now} $\ge$ \texttt{lastCollected + interval\_days}; \texttt{markCollected()} resets \texttt{lastCollected = now} once visited
+\item A \textbf{floor of 1 day} keeps a fast-filling bin from demanding more than one visit per day
+\item A \textbf{ceiling of 14 days} means no location ever waits more than two weeks, no matter how slowly it fills
+\item A location becomes due once \texttt{now} $\ge$ \texttt{lastCollected + interval\_days}; visiting it calls \texttt{markCollected()}, which resets \texttt{lastCollected} to now
 \end{itemize}
 \end{frame}
 
@@ -458,7 +459,7 @@ B2 & 100 & 2/day & 100/2 = 50 $\to$ 14 & 20 days ago & \textbf{Due} -- 6 days ov
 \vspace{2mm}
 \begin{center}
 \colorbox{GEULightBlue}{\parbox{.9\textwidth}{\centering
-Max-heap serving order (most overdue first): \textbf{B2 (6d)} $\to$ \textbf{B1 (2.5d)} $\to$ \textbf{H2 (1d)}; H1 stays off today's list.}}
+The max-heap serves the most overdue first: \textbf{B2 (6d)} $\to$ \textbf{B1 (2.5d)} $\to$ \textbf{H2 (1d)} -- H1 stays off today's list.}}
 \end{center}
 \end{frame}
 
@@ -485,21 +486,9 @@ arrow/.style={-{Latex[length=1.8mm]},thick,draw=GEUBlue}
 \end{center}
 \vspace{2mm}
 \begin{itemize}\itemsep2pt
-\item Each run, the scheduler's due list (frequency-driven) becomes the \texttt{homeIds} array sent to \texttt{POST /route} -- this \textit{is} how truck stops are chosen
-\item If a description classifies as \textbf{hazardous}, its location skips the due list entirely and is dispatched immediately via \texttt{POST /route/hazard}
-\item Non-hazardous waste never overrides the schedule -- its location simply waits for its fill-rate interval to elapse (previous slide)
-\end{itemize}
-\end{frame}
-
-% 17 -- Waste Classification Subsystem
-\begin{frame}{Waste Classification Subsystem}
-\small
-\begin{itemize}\itemsep4pt
-\item Keyword rules loaded from \texttt{waste\_rules.json}: each category maps to a keyword list and a hazard flag.
-\item Categories: recyclable, compost, general, \textbf{medical}, \textbf{chemical}.
-\item A description is matched against \textbf{medical} and \textbf{chemical} keywords \textit{first} -- hazard classification always takes priority, even if a recyclable keyword also appears (e.g. ``plastic syringe'' $\to$ medical).
-\item Falls back to \texttt{general} if no keyword matches.
-\item Output: bin type + a boolean hazardous flag, which triggers the constrained-routing path instead of the normal queue/schedule.
+\item Every run, the scheduler's due list feeds straight into the \texttt{homeIds} array sent to \texttt{POST /route} -- that's the actual mechanism deciding which stops the truck makes
+\item Anything the classifier flags as \textbf{hazardous} skips the due list altogether and goes out immediately through \texttt{POST /route/hazard}
+\item Non-hazardous waste never jumps the schedule -- it just waits for its fill-rate interval to run out, as covered on the previous slide
 \end{itemize}
 \end{frame}
 
@@ -538,25 +527,6 @@ GET /schedule & Homes/bins due for collection today\\
 \end{itemize}
 \end{frame}
 
-% 14 -- Technology Stack
-\begin{frame}{Technology Stack}
-\begin{block}{Backend}
-\begin{itemize}\itemsep3pt
-\item Programming Language: C++
-\item HTTP Framework: cpp-httplib (single-header)
-\item JSON Library: nlohmann/json (header-only)
-\item Build System: CMake
-\end{itemize}
-\end{block}
-\vspace{3mm}
-\begin{block}{Frontend \& Tooling}
-\begin{itemize}\itemsep3pt
-\item React (Vite) for the UI, built to a static bundle
-\item Cytoscape.js for graph rendering and route animation
-\item Version Control: Git / GitHub
-\end{itemize}
-\end{block}
-\end{frame}
 
 % 15a -- Deployment
 \begin{frame}{Deployment -- Hosting the Live Demo}
@@ -581,6 +551,26 @@ arrow/.style={-{Latex[length=2mm]},thick,draw=GEUBlue}
 \item Hosted on a small cloud VM / free-tier PaaS (Render, Railway, Fly.io), reverse-proxied through Nginx/Caddy for HTTPS
 \item \texttt{city.json} / schedule state persisted via a mounted volume so restarts don't lose data
 \end{itemize}
+\end{frame}
+
+% 14 -- Technology Stack
+\begin{frame}{Technology Stack}
+\begin{block}{Backend}
+\begin{itemize}\itemsep3pt
+\item Programming Language: C++
+\item HTTP Framework: cpp-httplib (single-header)
+\item JSON Library: nlohmann/json (header-only)
+\item Build System: CMake
+\end{itemize}
+\end{block}
+\vspace{3mm}
+\begin{block}{Frontend \& Tooling}
+\begin{itemize}\itemsep3pt
+\item React (Vite) for the UI, built to a static bundle
+\item Cytoscape.js for graph rendering and route animation
+\item Version Control: Git / GitHub
+\end{itemize}
+\end{block}
 \end{frame}
 
 % 15 -- Development Methodology

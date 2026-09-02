@@ -1,0 +1,26 @@
+\frametitle{Selecting Truck Stops -- Frequency + Waste Type}
+\footnotesize
+\begin{center}
+\begin{tikzpicture}[
+node distance=4mm,
+box/.style={rectangle,rounded corners,draw=GEUBlue,fill=GEULightBlue,minimum width=2.1cm,minimum height=9mm,align=center,font=\tiny},
+arrow/.style={-{Latex[length=1.8mm]},thick,draw=GEUBlue}
+]
+\node[box] (a) {Fill-rate \&\\capacity data};
+\node[box,right=of a] (b) {Scheduler\\\texttt{getDueLocations()}};
+\node[box,right=of b] (c) {Due IDs, ranked\\by overdue-ness};
+\node[box,right=of c] (d) {\texttt{POST /route}\\\{homeIds, mode\}};
+\node[box,right=of d] (e) {Truck's\\stop list};
+\draw[arrow] (a)--(b); \draw[arrow] (b)--(c); \draw[arrow] (c)--(d); \draw[arrow] (d)--(e);
+\node[box,below=9mm of a,xshift=8mm] (f) {Waste\\description};
+\node[box,right=of f] (g) {\texttt{classifyWaste()}};
+\draw[arrow] (f)--(g);
+\draw[arrow,red] (g) to[out=45,in=225] node[midway,below,font=\tiny,red]{hazardous -- immediate} (d.south);
+\end{tikzpicture}
+\end{center}
+\vspace{2mm}
+\begin{itemize}\itemsep2pt
+\item Every run, the scheduler's due list feeds straight into the \texttt{homeIds} array sent to \texttt{POST /route} -- that's the actual mechanism deciding which stops the truck makes
+\item Anything the classifier flags as \textbf{hazardous} skips the due list altogether and goes out immediately through \texttt{POST /route/hazard}
+\item Non-hazardous waste never jumps the schedule -- it just waits for its fill-rate interval to run out, as covered on the previous slide
+\end{itemize}

@@ -139,12 +139,12 @@ const DatabaseView = (() => {
     const table = $('db-log');
     table.replaceChildren();
     header(table, [['day', 'Day'], ['date', 'Date'], ['id', 'Location'], ['type', 'Type'], ['action', 'Action'],
-                   ['overdueByDays', 'Overdue (d)'], ['percentFull', '% full when collected']], false);
+                   ['truck', 'Truck'], ['overdueByDays', 'Overdue (d)'], ['percentFull', '% full when collected']], false);
     const tbody = document.createElement('tbody');
     if (!data.log.length) {
       const tr = document.createElement('tr');
       const td = cell('No collections yet. Run the simulation with auto-collect, or mark a route collected.');
-      td.colSpan = 7;
+      td.colSpan = 8;
       tr.appendChild(td);
       tbody.appendChild(tr);
     }
@@ -155,6 +155,7 @@ const DatabaseView = (() => {
       tr.appendChild(cell(e.id));
       tr.appendChild(cell(e.type));
       tr.appendChild(cell(e.action));
+      tr.appendChild(cell(e.truck || '-'));
       tr.appendChild(cell(num(e.overdueByDays), 'num'));
       tr.appendChild(cell(num(e.percentFull, 0) + '%', 'num'));
       tbody.appendChild(tr);

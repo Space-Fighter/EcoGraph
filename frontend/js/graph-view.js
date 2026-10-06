@@ -39,6 +39,7 @@ const GraphView = (() => {
           'text-background-color': t.edgeLabelBg, 'text-background-opacity': 0.85, 'text-background-padding': 2,
           'curve-style': 'bezier' } },
       { selector: 'node.due', style: { 'border-color': t.due, 'border-width': 5 } },
+      { selector: 'node.overflow', style: { 'border-color': t.hazard, 'border-width': 6 } },
       { selector: 'node.visited', style: { 'border-color': t.route, 'border-width': 5 } },
       { selector: 'edge.route', style: { 'line-color': t.route, width: 6, 'z-index': 10 } },
       { selector: 'edge.hazard-edge', style: { 'line-color': t.hazard, 'line-style': 'dashed', width: 6, 'z-index': 10 } },
@@ -120,9 +121,10 @@ const GraphView = (() => {
     }
   }
 
-  function markDue(ids) {
-    cy.nodes().removeClass('due');
+  function markDue(ids, overflowIds) {
+    cy.nodes().removeClass('due overflow');
     ids.forEach((id) => cy.getElementById(id).addClass('due'));
+    (overflowIds || []).forEach((id) => cy.getElementById(id).addClass('overflow'));
   }
 
   // Needed after the canvas was hidden (Database tab) and shown again.

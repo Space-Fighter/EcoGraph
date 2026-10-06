@@ -22,14 +22,20 @@ struct RouteResult {
     std::vector<std::string> unreachable;       // homes/bins that could not be reached
 };
 
-// Base class: concrete builders decide the visiting order (Polymorphism) and share the
-// helpers below (Inheritance). Hazardous homes are always filtered out first.
+// Both modes work on locations that are due (the fill-rate schedule decides *when*);
+// a strategy only decides the *order* in which a truck serves them (Polymorphism).
+// buildRoute() is shared (Inheritance): split off hazardous homes, order the rest,
+// drive depot -> homes in that order, then unload at the nearest suitable bins.
 class RouteStrategy {
 public:
     virtual ~RouteStrategy() {}
     virtual std::string mode() const = 0;
-    virtual RouteResult buildRoute(const Graph& g, const std::vector<std::string>& homeIds,
-                                   std::time_t now) const = 0;
+    // Visiting order for the given homes. Must be deterministic.
+    virtual std::vector<std::string> order(const Graph& g, const std::vector<std::string>& homeIds,
+                                           std::time_t now) const = 0;
+
+    RouteResult buildRoute(const Graph& g, const std::vector<std::string>& homeIds,
+                           std::time_t now) const;
 
 protected:
     // Splits homeIds into safe homes and hazardous ones using classifyWaste().
@@ -43,20 +49,21 @@ protected:
     static std::string depotId(const Graph& g);
 };
 
-// Most urgent (most overdue) home first; goes to a bin after every home.
+// Most urgent first: highest % full (closest to / past overflowing). Ties go to the
+// location that became due first (FIFO), then by id.
 class PriorityRouteBuilder : public RouteStrategy {
 public:
     std::string mode() const override { return "priority"; }
-    RouteResult buildRoute(const Graph& g, const std::vector<std::string>& homeIds,
-                           std::time_t now) const override;
+    std::vector<std::string> order(const Graph& g, const std::vector<std::string>& homeIds,
+                                   std::time_t now) const override;
 };
 
-// Homes in the order given (a queue), then disposal at the bins on the way out.
+// First come, first served: the location that became due first goes first, then by id.
 class FIFORouteBuilder : public RouteStrategy {
 public:
     std::string mode() const override { return "fifo"; }
-    RouteResult buildRoute(const Graph& g, const std::vector<std::string>& homeIds,
-                           std::time_t now) const override;
+    std::vector<std::string> order(const Graph& g, const std::vector<std::string>& homeIds,
+                                   std::time_t now) const override;
 };
 
 // Returns nullptr for an unknown mode.

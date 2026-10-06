@@ -1,8 +1,7 @@
 #include "router.hpp"
 
-#include <queue>
+#include <algorithm>
 #include <set>
-#include <utility>
 
 #include "dijkstra.hpp"
 #include "scheduler.hpp"
@@ -50,7 +49,7 @@ bool RouteStrategy::addLeg(const Graph& g, RouteResult& r, const std::string& fr
 std::string RouteStrategy::nearestBin(const Graph& g, const std::string& from,
                                       const std::string& binType) {
     std::vector<std::string> bins = g.nodeIdsByType(NodeType::Bin);
-    const char* preference[2] = {nullptr, "general"};
+    // pass 0: bins of the wanted type, pass 1: general bins, pass 2: any non-hazardous bin
     for (int pass = 0; pass < 3; ++pass) {
         std::string best;
         double bestCost = -1;
@@ -58,7 +57,7 @@ std::string RouteStrategy::nearestBin(const Graph& g, const std::string& from,
             const std::string& bt = g.getNode(bins[i]).binType;
             if (isHazardousBinType(bt)) continue;
             if (pass == 0 && bt != binType) continue;
-            if (pass == 1 && bt != preference[1]) continue;
+            if (pass == 1 && bt != "general") continue;
             PathResult p = shortestPath(g, from, bins[i]);
             if (p.cost >= 0 && (bestCost < 0 || p.cost < bestCost)) {
                 bestCost = p.cost;
@@ -70,67 +69,25 @@ std::string RouteStrategy::nearestBin(const Graph& g, const std::string& from,
     return std::string();
 }
 
-// ---------------------------------------------------------------- Priority
-
-RouteResult PriorityRouteBuilder::buildRoute(const Graph& g, const std::vector<std::string>& homeIds,
-                                             std::time_t now) const {
+RouteResult RouteStrategy::buildRoute(const Graph& g, const std::vector<std::string>& homeIds,
+                                      std::time_t now) const {
     RouteResult r;
     r.mode = mode();
     std::vector<std::string> safe;
     splitHazardous(g, homeIds, safe, r.skippedHazardous);
-
-    // Max-heap: most overdue home comes out first.
-    Scheduler sched;
-    std::priority_queue<std::pair<double, std::string> > heap;
-    for (size_t i = 0; i < safe.size(); ++i) {
-        heap.push(std::make_pair(sched.overdueByDays(g.getNode(safe[i]), now), safe[i]));
-    }
-
-    std::string current = depotId(g);
-    while (!heap.empty()) {
-        std::string home = heap.top().second;
-        heap.pop();
-        if (!addLeg(g, r, current, home, current + "->" + home)) {
-            r.unreachable.push_back(home);
-            continue;
-        }
-        current = home;
-        std::string bin = nearestBin(g, current, classifyWaste(g.getNode(home).wasteDescription).binType);
-        if (bin.empty() || !addLeg(g, r, current, bin, current + "->" + bin)) {
-            if (!bin.empty()) r.unreachable.push_back(bin);
-            continue;
-        }
-        current = bin;
-    }
-    return r;
-}
-
-// ---------------------------------------------------------------- FIFO
-
-RouteResult FIFORouteBuilder::buildRoute(const Graph& g, const std::vector<std::string>& homeIds,
-                                         std::time_t) const {
-    RouteResult r;
-    r.mode = mode();
-    std::vector<std::string> safe;
-    splitHazardous(g, homeIds, safe, r.skippedHazardous);
-
-    std::queue<std::string> pending;
-    for (size_t i = 0; i < safe.size(); ++i) pending.push(safe[i]);
+    std::vector<std::string> ordered = order(g, safe, now);
 
     std::string current = depotId(g);
     std::vector<std::string> binTypes;  // distinct bin types needed, in pickup order
-    while (!pending.empty()) {
-        std::string home = pending.front();
-        pending.pop();
+    for (size_t i = 0; i < ordered.size(); ++i) {
+        const std::string& home = ordered[i];
         if (!addLeg(g, r, current, home, current + "->" + home)) {
             r.unreachable.push_back(home);
             continue;
         }
         current = home;
         std::string bt = classifyWaste(g.getNode(home).wasteDescription).binType;
-        bool seen = false;
-        for (size_t i = 0; i < binTypes.size(); ++i) seen = seen || binTypes[i] == bt;
-        if (!seen) binTypes.push_back(bt);
+        if (std::find(binTypes.begin(), binTypes.end(), bt) == binTypes.end()) binTypes.push_back(bt);
     }
 
     // After the last pickup, unload at one bin per collected waste type.
@@ -146,6 +103,38 @@ RouteResult FIFORouteBuilder::buildRoute(const Graph& g, const std::vector<std::
         }
     }
     return r;
+}
+
+// ---------------------------------------------------------------- Priority / FIFO
+
+std::vector<std::string> PriorityRouteBuilder::order(const Graph& g,
+                                                     const std::vector<std::string>& homeIds,
+                                                     std::time_t now) const {
+    Scheduler sched;
+    std::vector<std::string> out = homeIds;
+    std::sort(out.begin(), out.end(), [&](const std::string& a, const std::string& b) {
+        const Node& na = g.getNode(a);
+        const Node& nb = g.getNode(b);
+        double pa = sched.percentFull(na, now), pb = sched.percentFull(nb, now);
+        if (pa != pb) return pa > pb;                                   // fullest first
+        std::time_t da = sched.nextDue(na), db = sched.nextDue(nb);
+        if (da != db) return da < db;                                   // tie: due first (FIFO)
+        return a < b;
+    });
+    return out;
+}
+
+std::vector<std::string> FIFORouteBuilder::order(const Graph& g,
+                                                 const std::vector<std::string>& homeIds,
+                                                 std::time_t) const {
+    Scheduler sched;
+    std::vector<std::string> out = homeIds;
+    std::sort(out.begin(), out.end(), [&](const std::string& a, const std::string& b) {
+        std::time_t da = sched.nextDue(g.getNode(a)), db = sched.nextDue(g.getNode(b));
+        if (da != db) return da < db;  // became due earlier -> served earlier
+        return a < b;
+    });
+    return out;
 }
 
 std::unique_ptr<RouteStrategy> makeRouteStrategy(const std::string& mode) {

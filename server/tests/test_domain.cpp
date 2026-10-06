@@ -118,19 +118,30 @@ static void testScheduler() {
     CHECK(s.getDueLocations(g, NOW).size() == 1);
 }
 
-// DEPOT -1- J -1- HA / HB / BIN; HA is far from BIN, HB is closer.
+// DEPOT -1- J -1- H1 / H2 / H3 / BIN.
+//   H1: fast filler, 125% full now, but only became due half a day ago
+//   H2: slow filler, 120% full now, became due two days ago
+//   H3: hazardous (never part of a normal route)
+// Priority (fullest first) must pick H1 first; FIFO (due first) must pick H2 first.
 static Graph makeRouteGraph() {
     Graph g;
     g.addNode(mk("DEPOT", NodeType::Depot, ZoneType::Industrial));
     g.addNode(mk("J", NodeType::Junction, ZoneType::Arterial));
-    for (int i = 0; i < 3; ++i) {
-        std::string id = i == 0 ? "H1" : i == 1 ? "H2" : "H3";
-        Node h = mk(id, NodeType::Home, ZoneType::Residential);
-        h.fillRate = 20; h.capacity = 100;
-        h.wasteDescription = i == 2 ? "used syringe" : "plastic bottle";
-        h.lastCollected = NOW - static_cast<std::time_t>((i == 0 ? 6 : 9) * DAY);  // H2 more overdue
-        g.addNode(h);
-    }
+    Node h1 = mk("H1", NodeType::Home, ZoneType::Residential);
+    h1.fillRate = 50; h1.capacity = 100;  // interval 2 days
+    h1.lastCollected = NOW - static_cast<std::time_t>(2.5 * DAY);
+    h1.wasteDescription = "plastic bottle";
+    Node h2 = mk("H2", NodeType::Home, ZoneType::Residential);
+    h2.fillRate = 10; h2.capacity = 100;  // interval 10 days
+    h2.lastCollected = NOW - static_cast<std::time_t>(12 * DAY);
+    h2.wasteDescription = "plastic bottle";
+    Node h3 = mk("H3", NodeType::Home, ZoneType::Residential);
+    h3.fillRate = 20; h3.capacity = 100;
+    h3.lastCollected = NOW - static_cast<std::time_t>(9 * DAY);
+    h3.wasteDescription = "used syringe";
+    g.addNode(h1);
+    g.addNode(h2);
+    g.addNode(h3);
     Node b = mk("BIN", NodeType::Bin, ZoneType::Industrial);
     b.binType = "recyclable";
     g.addNode(b);
@@ -147,20 +158,54 @@ static void testRouters() {
     std::vector<std::string> homes;
     homes.push_back("H1"); homes.push_back("H2"); homes.push_back("H3");
 
-    RouteResult fifo = makeRouteStrategy("fifo")->buildRoute(g, homes, NOW);
-    CHECK(fifo.skippedHazardous.size() == 1 && fifo.skippedHazardous[0] == "H3");
-    CHECK(fifo.segments.size() == 3);  // DEPOT>H1, H1>H2, H2>BIN
-    CHECK(fifo.segments[0].label == "DEPOT->H1");
-    CHECK(fifo.segments[1].label == "H1->H2");
-    CHECK(fifo.segments[2].label == "H2->BIN");
-    CHECK(near(fifo.totalCost, 2 + 3 + 5));
+    std::vector<std::string> safe;
+    safe.push_back("H1"); safe.push_back("H2");
 
+    // Ordering: Priority = fullest first, FIFO = became due first.
+    std::vector<std::string> p = makeRouteStrategy("priority")->order(g, safe, NOW);
+    CHECK(join(p) == "H1>H2");
+    std::vector<std::string> f = makeRouteStrategy("fifo")->order(g, safe, NOW);
+    CHECK(join(f) == "H2>H1");
+    // Input order must not matter.
+    std::vector<std::string> rev;
+    rev.push_back("H2"); rev.push_back("H1");
+    CHECK(join(makeRouteStrategy("priority")->order(g, rev, NOW)) == "H1>H2");
+
+    // Routes follow that order, then unload at the bin; hazardous H3 is pulled out.
     RouteResult pri = makeRouteStrategy("priority")->buildRoute(g, homes, NOW);
-    CHECK(pri.segments.size() == 4);  // DEPOT>H2, H2>BIN, BIN>H1, H1>BIN
-    CHECK(pri.segments[0].label == "DEPOT->H2");  // H2 is the most overdue
-    CHECK(pri.segments[2].label == "BIN->H1");
+    CHECK(pri.skippedHazardous.size() == 1 && pri.skippedHazardous[0] == "H3");
+    CHECK(pri.segments.size() == 3);
+    CHECK(pri.segments[0].label == "DEPOT->H1");
+    CHECK(pri.segments[1].label == "H1->H2");
+    CHECK(pri.segments[2].label == "H2->BIN");
+    CHECK(near(pri.totalCost, 2 + 3 + 5));
+
+    RouteResult fifo = makeRouteStrategy("fifo")->buildRoute(g, homes, NOW);
+    CHECK(fifo.segments.size() == 3);
+    CHECK(fifo.segments[0].label == "DEPOT->H2");
+    CHECK(fifo.segments[1].label == "H2->H1");
+    CHECK(fifo.segments[2].label == "H1->BIN");
 
     CHECK(makeRouteStrategy("bogus") == nullptr);
+}
+
+// Equal % full: the tie goes to whoever became due first.
+static void testPriorityTieBreak() {
+    Graph g;
+    g.addNode(mk("DEPOT", NodeType::Depot, ZoneType::Industrial));
+    Node a = mk("A", NodeType::Home, ZoneType::Residential);
+    a.fillRate = 20; a.capacity = 100;  // interval 5, 110% after 5.5 days, due 0.5 d ago
+    a.lastCollected = NOW - static_cast<std::time_t>(5.5 * DAY);
+    Node b = mk("B", NodeType::Home, ZoneType::Residential);
+    b.fillRate = 10; b.capacity = 100;  // interval 10, 110% after 11 days, due 1 d ago
+    b.lastCollected = NOW - static_cast<std::time_t>(11 * DAY);
+    g.addNode(a);
+    g.addNode(b);
+    Scheduler s;
+    CHECK(near(s.percentFull(g.getNode("A"), NOW), s.percentFull(g.getNode("B"), NOW)));
+    std::vector<std::string> ids;
+    ids.push_back("A"); ids.push_back("B");
+    CHECK(join(makeRouteStrategy("priority")->order(g, ids, NOW)) == "B>A");
 }
 
 static void testHazard() {
@@ -181,6 +226,7 @@ int main() {
     testClassifier();
     testScheduler();
     testRouters();
+    testPriorityTieBreak();
     testHazard();
     if (failures == 0) {
         std::cout << "All domain tests passed" << std::endl;

@@ -35,7 +35,8 @@ const Api = (() => {
     postRouteHazard: (locationId) => request('POST', 'route/hazard', { locationId }),
     postCollect: (ids) => request('POST', 'collect', { ids }),
     getSimulation: () => request('GET', 'simulation'),
-    advance: (days, autoCollect) => request('POST', 'simulate/advance', { days, autoCollect }),
+    // params: { days, autoCollect, mode, normalTrucks, normalCapacity, hazardTrucks }
+    advance: (params) => request('POST', 'simulate/advance', params),
     resetSimulation: () => request('POST', 'simulate/reset', {}),
     getDatabase: () => request('GET', 'database'),
   };

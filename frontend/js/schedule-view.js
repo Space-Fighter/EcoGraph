@@ -24,7 +24,7 @@ const ScheduleView = (() => {
       li.append(name, late);
       list.appendChild(li);
     });
-    GraphView.markDue(schedule.due.map((d) => d.id));
+    GraphView.markDue(schedule.due.map((d) => d.id), schedule.overflow || []);
   }
 
   async function refresh() {

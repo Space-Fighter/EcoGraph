@@ -108,18 +108,28 @@ json nodeRow(const Graph& g, const Node& n, const Scheduler& sched, std::time_t 
 }
 
 json dayReportToJson(const DayReport& r) {
+    json trucks = json::array();
+    for (size_t i = 0; i < r.trucks.size(); ++i) {
+        const TruckRun& t = r.trucks[i];
+        trucks.push_back({{"id", t.id},
+                          {"kind", t.kind},
+                          {"homes", t.homes},
+                          {"load", t.load},
+                          {"capacity", t.capacity},
+                          {"cost", t.cost},
+                          {"bin", t.bin},
+                          {"segments", segmentsToJson(t.segments)}});
+    }
     return {{"day", r.day},
             {"date", formatDate(r.time)},
             {"due", r.due},
-            {"overflowCount", r.overflowCount},
-            {"collected", r.collected},
-            {"hazardCollected", r.hazardCollected},
+            {"overflowIds", r.overflowIds},
+            {"overflowCount", r.overflowIds.size()},
+            {"trucks", trucks},
+            {"carriedOver", r.carriedOver},
             {"emptiedBins", r.emptiedBins},
             {"failed", r.failed},
-            {"routeCost", r.routeCost},
-            {"hazardCost", r.hazardCost},
-            {"segments", segmentsToJson(r.segments)},
-            {"hazardSegments", segmentsToJson(r.hazardSegments)}};
+            {"totalCost", r.totalCost}};
 }
 
 json simStatus(const Simulation& sim) {
@@ -259,7 +269,17 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
                            {"type", nodeTypeToString(d[i].type)},
                            {"overdueByDays", d[i].overdueByDays}});
         }
-        sendJson(res, 200, {{"ok", true}, {"date", formatDate(now)}, {"day", state.sim.day()}, {"due", due}});
+        json overflow = json::array();  // already past 100% full: the thing we want to avoid
+        std::vector<std::string> ids = state.graph.nodeIds();
+        for (size_t i = 0; i < ids.size(); ++i) {
+            const Node& n = state.graph.getNode(ids[i]);
+            if ((n.type == NodeType::Home || n.type == NodeType::Bin) &&
+                state.scheduler.percentFull(n, now) > 100.0) {
+                overflow.push_back(n.id);
+            }
+        }
+        sendJson(res, 200, {{"ok", true}, {"date", formatDate(now)}, {"day", state.sim.day()},
+                            {"due", due}, {"overflow", overflow}});
     });
 
     // POST /collect   {"ids": ["H1", ...]}  -- marks locations as just collected
@@ -293,23 +313,47 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
         sendJson(res, 200, j);
     });
 
-    // POST /simulate/advance   {"days": 1..60, "autoCollect": true|false}
+    // POST /simulate/advance
+    //   {"days": 1..60, "autoCollect": bool, "mode": "priority"|"fifo",
+    //    "normalTrucks": 0..20, "normalCapacity": >0, "hazardTrucks": 0..10}
     svr.Post("/simulate/advance", [&state](const httplib::Request& req, httplib::Response& res) {
-        json body;
+        json body = json::object();
         if (!req.body.empty() && !parseBody(req, res, body)) return;
-        if (body.is_null()) body = json::object();
-        int days = body.value("days", 1);
-        bool autoCollect = body.value("autoCollect", false);
-        if (days < 1 || days > 60) {
-            sendError(res, 400, "bad_days", "days must be between 1 and 60");
-            return;
+        try {
+            int days = body.value("days", 1);
+            bool autoCollect = body.value("autoCollect", false);
+            std::string mode = body.value("mode", std::string("priority"));
+            Fleet fleet;
+            fleet.normalTrucks = body.value("normalTrucks", fleet.normalTrucks);
+            fleet.normalCapacity = body.value("normalCapacity", fleet.normalCapacity);
+            fleet.hazardTrucks = body.value("hazardTrucks", fleet.hazardTrucks);
+
+            if (days < 1 || days > 60) {
+                sendError(res, 400, "bad_days", "days must be between 1 and 60");
+                return;
+            }
+            std::unique_ptr<RouteStrategy> strategy = makeRouteStrategy(mode);
+            if (!strategy) {
+                sendError(res, 400, "bad_mode", "mode must be \"priority\" or \"fifo\"");
+                return;
+            }
+            if (fleet.normalTrucks < 0 || fleet.normalTrucks > 20 || fleet.hazardTrucks < 0 ||
+                fleet.hazardTrucks > 10 || !(fleet.normalCapacity > 0) || fleet.normalCapacity > 100000) {
+                sendError(res, 400, "bad_fleet",
+                          "normalTrucks 0-20, hazardTrucks 0-10, normalCapacity 1-100000");
+                return;
+            }
+
+            std::lock_guard<std::mutex> lock(state.mutex);
+            json reports = json::array();
+            for (int i = 0; i < days; ++i) {
+                reports.push_back(dayReportToJson(
+                    state.sim.advanceDay(state.graph, state.scheduler, autoCollect, *strategy, fleet)));
+            }
+            sendJson(res, 200, {{"ok", true}, {"simulation", simStatus(state.sim)}, {"days", reports}});
+        } catch (const json::exception&) {
+            sendError(res, 400, "bad_params", "Simulation parameters have the wrong type");
         }
-        std::lock_guard<std::mutex> lock(state.mutex);
-        json reports = json::array();
-        for (int i = 0; i < days; ++i) {
-            reports.push_back(dayReportToJson(state.sim.advanceDay(state.graph, state.scheduler, autoCollect)));
-        }
-        sendJson(res, 200, {{"ok", true}, {"simulation", simStatus(state.sim)}, {"days", reports}});
     });
 
     // POST /simulate/reset  -- reload the original city data and go back to day 0
@@ -368,6 +412,7 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
                            {"id", e.id},
                            {"type", nodeTypeToString(e.type)},
                            {"action", e.action},
+                           {"truck", e.truck},
                            {"overdueByDays", e.overdueByDays},
                            {"percentFull", e.percentFull}});
         }

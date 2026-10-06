@@ -36,6 +36,17 @@
         <div class="row">
           <label><input type="checkbox" id="sim-auto" checked> Auto-collect what is due each day</label>
         </div>
+        <div class="fleet">
+          <label>Order
+            <select id="sim-mode">
+              <option value="priority">Priority (fullest first)</option>
+              <option value="fifo">FIFO (first due first)</option>
+            </select>
+          </label>
+          <label>Normal trucks <input type="number" id="fleet-normal" value="2" min="0" max="20"></label>
+          <label>Capacity / truck <input type="number" id="fleet-capacity" value="200" min="1" max="100000"></label>
+          <label>Hazard trucks <input type="number" id="fleet-hazard" value="1" min="0" max="10"></label>
+        </div>
         <div class="row buttons">
           <button id="sim-step">+1 day</button>
           <input type="number" id="sim-days" value="10" min="1" max="60" title="Days to play">
@@ -47,40 +58,8 @@
       </section>
 
       <section>
-        <h2>1. Plan a collection route</h2>
-        <div class="row">
-          <label><input type="radio" name="mode" value="priority" checked> Priority <small>(most overdue first)</small></label>
-          <label><input type="radio" name="mode" value="fifo"> FIFO <small>(order selected)</small></label>
-        </div>
-        <div id="home-list" class="home-list"></div>
-        <div class="row buttons">
-          <button id="btn-route" class="primary">Compute route</button>
-          <button id="btn-due">Select due homes</button>
-          <button id="btn-collect" disabled>Mark route collected</button>
-        </div>
-      </section>
-
-      <section>
-        <h2>2. Check waste / hazard dispatch</h2>
-        <div class="row">
-          <input id="waste-input" type="text" placeholder="e.g. used plastic syringe">
-          <button id="btn-classify">Classify</button>
-        </div>
-        <div class="row">
-          <select id="hazard-location"></select>
-          <button id="btn-hazard" class="danger">Dispatch hazard truck</button>
-        </div>
-        <div id="classify-result" class="note"></div>
-      </section>
-
-      <section>
-        <h2>3. Due for collection <small id="schedule-date"></small></h2>
+        <h2>Due for collection <small id="schedule-date"></small></h2>
         <ul id="due-list" class="due-list"></ul>
-      </section>
-
-      <section>
-        <h2>Result</h2>
-        <div id="result" class="result">Nothing computed yet.</div>
       </section>
     </aside>
 
@@ -130,6 +109,7 @@
         <span><i class="sw industrial"></i>industrial</span>
         <span><i class="sw arterial"></i>arterial</span>
         <span><i class="sw due"></i>due now</span>
+        <span><i class="sw overflow"></i>overflowing</span>
         <span><i class="line route"></i>route</span>
         <span><i class="line hazard"></i>hazard route</span>
       </div>
@@ -141,7 +121,6 @@
   <script src="js/api.js"></script>
   <script src="js/graph-view.js"></script>
   <script src="js/schedule-view.js"></script>
-  <script src="js/controls.js"></script>
   <script src="js/database-view.js"></script>
   <script src="js/simulation-view.js"></script>
   <script src="js/theme.js"></script>

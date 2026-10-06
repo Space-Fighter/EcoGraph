@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EcoRouting Engine</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <h1>EcoRouting Engine</h1>
+    <span class="sub">Hazard-aware path optimisation &amp; fill-rate-adaptive waste scheduling</span>
+    <span id="status" class="status">connecting…</span>
+  </header>
+
+  <main>
+    <aside>
+      <section>
+        <h2>1. Plan a collection route</h2>
+        <div class="row">
+          <label><input type="radio" name="mode" value="priority" checked> Priority <small>(most overdue first)</small></label>
+          <label><input type="radio" name="mode" value="fifo"> FIFO <small>(order selected)</small></label>
+        </div>
+        <div id="home-list" class="home-list"></div>
+        <div class="row buttons">
+          <button id="btn-route" class="primary">Compute route</button>
+          <button id="btn-due">Select due homes</button>
+          <button id="btn-collect" disabled>Mark route collected</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>2. Check waste / hazard dispatch</h2>
+        <div class="row">
+          <input id="waste-input" type="text" placeholder="e.g. used plastic syringe">
+          <button id="btn-classify">Classify</button>
+        </div>
+        <div class="row">
+          <select id="hazard-location"></select>
+          <button id="btn-hazard" class="danger">Dispatch hazard truck</button>
+        </div>
+        <div id="classify-result" class="note"></div>
+      </section>
+
+      <section>
+        <h2>3. Due for collection <small id="schedule-date"></small></h2>
+        <ul id="due-list" class="due-list"></ul>
+      </section>
+
+      <section>
+        <h2>Result</h2>
+        <div id="result" class="result">Nothing computed yet.</div>
+      </section>
+    </aside>
+
+    <div class="canvas-wrap">
+      <div id="cy"></div>
+      <div class="legend">
+        <span><i class="sw residential"></i>residential</span>
+        <span><i class="sw commercial"></i>commercial</span>
+        <span><i class="sw industrial"></i>industrial</span>
+        <span><i class="sw arterial"></i>arterial</span>
+        <span><i class="sw due"></i>due now</span>
+        <span><i class="line route"></i>route</span>
+        <span><i class="line hazard"></i>hazard route</span>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.2/cytoscape.min.js"></script>
+  <script src="config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/graph-view.js"></script>
+  <script src="js/schedule-view.js"></script>
+  <script src="js/controls.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

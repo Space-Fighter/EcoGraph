@@ -1,11 +1,5 @@
 # EcoGraph — Smart Waste Collection Routing & Scheduling System
 
-[![C++17](https://img.shields.io/badge/C%2B%2B-17-00599C?style=flat-square&logo=c%2B%2B)](https://isocpp.org/)
-[![HTTP Framework](https://img.shields.io/badge/HTTP-cpp--httplib-brightgreen?style=flat-square)](https://github.com/yhirose/cpp-httplib)
-[![JSON Engine](https://img.shields.io/badge/JSON-nlohmann%2Fjson-blue?style=flat-square)](https://github.com/nlohmann/json)
-[![Frontend Canvas](https://img.shields.io/badge/Frontend-Cytoscape.js-orange?style=flat-square)](https://js.cytoscape.org/)
-[![License](https://img.shields.io/badge/License-MIT-lightgrey?style=flat-square)](LICENSE)
-
 > **EcoGraph** is an algorithmic, graph-based waste management system built with a high-performance **C++17 backend** and an interactive **Cytoscape.js visualizer**. It replaces inefficient fixed collection routes with **dynamic shortest-path routing**, **zone-constrained hazardous material dispatching**, **fill-rate-adaptive scheduling**, and **time-step simulation**.
 
 ---

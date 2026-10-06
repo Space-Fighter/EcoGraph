@@ -5,13 +5,18 @@
 
 #include "graph.hpp"
 #include "httplib.h"
+#include <string>
+
 #include "scheduler.hpp"
+#include "simulation.hpp"
 
 // Everything the handlers share. One mutex guards the graph because the scheduler
 // mutates lastCollected while other requests are reading it.
 struct AppState {
     Graph graph;
     Scheduler scheduler;
+    Simulation sim;         // simulated calendar + collection log
+    std::string cityPath;   // kept so /simulate/reset can reload the original data
     std::mutex mutex;
 };
 

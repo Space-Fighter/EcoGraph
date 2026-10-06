@@ -25,6 +25,23 @@ bool Scheduler::isDue(const Node& n, std::time_t now) const {
     return overdueByDays(n, now) >= 0;
 }
 
+double Scheduler::daysSinceCollected(const Node& n, std::time_t now) const {
+    return static_cast<double>(now - n.lastCollected) / SECONDS_PER_DAY;
+}
+
+double Scheduler::fillLevel(const Node& n, std::time_t now) const {
+    double days = daysSinceCollected(n, now);
+    return days > 0 ? n.fillRate * days : 0.0;
+}
+
+double Scheduler::percentFull(const Node& n, std::time_t now) const {
+    return n.capacity > 0 ? 100.0 * fillLevel(n, now) / n.capacity : 0.0;
+}
+
+std::time_t Scheduler::nextDue(const Node& n) const {
+    return n.lastCollected + static_cast<std::time_t>(computeInterval(n) * SECONDS_PER_DAY);
+}
+
 std::vector<DueLocation> Scheduler::getDueLocations(const Graph& g, std::time_t now) const {
     typedef std::pair<double, std::string> Entry;
     std::priority_queue<Entry> heap;  // max-heap on overdue-ness

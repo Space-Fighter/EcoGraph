@@ -1,17 +1,55 @@
 // Cytoscape canvas: rendering, zone styling and route animation.
 const GraphView = (() => {
-  const ZONE_COLOR = {
-    residential: '#8fd19e',
-    commercial: '#8fb8e8',
-    industrial: '#b8b8b8',
-    arterial: '#f0efe9',
+  // Cytoscape cannot read CSS variables, so the palette is mirrored here per theme.
+  // Zone fill colours match --res/--com/--ind/--art in style.css (used by the legend).
+  const THEMES = {
+    light: {
+      zone: { residential: '#8fd19e', commercial: '#8fb8e8', industrial: '#b8b8b8', arterial: '#f0efe9' },
+      edge: { residential: '#5aa56b', commercial: '#5b8fd0', industrial: '#8a8a8a', arterial: '#c3c0b4' },
+      text: '#1c1c1c', nodeBorder: '#555555', depotBorder: '#143769',
+      edgeLabel: '#444444', edgeLabelBg: '#ffffff',
+      due: '#f59e0b', route: '#143769', hazard: '#d62828',
+    },
+    dark: {
+      zone: { residential: '#4f9e63', commercial: '#4d7fc2', industrial: '#7d8591', arterial: '#566070' },
+      edge: { residential: '#3f7d50', commercial: '#3d65a0', industrial: '#5f6670', arterial: '#4a5362' },
+      text: '#e6e9ee', nodeBorder: '#aab4c3', depotBorder: '#8ab4f8',
+      edgeLabel: '#c5cdd9', edgeLabelBg: '#11161d',
+      due: '#fbbf24', route: '#7db3ff', hazard: '#ef5350',
+    },
   };
-  const ZONE_EDGE = {
-    residential: '#5aa56b',
-    commercial: '#5b8fd0',
-    industrial: '#8a8a8a',
-    arterial: '#c3c0b4',
-  };
+
+  function currentTheme() {
+    return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+  }
+
+  function buildStyle(t) {
+    return [
+      { selector: 'node', style: {
+          label: 'data(label)', 'font-size': 11, 'text-valign': 'bottom', 'text-margin-y': 4, color: t.text,
+          'background-color': (n) => t.zone[n.data('zone')] || '#ddd',
+          'border-width': 2, 'border-color': t.nodeBorder, width: 30, height: 30 } },
+      { selector: 'node[type="depot"]', style: { shape: 'rectangle', width: 40, height: 40, 'border-width': 3, 'border-color': t.depotBorder, 'font-weight': 'bold' } },
+      { selector: 'node[type="home"]', style: { shape: 'ellipse' } },
+      { selector: 'node[type="bin"]', style: { shape: 'triangle', width: 36, height: 36 } },
+      { selector: 'node[type="junction"]', style: { shape: 'ellipse', width: 14, height: 14, 'font-size': 9 } },
+      { selector: 'edge', style: {
+          width: 3, 'line-color': (e) => t.edge[e.data('zone')] || '#bbb',
+          label: 'data(label)', 'font-size': 9, color: t.edgeLabel,
+          'text-background-color': t.edgeLabelBg, 'text-background-opacity': 0.85, 'text-background-padding': 2,
+          'curve-style': 'bezier' } },
+      { selector: 'node.due', style: { 'border-color': t.due, 'border-width': 5 } },
+      { selector: 'node.visited', style: { 'border-color': t.route, 'border-width': 5 } },
+      { selector: 'edge.route', style: { 'line-color': t.route, width: 6, 'z-index': 10 } },
+      { selector: 'edge.hazard-edge', style: { 'line-color': t.hazard, 'line-style': 'dashed', width: 6, 'z-index': 10 } },
+      { selector: 'node.hazard-visited', style: { 'border-color': t.hazard, 'border-width': 5 } },
+    ];
+  }
+
+  // Re-skins the canvas without touching positions or highlighted routes.
+  function applyTheme() {
+    if (cy) cy.style(buildStyle(THEMES[currentTheme()]));
+  }
 
   let cy = null;
   let animationToken = 0;  // bumping this cancels an animation in progress
@@ -37,26 +75,7 @@ const GraphView = (() => {
       elements,
       layout: { name: 'preset', padding: 40 },
       wheelSensitivity: 0.3,
-      style: [
-        { selector: 'node', style: {
-            label: 'data(label)', 'font-size': 11, 'text-valign': 'bottom', 'text-margin-y': 4,
-            'background-color': (n) => ZONE_COLOR[n.data('zone')] || '#ddd',
-            'border-width': 2, 'border-color': '#555', width: 30, height: 30 } },
-        { selector: 'node[type="depot"]', style: { shape: 'rectangle', width: 40, height: 40, 'border-width': 3, 'border-color': '#143769', 'font-weight': 'bold' } },
-        { selector: 'node[type="home"]', style: { shape: 'ellipse' } },
-        { selector: 'node[type="bin"]', style: { shape: 'triangle', width: 36, height: 36 } },
-        { selector: 'node[type="junction"]', style: { shape: 'ellipse', width: 14, height: 14, 'font-size': 9 } },
-        { selector: 'edge', style: {
-            width: 3, 'line-color': (e) => ZONE_EDGE[e.data('zone')] || '#bbb',
-            label: 'data(label)', 'font-size': 9, color: '#444',
-            'text-background-color': '#fff', 'text-background-opacity': 0.85, 'text-background-padding': 2,
-            'curve-style': 'bezier' } },
-        { selector: 'node.due', style: { 'border-color': '#f59e0b', 'border-width': 5 } },
-        { selector: 'node.visited', style: { 'border-color': '#143769', 'border-width': 5 } },
-        { selector: 'edge.route', style: { 'line-color': '#143769', width: 6, 'z-index': 10 } },
-        { selector: 'edge.hazard-edge', style: { 'line-color': '#d62828', 'line-style': 'dashed', width: 6, 'z-index': 10 } },
-        { selector: 'node.hazard-visited', style: { 'border-color': '#d62828', 'border-width': 5 } },
-      ],
+      style: buildStyle(THEMES[currentTheme()]),
     });
     cy.fit(undefined, 40);
     return cy;
@@ -106,5 +125,12 @@ const GraphView = (() => {
     ids.forEach((id) => cy.getElementById(id).addClass('due'));
   }
 
-  return { init, animateRoute, clearRoute, markDue };
+  // Needed after the canvas was hidden (Database tab) and shown again.
+  function resize() {
+    if (!cy) return;
+    cy.resize();
+    cy.fit(undefined, 40);
+  }
+
+  return { init, animateRoute, clearRoute, markDue, resize, applyTheme };
 })();

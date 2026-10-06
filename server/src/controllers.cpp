@@ -1,7 +1,9 @@
 #include "controllers.hpp"
 
 #include <ctime>
+#include <map>
 
+#include "city_loader.hpp"
 #include "dijkstra.hpp"
 #include "json.hpp"
 #include "router.hpp"
@@ -67,11 +69,61 @@ json nodeToJson(const Node& n, const Scheduler& sched, std::time_t now) {
     return j;
 }
 
-std::string todayString(std::time_t now) {
-    char buf[16];
-    std::tm* t = std::localtime(&now);
-    std::strftime(buf, sizeof(buf), "%Y-%m-%d", t);
-    return buf;
+const char* statusOf(const Node& n, const Scheduler& sched, std::time_t now) {
+    if (n.type != NodeType::Home && n.type != NodeType::Bin) return "n/a";
+    if (sched.percentFull(n, now) > 100.0) return "overflow";
+    return sched.isDue(n, now) ? "due" : "ok";
+}
+
+// One row of the "database" view: everything known about a node on the simulated date.
+json nodeRow(const Graph& g, const Node& n, const Scheduler& sched, std::time_t now) {
+    json row = {{"id", n.id},
+                {"type", nodeTypeToString(n.type)},
+                {"zone", zoneToString(n.zone)},
+                {"status", statusOf(n, sched, now)}};
+    json neighbours = json::array();
+    const std::vector<Edge>& es = g.neighbors(n.id);
+    for (size_t i = 0; i < es.size(); ++i) neighbours.push_back(es[i].to);
+    row["connections"] = neighbours;
+
+    if (n.type == NodeType::Home || n.type == NodeType::Bin) {
+        row["fillRate"] = n.fillRate;
+        row["capacity"] = n.capacity;
+        row["fillLevel"] = sched.fillLevel(n, now);
+        row["percentFull"] = sched.percentFull(n, now);
+        row["lastCollected"] = formatDate(n.lastCollected);
+        row["daysSinceCollected"] = sched.daysSinceCollected(n, now);
+        row["intervalDays"] = sched.computeInterval(n);
+        row["nextDue"] = formatDate(sched.nextDue(n));
+        row["overdueByDays"] = sched.overdueByDays(n, now);
+    }
+    if (n.type == NodeType::Bin) row["binType"] = n.binType;
+    if (n.type == NodeType::Home) {
+        ClassificationResult c = classifyWaste(n.wasteDescription);
+        row["waste"] = n.wasteDescription;
+        row["binType"] = c.binType;
+        row["hazardous"] = c.hazardous;
+    }
+    return row;
+}
+
+json dayReportToJson(const DayReport& r) {
+    return {{"day", r.day},
+            {"date", formatDate(r.time)},
+            {"due", r.due},
+            {"overflowCount", r.overflowCount},
+            {"collected", r.collected},
+            {"hazardCollected", r.hazardCollected},
+            {"emptiedBins", r.emptiedBins},
+            {"failed", r.failed},
+            {"routeCost", r.routeCost},
+            {"hazardCost", r.hazardCost},
+            {"segments", segmentsToJson(r.segments)},
+            {"hazardSegments", segmentsToJson(r.hazardSegments)}};
+}
+
+json simStatus(const Simulation& sim) {
+    return {{"day", sim.day()}, {"date", formatDate(sim.now())}, {"startDate", formatDate(sim.startTime())}};
 }
 
 }  // namespace
@@ -92,7 +144,7 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
     // GET /graph
     svr.Get("/graph", [&state](const httplib::Request&, httplib::Response& res) {
         std::lock_guard<std::mutex> lock(state.mutex);
-        std::time_t now = std::time(nullptr);
+        std::time_t now = state.sim.now();
         json nodes = json::array(), edges = json::array();
         std::vector<std::string> ids = state.graph.nodeIds();
         for (size_t i = 0; i < ids.size(); ++i) {
@@ -145,7 +197,7 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
             }
         }
 
-        RouteResult r = strategy->buildRoute(state.graph, homeIds, std::time(nullptr));
+        RouteResult r = strategy->buildRoute(state.graph, homeIds, state.sim.now());
         sendJson(res, 200,
                  {{"ok", true},
                   {"mode", r.mode},
@@ -199,7 +251,7 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
     // GET /schedule
     svr.Get("/schedule", [&state](const httplib::Request&, httplib::Response& res) {
         std::lock_guard<std::mutex> lock(state.mutex);
-        std::time_t now = std::time(nullptr);
+        std::time_t now = state.sim.now();
         json due = json::array();
         std::vector<DueLocation> d = state.scheduler.getDueLocations(state.graph, now);
         for (size_t i = 0; i < d.size(); ++i) {
@@ -207,7 +259,7 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
                            {"type", nodeTypeToString(d[i].type)},
                            {"overdueByDays", d[i].overdueByDays}});
         }
-        sendJson(res, 200, {{"ok", true}, {"date", todayString(now)}, {"due", due}});
+        sendJson(res, 200, {{"ok", true}, {"date", formatDate(now)}, {"day", state.sim.day()}, {"due", due}});
     });
 
     // POST /collect   {"ids": ["H1", ...]}  -- marks locations as just collected
@@ -227,9 +279,100 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
             }
             ids.push_back(v.get<std::string>());
         }
-        std::time_t now = std::time(nullptr);
-        for (size_t i = 0; i < ids.size(); ++i) state.scheduler.markCollected(state.graph, ids[i], now);
+        for (size_t i = 0; i < ids.size(); ++i) {
+            state.sim.collect(state.graph, state.scheduler, ids[i], "manual");
+        }
         sendJson(res, 200, {{"ok", true}, {"collected", ids}});
+    });
+
+    // GET /simulation
+    svr.Get("/simulation", [&state](const httplib::Request&, httplib::Response& res) {
+        std::lock_guard<std::mutex> lock(state.mutex);
+        json j = simStatus(state.sim);
+        j["ok"] = true;
+        sendJson(res, 200, j);
+    });
+
+    // POST /simulate/advance   {"days": 1..60, "autoCollect": true|false}
+    svr.Post("/simulate/advance", [&state](const httplib::Request& req, httplib::Response& res) {
+        json body;
+        if (!req.body.empty() && !parseBody(req, res, body)) return;
+        if (body.is_null()) body = json::object();
+        int days = body.value("days", 1);
+        bool autoCollect = body.value("autoCollect", false);
+        if (days < 1 || days > 60) {
+            sendError(res, 400, "bad_days", "days must be between 1 and 60");
+            return;
+        }
+        std::lock_guard<std::mutex> lock(state.mutex);
+        json reports = json::array();
+        for (int i = 0; i < days; ++i) {
+            reports.push_back(dayReportToJson(state.sim.advanceDay(state.graph, state.scheduler, autoCollect)));
+        }
+        sendJson(res, 200, {{"ok", true}, {"simulation", simStatus(state.sim)}, {"days", reports}});
+    });
+
+    // POST /simulate/reset  -- reload the original city data and go back to day 0
+    svr.Post("/simulate/reset", [&state](const httplib::Request&, httplib::Response& res) {
+        std::lock_guard<std::mutex> lock(state.mutex);
+        try {
+            state.graph = loadCity(state.cityPath, state.sim.startTime());
+        } catch (const std::exception& e) {
+            sendError(res, 500, "reload_failed", e.what());
+            return;
+        }
+        state.sim.start(state.sim.startTime());
+        sendJson(res, 200, {{"ok", true}, {"simulation", simStatus(state.sim)}});
+    });
+
+    // GET /database  -- node table, per-zone summary and the collection log
+    svr.Get("/database", [&state](const httplib::Request&, httplib::Response& res) {
+        std::lock_guard<std::mutex> lock(state.mutex);
+        std::time_t now = state.sim.now();
+
+        json nodes = json::array();
+        std::map<std::string, json> zones;
+        std::vector<std::string> ids = state.graph.nodeIds();
+        for (size_t i = 0; i < ids.size(); ++i) {
+            const Node& n = state.graph.getNode(ids[i]);
+            nodes.push_back(nodeRow(state.graph, n, state.scheduler, now));
+
+            json& z = zones[zoneToString(n.zone)];
+            if (z.is_null()) {
+                z = {{"zone", zoneToString(n.zone)}, {"nodes", 0}, {"collectable", 0}, {"due", 0},
+                     {"overflow", 0}, {"avgPercentFull", 0.0}, {"totalFillRate", 0.0}};
+            }
+            z["nodes"] = z["nodes"].get<int>() + 1;
+            if (n.type == NodeType::Home || n.type == NodeType::Bin) {
+                z["collectable"] = z["collectable"].get<int>() + 1;
+                z["avgPercentFull"] = z["avgPercentFull"].get<double>() + state.scheduler.percentFull(n, now);
+                z["totalFillRate"] = z["totalFillRate"].get<double>() + n.fillRate;
+                if (state.scheduler.isDue(n, now)) z["due"] = z["due"].get<int>() + 1;
+                if (state.scheduler.percentFull(n, now) > 100.0) z["overflow"] = z["overflow"].get<int>() + 1;
+            }
+        }
+        json zoneArr = json::array();
+        for (std::map<std::string, json>::iterator it = zones.begin(); it != zones.end(); ++it) {
+            json z = it->second;
+            int c = z["collectable"].get<int>();
+            z["avgPercentFull"] = c ? z["avgPercentFull"].get<double>() / c : 0.0;
+            zoneArr.push_back(z);
+        }
+
+        json log = json::array();
+        const std::vector<LogEntry>& entries = state.sim.log();
+        for (size_t i = entries.size(); i-- > 0 && log.size() < 300;) {  // newest first
+            const LogEntry& e = entries[i];
+            log.push_back({{"day", e.day},
+                           {"date", formatDate(e.time)},
+                           {"id", e.id},
+                           {"type", nodeTypeToString(e.type)},
+                           {"action", e.action},
+                           {"overdueByDays", e.overdueByDays},
+                           {"percentFull", e.percentFull}});
+        }
+        sendJson(res, 200, {{"ok", true}, {"simulation", simStatus(state.sim)}, {"nodes", nodes},
+                            {"zones", zoneArr}, {"log", log}});
     });
 
     svr.set_exception_handler([](const httplib::Request&, httplib::Response& res, std::exception_ptr) {

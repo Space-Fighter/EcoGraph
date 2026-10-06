@@ -12,6 +12,7 @@ set(CORE_SOURCES
     src/waste_classifier.cpp
     src/scheduler.cpp
     src/router.cpp
+    src/simulation.cpp
     src/city_loader.cpp)
 
 add_library(core STATIC ${CORE_SOURCES})
@@ -27,7 +28,7 @@ else()
 endif()
 
 enable_testing()
-foreach(t test_dijkstra test_domain)
+foreach(t test_dijkstra test_domain test_simulation)
   add_executable(${t} tests/${t}.cpp)
   target_link_libraries(${t} core)
   add_test(NAME ${t} COMMAND ${t})

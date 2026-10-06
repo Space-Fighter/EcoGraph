@@ -21,6 +21,11 @@ public:
     double overdueByDays(const Node& n, std::time_t now) const;  // negative = not yet due
     bool isDue(const Node& n, std::time_t now) const;
 
+    double daysSinceCollected(const Node& n, std::time_t now) const;
+    double fillLevel(const Node& n, std::time_t now) const;    // units, can exceed capacity
+    double percentFull(const Node& n, std::time_t now) const;  // >100 means overflowing
+    std::time_t nextDue(const Node& n) const;                  // lastCollected + interval
+
     // Due homes/bins, most overdue first (max-heap order).
     std::vector<DueLocation> getDueLocations(const Graph& g, std::time_t now) const;
 

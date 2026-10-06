@@ -106,6 +106,7 @@ const Controls = (() => {
       await Api.postCollect(lastRouteHomes);
       $('btn-collect').disabled = true;
       await ScheduleView.refresh();
+      await DatabaseView.refreshIfVisible();
       showResult(['Marked collected: ' + lastRouteHomes.join(', ')]);
     } catch (e) { showError(e); }
   }

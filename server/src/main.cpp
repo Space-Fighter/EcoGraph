@@ -25,8 +25,11 @@ int main(int argc, char** argv) {
     const char* cors = std::getenv("CORS_ORIGIN");
 
     AppState state;
+    state.cityPath = cityPath;
     try {
-        state.graph = loadCity(cityPath, std::time(nullptr));
+        std::time_t base = std::time(nullptr);
+        state.graph = loadCity(cityPath, base);
+        state.sim.start(base);
     } catch (const std::exception& e) {
         std::cerr << "Failed to load city: " << e.what() << std::endl;
         return 1;

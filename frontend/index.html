@@ -4,17 +4,48 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>EcoRouting Engine</title>
+  <script>
+    // Pick the theme before first paint (saved choice, else OS preference).
+    (function () {
+      var theme = 'light';
+      try {
+        var saved = localStorage.getItem('eco-theme');
+        if (saved === 'dark' || saved === 'light') theme = saved;
+        else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) theme = 'dark';
+      } catch (e) {}
+      document.documentElement.dataset.theme = theme;
+    })();
+  </script>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <header>
     <h1>EcoRouting Engine</h1>
     <span class="sub">Hazard-aware path optimisation &amp; fill-rate-adaptive waste scheduling</span>
-    <span id="status" class="status">connecting…</span>
+    <div class="header-right">
+      <button id="theme-toggle" type="button" aria-pressed="false">Dark mode</button>
+      <span id="status" class="status">connecting…</span>
+    </div>
   </header>
 
   <main>
     <aside>
+      <section>
+        <h2>Simulation <small id="sim-date"></small></h2>
+        <div class="row"><strong id="sim-day">Day 0</strong></div>
+        <div class="row">
+          <label><input type="checkbox" id="sim-auto" checked> Auto-collect what is due each day</label>
+        </div>
+        <div class="row buttons">
+          <button id="sim-step">+1 day</button>
+          <input type="number" id="sim-days" value="10" min="1" max="60" title="Days to play">
+          <button id="sim-play" class="primary">&#9654; Play days</button>
+          <button id="sim-stop" disabled>Stop</button>
+          <button id="sim-reset">Reset</button>
+        </div>
+        <ul id="sim-history" class="due-list history"></ul>
+      </section>
+
       <section>
         <h2>1. Plan a collection route</h2>
         <div class="row">
@@ -54,7 +85,45 @@
     </aside>
 
     <div class="canvas-wrap">
+      <div class="tabs">
+        <button class="tab active" data-tab="map">Map</button>
+        <button class="tab" data-tab="db">Database</button>
+      </div>
       <div id="cy"></div>
+
+      <div id="db-panel" class="db-panel" hidden>
+        <div class="db-toolbar">
+          <input type="text" id="db-search" placeholder="Search id, waste, zone…">
+          <select id="db-type">
+            <option value="">All types</option>
+            <option value="home">Homes</option>
+            <option value="bin">Bins</option>
+            <option value="junction">Junctions</option>
+            <option value="depot">Depot</option>
+          </select>
+          <select id="db-zone">
+            <option value="">All zones</option>
+            <option value="residential">Residential</option>
+            <option value="commercial">Commercial</option>
+            <option value="industrial">Industrial</option>
+            <option value="arterial">Arterial</option>
+          </select>
+          <select id="db-status">
+            <option value="">Any status</option>
+            <option value="ok">OK</option>
+            <option value="due">Due</option>
+            <option value="overflow">Overflow</option>
+          </select>
+          <span id="db-asof" class="db-asof"></span>
+        </div>
+        <h3>Nodes</h3>
+        <div class="table-wrap"><table id="db-nodes"></table></div>
+        <h3>Areas (zones)</h3>
+        <div class="table-wrap"><table id="db-zones"></table></div>
+        <h3>Collection log <small>(newest first)</small></h3>
+        <div class="table-wrap"><table id="db-log"></table></div>
+      </div>
+
       <div class="legend">
         <span><i class="sw residential"></i>residential</span>
         <span><i class="sw commercial"></i>commercial</span>
@@ -73,6 +142,9 @@
   <script src="js/graph-view.js"></script>
   <script src="js/schedule-view.js"></script>
   <script src="js/controls.js"></script>
+  <script src="js/database-view.js"></script>
+  <script src="js/simulation-view.js"></script>
+  <script src="js/theme.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

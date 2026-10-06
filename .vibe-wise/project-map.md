@@ -13,7 +13,9 @@ EcoRouting Engine: shortest-path garbage routing, hazard-aware dispatch avoiding
 - include/controllers.hpp, src/controllers.cpp: handlers; src/main.cpp: bootstrap
 - third_party/httplib.h (cpp-httplib 0.59.0), third_party/json.hpp (nlohmann 3.11.3)
 - frontend/: index.html, config.js (ECO_API_BASE), css/style.css, js/{api,graph-view,controls,schedule-view,app}.js; Cytoscape 3.30.2 from cdnjs
-- tests: server/tests/test_dijkstra.cpp, test_domain.cpp
+- include/simulation.hpp, src/simulation.cpp: Simulation (simulated day clock, advanceDay with optional auto-collect, collection log); endpoints GET /simulation, /database, POST /simulate/advance, /simulate/reset
+- frontend/js/simulation-view.js (play/step days, animates each day), database-view.js (node table, zone summary, collection log)
+- tests: server/tests/test_dijkstra.cpp, test_domain.cpp, test_simulation.cpp
 
 ## Main Flow
 Browser (Cytoscape) -> fetch JSON -> cpp-httplib -> controllers (mutex-guarded AppState) -> Graph/Router/Classifier/Scheduler -> in-memory state loaded from data/city.json

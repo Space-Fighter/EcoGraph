@@ -107,7 +107,28 @@ input[type=text], input[type=number], select { font: inherit; font-size: 13px; p
 .tabs { position: absolute; top: 0; left: 0; right: 0; height: 38px; display: flex; gap: 4px; padding: 5px 10px 0; background: var(--bg-head); border-bottom: 1px solid var(--border); z-index: 5; }
 .tab { border-radius: 6px 6px 0 0; border-bottom: 0; background: var(--bg-tab); }
 .tab.active { background: var(--bg); font-weight: 600; color: var(--accent); }
-#cy { position: absolute; top: 38px; left: 0; right: 0; bottom: 0; background: var(--bg); }
+.tab-action { margin-left: auto; margin-bottom: 4px; padding: 3px 10px; font-size: 12px; }
+#cy { position: absolute; top: 38px; left: 0; right: 0; bottom: 0; background: var(--bg); z-index: 1; }
+#map { position: absolute; top: 38px; left: 0; right: 0; bottom: 0; z-index: 0; display: none; background: var(--bg); }
+
+/* With real map tiles: Leaflet is the interactive layer, Cytoscape draws on top of it. */
+.map-mode #map { display: block; }
+.map-mode #cy { background: transparent; pointer-events: none; }
+
+.leaflet-container { font: inherit; }
+.leaflet-tooltip { background: var(--bg-card); color: var(--text); border-color: var(--border); box-shadow: 0 1px 4px rgba(0,0,0,.3); }
+.leaflet-tooltip-top:before { border-top-color: var(--border); }
+.leaflet-tooltip.area-label {
+  background: transparent; border: 0; box-shadow: none; font-size: 11px; font-weight: 700;
+  color: var(--accent); text-shadow: 0 0 3px var(--bg), 0 0 3px var(--bg), 0 0 5px var(--bg); pointer-events: none;
+}
+.leaflet-tooltip.area-label:before { display: none; }
+.leaflet-container.zoom-low .area-label { display: none; }
+.leaflet-container { background: var(--bg); }
+.leaflet-control-zoom a { color: #1c1c1c; }
+
+.builder-msg { font-size: 12px; color: var(--muted); }
+.builder-msg.error { color: var(--red); }
 
 .db-panel { position: absolute; top: 38px; left: 0; right: 0; bottom: 0; overflow: auto; padding: 10px 14px; background: var(--bg); }
 .db-panel h3 { margin: 14px 0 6px; font-size: 14px; color: var(--accent); }
@@ -141,7 +162,7 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .history li b { color: var(--accent); }
 #sim-days { width: 60px; flex: 0 0 auto; }
 
-.legend { position: absolute; left: 10px; bottom: 10px; background: var(--legend-bg); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: 12px; display: flex; flex-wrap: wrap; gap: 4px 12px; max-width: 90%; }
+.legend { position: absolute; z-index: 2; left: 10px; bottom: 22px; background: var(--legend-bg); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: 12px; display: flex; flex-wrap: wrap; gap: 4px 12px; max-width: 90%; }
 .legend span { display: inline-flex; align-items: center; gap: 5px; }
 .sw { width: 12px; height: 12px; border-radius: 50%; border: 1px solid #888; display: inline-block; }
 .sw.residential { background: var(--res); }

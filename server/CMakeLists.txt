@@ -13,7 +13,8 @@ set(CORE_SOURCES
     src/scheduler.cpp
     src/router.cpp
     src/simulation.cpp
-    src/city_loader.cpp)
+    src/city_loader.cpp
+    src/city_generator.cpp)
 
 add_library(core STATIC ${CORE_SOURCES})
 
@@ -28,8 +29,8 @@ else()
 endif()
 
 enable_testing()
-foreach(t test_dijkstra test_domain test_simulation)
+foreach(t test_dijkstra test_domain test_simulation test_city_data test_generator)
   add_executable(${t} tests/${t}.cpp)
   target_link_libraries(${t} core)
-  add_test(NAME ${t} COMMAND ${t})
+  add_test(NAME ${t} COMMAND ${t} WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endforeach()

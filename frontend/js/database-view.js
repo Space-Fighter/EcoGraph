@@ -1,4 +1,4 @@
-// "Database" tab: node table (sortable / filterable), per-zone summary and collection log.
+// "Database" tab: node table (sortable / filterable), locality and zone summaries, collection log.
 const DatabaseView = (() => {
   const $ = (id) => document.getElementById(id);
   let data = null;
@@ -6,8 +6,9 @@ const DatabaseView = (() => {
   let active = false;
 
   const NODE_COLS = [
-    ['id', 'ID'], ['type', 'Type'], ['zone', 'Zone'], ['binType', 'Bin type'], ['waste', 'Waste'],
-    ['fillRate', 'Fill rate /day'], ['capacity', 'Capacity'], ['fillLevel', 'Fill level'],
+    ['id', 'ID'], ['name', 'Name'], ['area', 'Locality'], ['type', 'Type'], ['zone', 'Zone'],
+    ['lat', 'Lat'], ['lng', 'Lng'], ['binType', 'Bin type'], ['waste', 'Waste'],
+    ['fillRate', 'Fill rate (kg/day)'], ['capacity', 'Capacity (kg)'], ['fillLevel', 'Fill level (kg)'],
     ['percentFull', '% full'], ['lastCollected', 'Last collected'], ['daysSinceCollected', 'Days since'],
     ['intervalDays', 'Interval (d)'], ['nextDue', 'Next due'], ['overdueByDays', 'Overdue (d)'],
     ['status', 'Status'], ['connections', 'Connected to'],
@@ -55,7 +56,8 @@ const DatabaseView = (() => {
       if (type && n.type !== type) return false;
       if (zone && n.zone !== zone) return false;
       if (status && n.status !== status) return false;
-      if (q && !(n.id + ' ' + (n.waste || '') + ' ' + n.zone + ' ' + (n.binType || '')).toLowerCase().includes(q)) return false;
+      const haystack = [n.id, n.name, n.area, n.waste, n.zone, n.binType].join(' ').toLowerCase();
+      if (q && !haystack.includes(q)) return false;
       return true;
     });
     const k = sort.key;
@@ -80,8 +82,12 @@ const DatabaseView = (() => {
       const tr = document.createElement('tr');
       const collectable = n.type === 'home' || n.type === 'bin';
       tr.appendChild(cell(n.id));
+      tr.appendChild(cell(n.name || ''));
+      tr.appendChild(cell(n.area || ''));
       tr.appendChild(cell(n.type));
       tr.appendChild(cell(n.zone));
+      tr.appendChild(cell(num(n.lat, 4), 'num'));
+      tr.appendChild(cell(num(n.lng, 4), 'num'));
       tr.appendChild(cell(n.binType || ''));
       const waste = cell((n.waste || '') + (n.hazardous ? '  [HAZARDOUS]' : ''));
       tr.appendChild(waste);
@@ -115,15 +121,16 @@ const DatabaseView = (() => {
     table.appendChild(tbody);
   }
 
-  function renderZones() {
-    const table = $('db-zones');
+  // Summary table for a grouping of nodes: zones (key "zone") or localities (key "area").
+  function renderGroups(tableId, rows, key, label) {
+    const table = $(tableId);
     table.replaceChildren();
-    header(table, [['zone', 'Zone'], ['nodes', 'Nodes'], ['collectable', 'Homes + bins'], ['due', 'Due'],
-                   ['overflow', 'Overflowing'], ['avgPercentFull', 'Avg % full'], ['totalFillRate', 'Total fill rate /day']], false);
+    header(table, [[key, label], ['nodes', 'Nodes'], ['collectable', 'Homes + bins'], ['due', 'Due'],
+                   ['overflow', 'Overflowing'], ['avgPercentFull', 'Avg % full'], ['totalFillRate', 'Total fill rate (kg/day)']], false);
     const tbody = document.createElement('tbody');
-    data.zones.forEach((z) => {
+    rows.forEach((z) => {
       const tr = document.createElement('tr');
-      tr.appendChild(cell(z.zone));
+      tr.appendChild(cell(z[key]));
       tr.appendChild(cell(z.nodes, 'num'));
       tr.appendChild(cell(z.collectable, 'num'));
       tr.appendChild(cell(z.due, 'num'));
@@ -143,7 +150,7 @@ const DatabaseView = (() => {
     const tbody = document.createElement('tbody');
     if (!data.log.length) {
       const tr = document.createElement('tr');
-      const td = cell('No collections yet. Run the simulation with auto-collect, or mark a route collected.');
+      const td = cell('No collections yet. Run the simulation with auto-collect switched on.');
       td.colSpan = 8;
       tr.appendChild(td);
       tbody.appendChild(tr);
@@ -167,7 +174,8 @@ const DatabaseView = (() => {
     data = await Api.getDatabase();
     $('db-asof').textContent = 'As of day ' + data.simulation.day + ' (' + data.simulation.date + ')';
     renderNodes();
-    renderZones();
+    renderGroups('db-localities', data.localities, 'area', 'Locality');
+    renderGroups('db-zones', data.zones, 'zone', 'Zone');
     renderLog();
   }
 
@@ -175,6 +183,8 @@ const DatabaseView = (() => {
     active = name === 'db';
     document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
     $('cy').hidden = active;
+    $('map').hidden = active;
+    $('fit-all').hidden = active;
     document.querySelector('.legend').hidden = active;
     $('db-panel').hidden = !active;
     if (active) refresh().catch((e) => { $('db-asof').textContent = e.message; });

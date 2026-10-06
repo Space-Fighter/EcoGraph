@@ -39,5 +39,7 @@ const Api = (() => {
     advance: (params) => request('POST', 'simulate/advance', params),
     resetSimulation: () => request('POST', 'simulate/reset', {}),
     getDatabase: () => request('GET', 'database'),
+    // params: { type: 'home'|'bin'|'junction', count, hazardous, seed? }
+    generateNodes: (params) => request('POST', 'nodes/generate', params),
   };
 })();

@@ -28,7 +28,9 @@ int main(int argc, char** argv) {
     state.cityPath = cityPath;
     try {
         std::time_t base = std::time(nullptr);
-        state.graph = loadCity(cityPath, base);
+        City city = loadCity(cityPath, base);
+        state.graph = city.graph;
+        state.areas = city.areas;
         state.sim.start(base);
     } catch (const std::exception& e) {
         std::cerr << "Failed to load city: " << e.what() << std::endl;

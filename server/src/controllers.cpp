@@ -3,6 +3,7 @@
 #include <ctime>
 #include <map>
 
+#include "city_generator.hpp"
 #include "city_loader.hpp"
 #include "dijkstra.hpp"
 #include "json.hpp"
@@ -12,6 +13,8 @@
 using json = nlohmann::json;
 
 namespace {
+
+const size_t MAX_NODES = 500;  // keeps per-request Dijkstra work and the map readable
 
 void sendJson(httplib::Response& res, int status, const json& body) {
     res.status = status;
@@ -48,10 +51,12 @@ json segmentsToJson(const std::vector<RouteSegment>& segs) {
 
 json nodeToJson(const Node& n, const Scheduler& sched, std::time_t now) {
     json j = {{"id", n.id},
+              {"name", n.name},
+              {"area", n.area},
               {"type", nodeTypeToString(n.type)},
               {"zone", zoneToString(n.zone)},
-              {"x", n.x},
-              {"y", n.y}};
+              {"lat", n.lat},
+              {"lng", n.lng}};
     if (n.type == NodeType::Home || n.type == NodeType::Bin) {
         j["fillRate"] = n.fillRate;
         j["capacity"] = n.capacity;
@@ -78,8 +83,12 @@ const char* statusOf(const Node& n, const Scheduler& sched, std::time_t now) {
 // One row of the "database" view: everything known about a node on the simulated date.
 json nodeRow(const Graph& g, const Node& n, const Scheduler& sched, std::time_t now) {
     json row = {{"id", n.id},
+                {"name", n.name},
+                {"area", n.area},
                 {"type", nodeTypeToString(n.type)},
                 {"zone", zoneToString(n.zone)},
+                {"lat", n.lat},
+                {"lng", n.lng},
                 {"status", statusOf(n, sched, now)}};
     json neighbours = json::array();
     const std::vector<Edge>& es = g.neighbors(n.id);
@@ -105,6 +114,51 @@ json nodeRow(const Graph& g, const Node& n, const Scheduler& sched, std::time_t 
         row["hazardous"] = c.hazardous;
     }
     return row;
+}
+
+json edgeToJson(const EdgeRecord& e) {
+    return {{"from", e.from}, {"to", e.to}, {"weight", e.weight}, {"zone", zoneToString(e.zone)}};
+}
+
+json areasToJson(const std::vector<Area>& areas) {
+    json arr = json::array();
+    for (size_t i = 0; i < areas.size(); ++i) {
+        arr.push_back({{"name", areas[i].name},
+                       {"zone", zoneToString(areas[i].zone)},
+                       {"lat", areas[i].lat},
+                       {"lng", areas[i].lng},
+                       {"radiusKm", areas[i].radiusKm}});
+    }
+    return arr;
+}
+
+// Adds node n to the running totals of one group (a zone or a locality).
+void accumulateGroup(std::map<std::string, json>& groups, const std::string& key, const char* keyName,
+                     const Node& n, const Scheduler& sched, std::time_t now) {
+    json& g = groups[key];
+    if (g.is_null()) {
+        g = {{keyName, key}, {"nodes", 0}, {"collectable", 0}, {"due", 0},
+             {"overflow", 0}, {"avgPercentFull", 0.0}, {"totalFillRate", 0.0}};
+    }
+    g["nodes"] = g["nodes"].get<int>() + 1;
+    if (n.type == NodeType::Home || n.type == NodeType::Bin) {
+        g["collectable"] = g["collectable"].get<int>() + 1;
+        g["avgPercentFull"] = g["avgPercentFull"].get<double>() + sched.percentFull(n, now);
+        g["totalFillRate"] = g["totalFillRate"].get<double>() + n.fillRate;
+        if (sched.isDue(n, now)) g["due"] = g["due"].get<int>() + 1;
+        if (sched.percentFull(n, now) > 100.0) g["overflow"] = g["overflow"].get<int>() + 1;
+    }
+}
+
+json finishGroups(const std::map<std::string, json>& groups) {
+    json arr = json::array();
+    for (std::map<std::string, json>::const_iterator it = groups.begin(); it != groups.end(); ++it) {
+        json g = it->second;
+        int c = g["collectable"].get<int>();
+        g["avgPercentFull"] = c ? g["avgPercentFull"].get<double>() / c : 0.0;
+        arr.push_back(g);
+    }
+    return arr;
 }
 
 json dayReportToJson(const DayReport& r) {
@@ -161,13 +215,60 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
             nodes.push_back(nodeToJson(state.graph.getNode(ids[i]), state.scheduler, now));
         }
         const std::vector<EdgeRecord>& es = state.graph.edges();
-        for (size_t i = 0; i < es.size(); ++i) {
-            edges.push_back({{"from", es[i].from},
-                             {"to", es[i].to},
-                             {"weight", es[i].weight},
-                             {"zone", zoneToString(es[i].zone)}});
+        for (size_t i = 0; i < es.size(); ++i) edges.push_back(edgeToJson(es[i]));
+        sendJson(res, 200, {{"ok", true}, {"nodes", nodes}, {"edges", edges}, {"areas", areasToJson(state.areas)}});
+    });
+
+    // POST /nodes/generate   {"type": "home"|"bin"|"junction", "count": 1..100, "hazardous": bool, "seed": int?}
+    // Adds random nodes (placed inside the city's localities and wired into the road network).
+    svr.Post("/nodes/generate", [&state](const httplib::Request& req, httplib::Response& res) {
+        json body;
+        if (!parseBody(req, res, body)) return;
+        try {
+            std::string type = body.value("type", std::string());
+            int count = body.value("count", 1);
+            bool hazardous = body.value("hazardous", false);
+
+            GenKind kind;
+            if (type == "home") kind = GenKind::Home;
+            else if (type == "bin") kind = GenKind::Bin;
+            else if (type == "junction") kind = GenKind::Junction;
+            else {
+                sendError(res, 400, "bad_type", "type must be \"home\", \"bin\" or \"junction\"");
+                return;
+            }
+            if (hazardous && kind == GenKind::Junction) {
+                sendError(res, 400, "bad_type", "junctions cannot be hazardous");
+                return;
+            }
+            if (count < 1 || count > 100) {
+                sendError(res, 400, "bad_count", "count must be between 1 and 100");
+                return;
+            }
+
+            std::lock_guard<std::mutex> lock(state.mutex);
+            if (state.graph.nodeIds().size() + static_cast<size_t>(count) > MAX_NODES) {
+                sendError(res, 400, "too_many_nodes",
+                          "The city is limited to " + std::to_string(MAX_NODES) + " nodes");
+                return;
+            }
+            if (body.contains("seed")) state.rng.seed(body["seed"].get<unsigned>());
+
+            GeneratedBatch batch = generateNodes(state.graph, state.areas, kind, hazardous, count,
+                                                 state.sim.now(), state.rng);
+            std::time_t now = state.sim.now();
+            json nodes = json::array(), edges = json::array();
+            for (size_t i = 0; i < batch.nodeIds.size(); ++i) {
+                nodes.push_back(nodeToJson(state.graph.getNode(batch.nodeIds[i]), state.scheduler, now));
+            }
+            for (size_t i = 0; i < batch.edges.size(); ++i) edges.push_back(edgeToJson(batch.edges[i]));
+            sendJson(res, 200, {{"ok", true}, {"nodes", nodes}, {"edges", edges},
+                                {"totalNodes", state.graph.nodeIds().size()}});
+        } catch (const json::exception&) {
+            sendError(res, 400, "bad_params", "Parameters have the wrong type");
+        } catch (const std::invalid_argument& e) {
+            sendError(res, 400, "cannot_generate", e.what());
         }
-        sendJson(res, 200, {{"ok", true}, {"nodes", nodes}, {"edges", edges}});
     });
 
     // POST /route   {"homeIds": [...], "mode": "priority" | "fifo"}
@@ -360,7 +461,9 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
     svr.Post("/simulate/reset", [&state](const httplib::Request&, httplib::Response& res) {
         std::lock_guard<std::mutex> lock(state.mutex);
         try {
-            state.graph = loadCity(state.cityPath, state.sim.startTime());
+            City city = loadCity(state.cityPath, state.sim.startTime());
+            state.graph = city.graph;
+            state.areas = city.areas;
         } catch (const std::exception& e) {
             sendError(res, 500, "reload_failed", e.what());
             return;
@@ -375,33 +478,16 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
         std::time_t now = state.sim.now();
 
         json nodes = json::array();
-        std::map<std::string, json> zones;
+        std::map<std::string, json> zones, localities;
         std::vector<std::string> ids = state.graph.nodeIds();
         for (size_t i = 0; i < ids.size(); ++i) {
             const Node& n = state.graph.getNode(ids[i]);
             nodes.push_back(nodeRow(state.graph, n, state.scheduler, now));
-
-            json& z = zones[zoneToString(n.zone)];
-            if (z.is_null()) {
-                z = {{"zone", zoneToString(n.zone)}, {"nodes", 0}, {"collectable", 0}, {"due", 0},
-                     {"overflow", 0}, {"avgPercentFull", 0.0}, {"totalFillRate", 0.0}};
-            }
-            z["nodes"] = z["nodes"].get<int>() + 1;
-            if (n.type == NodeType::Home || n.type == NodeType::Bin) {
-                z["collectable"] = z["collectable"].get<int>() + 1;
-                z["avgPercentFull"] = z["avgPercentFull"].get<double>() + state.scheduler.percentFull(n, now);
-                z["totalFillRate"] = z["totalFillRate"].get<double>() + n.fillRate;
-                if (state.scheduler.isDue(n, now)) z["due"] = z["due"].get<int>() + 1;
-                if (state.scheduler.percentFull(n, now) > 100.0) z["overflow"] = z["overflow"].get<int>() + 1;
-            }
+            accumulateGroup(zones, zoneToString(n.zone), "zone", n, state.scheduler, now);
+            accumulateGroup(localities, n.area.empty() ? "(unassigned)" : n.area, "area", n, state.scheduler, now);
         }
-        json zoneArr = json::array();
-        for (std::map<std::string, json>::iterator it = zones.begin(); it != zones.end(); ++it) {
-            json z = it->second;
-            int c = z["collectable"].get<int>();
-            z["avgPercentFull"] = c ? z["avgPercentFull"].get<double>() / c : 0.0;
-            zoneArr.push_back(z);
-        }
+        json zoneArr = finishGroups(zones);
+        json localityArr = finishGroups(localities);
 
         json log = json::array();
         const std::vector<LogEntry>& entries = state.sim.log();
@@ -417,7 +503,7 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
                            {"percentFull", e.percentFull}});
         }
         sendJson(res, 200, {{"ok", true}, {"simulation", simStatus(state.sim)}, {"nodes", nodes},
-                            {"zones", zoneArr}, {"log", log}});
+                            {"zones", zoneArr}, {"localities", localityArr}, {"log", log}});
     });
 
     svr.set_exception_handler([](const httplib::Request&, httplib::Response& res, std::exception_ptr) {

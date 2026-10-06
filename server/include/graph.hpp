@@ -16,13 +16,15 @@ NodeType nodeTypeFromString(const std::string& s);  // throws std::invalid_argum
 
 struct Node {
     std::string id;
+    std::string name;  // display name, e.g. "Clement Town Campus Hostels"
+    std::string area;  // locality the node belongs to
     NodeType type = NodeType::Junction;
     ZoneType zone = ZoneType::Arterial;
-    double x = 0, y = 0;  // layout hint for the frontend
+    double lat = 0, lng = 0;  // degrees
 
     // Home / Bin only
-    double fillRate = 0.0;          // units per day
-    double capacity = 100.0;        // units at which the location is "full"
+    double fillRate = 0.0;          // kg per day
+    double capacity = 100.0;        // kg at which the location is "full"
     std::time_t lastCollected = 0;  // epoch seconds
     std::string binType;            // Bin: recyclable | compost | general | medical | chemical
     std::string wasteDescription;   // Home: what this home currently has out for pickup

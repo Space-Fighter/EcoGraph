@@ -50,13 +50,13 @@ const SimulationView = (() => {
 
     const summary = [d.due.length + ' due'];
     if (d.emptiedBins.length) summary.push('bins emptied: ' + d.emptiedBins.join(', '));
-    if (d.totalCost) summary.push('total route cost ' + d.totalCost.toFixed(1));
+    if (d.totalCost) summary.push('total distance ' + d.totalCost.toFixed(1) + ' km');
     li.appendChild(line(summary.join(' · ')));
 
     d.trucks.forEach((t) => {
-      const load = t.kind === 'normal' ? ' (load ' + t.load.toFixed(0) + '/' + t.capacity.toFixed(0) + ')' : '';
+      const load = t.kind === 'normal' ? ' (' + t.load.toFixed(0) + '/' + t.capacity.toFixed(0) + ' kg)' : ' (' + t.load.toFixed(0) + ' kg)';
       const dest = t.kind === 'hazard' ? ' -> ' + t.bin : '';
-      li.appendChild(line(t.id + ': ' + t.homes.join(', ') + load + dest + ', cost ' + t.cost.toFixed(1), 'truck'));
+      li.appendChild(line(t.id + ': ' + t.homes.join(', ') + load + dest + ', ' + t.cost.toFixed(1) + ' km', 'truck'));
     });
     if (d.carriedOver.length) li.appendChild(line('Waiting for a free truck: ' + d.carriedOver.join(', '), 'alert'));
     if (d.overflowIds.length) li.appendChild(line('Overflowing this morning: ' + d.overflowIds.join(', '), 'alert'));
@@ -102,6 +102,9 @@ const SimulationView = (() => {
     try {
       const res = await Api.resetSimulation();
       GraphView.clearRoute();
+      const graph = await Api.getGraph();  // generated nodes are gone: redraw the original city
+      GraphView.rebuild(graph);
+      CityBuilder.reset(graph);
       $('sim-history').replaceChildren();
       showStatus(res.simulation);
       await refreshViews();

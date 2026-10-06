@@ -5,6 +5,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     const graph = await Api.getGraph();
     GraphView.init(document.getElementById('cy'), graph);
+    document.getElementById('fit-all').addEventListener('click', () => GraphView.fitAll());
+    CityBuilder.init(graph);
     DatabaseView.init();
     await SimulationView.init();
     await ScheduleView.refresh();

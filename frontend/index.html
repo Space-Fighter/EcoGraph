@@ -16,6 +16,7 @@
       document.documentElement.dataset.theme = theme;
     })();
   </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -43,9 +44,9 @@
               <option value="fifo">FIFO (first due first)</option>
             </select>
           </label>
-          <label>Normal trucks <input type="number" id="fleet-normal" value="2" min="0" max="20"></label>
-          <label>Capacity / truck <input type="number" id="fleet-capacity" value="200" min="1" max="100000"></label>
-          <label>Hazard trucks <input type="number" id="fleet-hazard" value="1" min="0" max="10"></label>
+          <label>Normal trucks <input type="number" id="fleet-normal" value="3" min="0" max="20"></label>
+          <label>Capacity / truck (kg) <input type="number" id="fleet-capacity" value="1000" min="1" max="100000"></label>
+          <label>Hazard trucks <input type="number" id="fleet-hazard" value="2" min="0" max="10"></label>
         </div>
         <div class="row buttons">
           <button id="sim-step">+1 day</button>
@@ -58,6 +59,22 @@
       </section>
 
       <section>
+        <h2>City builder <small id="builder-count"></small></h2>
+        <div class="row">
+          <select id="builder-type">
+            <option value="home">Household cluster</option>
+            <option value="home-haz">Hazardous site (clinic, lab, workshop)</option>
+            <option value="bin">Waste bin / facility</option>
+            <option value="bin-haz">Hazardous waste facility</option>
+            <option value="junction">Road junction</option>
+          </select>
+          <input type="number" id="builder-count-input" value="10" min="1" max="100" title="How many to add">
+          <button id="builder-add" class="primary">Add</button>
+        </div>
+        <div id="builder-msg" class="builder-msg">New nodes are placed inside the localities and linked to the nearest roads. Reset removes them.</div>
+      </section>
+
+      <section>
         <h2>Due for collection <small id="schedule-date"></small></h2>
         <ul id="due-list" class="due-list"></ul>
       </section>
@@ -67,12 +84,14 @@
       <div class="tabs">
         <button class="tab active" data-tab="map">Map</button>
         <button class="tab" data-tab="db">Database</button>
+        <button id="fit-all" class="tab-action" type="button" title="Zoom and centre so every node is visible">Fit all nodes</button>
       </div>
+      <div id="map"></div>
       <div id="cy"></div>
 
       <div id="db-panel" class="db-panel" hidden>
         <div class="db-toolbar">
-          <input type="text" id="db-search" placeholder="Search id, waste, zone…">
+          <input type="text" id="db-search" placeholder="Search name, locality, waste…">
           <select id="db-type">
             <option value="">All types</option>
             <option value="home">Homes</option>
@@ -97,7 +116,9 @@
         </div>
         <h3>Nodes</h3>
         <div class="table-wrap"><table id="db-nodes"></table></div>
-        <h3>Areas (zones)</h3>
+        <h3>Localities</h3>
+        <div class="table-wrap"><table id="db-localities"></table></div>
+        <h3>Zones</h3>
         <div class="table-wrap"><table id="db-zones"></table></div>
         <h3>Collection log <small>(newest first)</small></h3>
         <div class="table-wrap"><table id="db-log"></table></div>
@@ -116,12 +137,14 @@
     </div>
   </main>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.2/cytoscape.min.js"></script>
   <script src="config.js"></script>
   <script src="js/api.js"></script>
   <script src="js/graph-view.js"></script>
   <script src="js/schedule-view.js"></script>
   <script src="js/database-view.js"></script>
+  <script src="js/city-builder.js"></script>
   <script src="js/simulation-view.js"></script>
   <script src="js/theme.js"></script>
   <script src="js/app.js"></script>

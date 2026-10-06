@@ -15,9 +15,9 @@ std::string formatDate(std::time_t t);  // YYYY-MM-DD
 // (a home's load is its current fill level). Hazard trucks are a separate pool and each
 // makes one hazard trip per day.
 struct Fleet {
-    int normalTrucks = 2;
-    double normalCapacity = 200;
-    int hazardTrucks = 1;
+    int normalTrucks = 3;
+    double normalCapacity = 1000;  // kg per truck per day
+    int hazardTrucks = 2;
 };
 
 struct LogEntry {

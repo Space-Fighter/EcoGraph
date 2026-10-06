@@ -5,8 +5,11 @@
 
 #include "graph.hpp"
 #include "httplib.h"
+#include <random>
 #include <string>
+#include <vector>
 
+#include "city_loader.hpp"
 #include "scheduler.hpp"
 #include "simulation.hpp"
 
@@ -14,6 +17,8 @@
 // mutates lastCollected while other requests are reading it.
 struct AppState {
     Graph graph;
+    std::vector<Area> areas;  // localities from the city file (labels, node placement)
+    std::mt19937 rng{std::random_device{}()};  // for generated nodes; reseedable per request
     Scheduler scheduler;
     Simulation sim;         // simulated calendar + collection log
     std::string cityPath;   // kept so /simulate/reset can reload the original data

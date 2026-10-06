@@ -4,7 +4,7 @@
 set -e
 cd "$(dirname "$0")"
 mkdir -p build
-CORE="src/graph.cpp src/dijkstra.cpp src/waste_classifier.cpp src/scheduler.cpp src/router.cpp src/simulation.cpp src/city_loader.cpp"
+CORE="src/graph.cpp src/dijkstra.cpp src/waste_classifier.cpp src/scheduler.cpp src/router.cpp src/simulation.cpp src/city_loader.cpp src/city_generator.cpp"
 FLAGS="-std=c++17 -O2 -Wall -Wextra -Iinclude -Ithird_party"
 case "$(uname -s)" in
   MINGW*|MSYS*|CYGWIN*) LIBS="-static -lws2_32 -D_WIN32_WINNT=0x0A00"; EXE=".exe" ;;
@@ -14,4 +14,6 @@ g++ $FLAGS $CORE src/main.cpp src/controllers.cpp -o build/ecorouting$EXE $LIBS
 g++ $FLAGS $CORE tests/test_dijkstra.cpp -o build/test_dijkstra$EXE
 g++ $FLAGS $CORE tests/test_domain.cpp -o build/test_domain$EXE
 g++ $FLAGS $CORE tests/test_simulation.cpp -o build/test_simulation$EXE
-echo "Built: build/ecorouting$EXE, build/test_dijkstra$EXE, build/test_domain$EXE"
+g++ $FLAGS $CORE tests/test_city_data.cpp -o build/test_city_data$EXE
+g++ $FLAGS $CORE tests/test_generator.cpp -o build/test_generator$EXE
+echo "Built: build/ecorouting$EXE and the test binaries"

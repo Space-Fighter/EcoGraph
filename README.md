@@ -10,7 +10,7 @@
 
 ---
 
-## 📌 Project Overview
+## Project Overview
 
 Municipal waste collection routes are traditionally static: trucks follow fixed schedules regardless of actual trash fill levels or the presence of biohazardous waste. This results in excessive fuel consumption, labor inefficiency, and potential environmental hazards.
 
@@ -28,32 +28,32 @@ Municipal waste collection routes are traditionally static: trucks follow fixed 
 
 ---
 
-## ✨ Key Features
+## Key Features
 
-- **🌐 Weighted Graph City Network Model**
+- **Weighted Graph City Network Model**
   - City map represented as an adjacency list with node types (`Depot`, `Home`, `Junction`, `Bin`).
   - Edges contain physical distances/costs and are categorized into **Zone Types** (`residential`, `commercial`, `industrial`).
 
-- **⚡ Dual-Strategy Shortest Path Routing**
+- **Dual-Strategy Shortest Path Routing**
   - **Priority Mode**: Route truck from depot → home → nearest matching bin → next home → bin. Disposes waste immediately after every pickup.
   - **FIFO Mode**: Route truck from depot → home1 → home2 → ... → homeN, then to disposal bins. Collects from all queued homes before visiting bins.
   - Powered by **Dijkstra's Algorithm** with min-heap priority queues.
 
-- **☣️ Zone-Constrained Hazardous Waste Dispatch**
+- **Zone-Constrained Hazardous Waste Dispatch**
   - Rule-based detection of **Medical** and **Chemical** waste.
   - Triggers **immediate priority dispatch**, bypassing normal collection queues.
   - Uses **Constrained Dijkstra** which restricts travel exclusively to `industrial` or arterial roads, strictly excluding `residential` and `commercial` zones to protect public health.
 
-- **📅 Fill-Rate Adaptive Scheduler**
+- **Fill-Rate Adaptive Scheduler**
   - Tracks individual node fill rates ($\text{units/day}$) and container capacities.
   - Computes dynamic collection intervals (clamped between 1 and 14 days).
   - Maintains a max-heap priority queue of "due" and "overflowing" locations.
 
-- **⏱️ Time-Step Day Progression Simulation**
+- **Time-Step Day Progression Simulation**
   - Built-in simulation engine with advanceable days (1 to 60 days).
   - Features **Auto-Collection** toggles, overflow indicators, and historical collection logs.
 
-- **🎨 Interactive Cytoscape.js Frontend & Tabular Database Inspector**
+- **Interactive Cytoscape.js Frontend & Tabular Database Inspector**
   - Visual graph canvas with live truck movement animations.
   - Distinct styling and animations for hazardous vs. regular routes.
   - Dark/Light mode theme engine.
@@ -61,7 +61,7 @@ Municipal waste collection routes are traditionally static: trucks follow fixed 
 
 ---
 
-## 🏗️ System Architecture
+## System Architecture
 
 EcoGraph operates as a single persistent C++ process that serves both the JSON REST API and the static web assets from a unified port (avoiding CORS issues).
 
@@ -98,7 +98,7 @@ EcoGraph operates as a single persistent C++ process that serves both the JSON R
 
 ---
 
-## 🧮 Data Structures & Algorithms Matrix
+## Data Structures & Algorithms Matrix
 
 | Concept / Task | Algorithmic Structure | Purpose & Time Complexity |
 |---|---|---|
@@ -111,7 +111,7 @@ EcoGraph operates as a single persistent C++ process that serves both the JSON R
 
 ---
 
-## 📁 Repository Directory Structure
+## Repository Directory Structure
 
 ```
 EcoGraph/
@@ -169,7 +169,7 @@ EcoGraph/
 
 ---
 
-## 🌐 REST API Endpoints
+## REST API Endpoints
 
 ### 1. System & Topology
 - **`GET /health`**
@@ -238,11 +238,11 @@ cmake --build .
 ```
 
 Once running, open your web browser at:
-👉 **`http://localhost:8080`**
+ **`http://localhost:8080`**
 
 ---
 
-## 🧪 Running Unit Tests
+## Running Unit Tests
 
 EcoGraph includes dedicated C++ unit test executables covering pathfinding, constrained routing, domain models, and simulation clocks.
 
@@ -261,7 +261,7 @@ cd server/build
 
 ---
 
-## 👥 Authors & Academic Credits
+## Authors & Academic Credits
 
 - **Course:** Data Structures & Algorithms in C++ Project (2026)
 - **Team ID:** `DSCPP-III-2026-T186`
@@ -273,6 +273,3 @@ cd server/build
 
 ---
 
-## 📜 License
-
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.

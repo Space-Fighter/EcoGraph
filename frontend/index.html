@@ -125,14 +125,27 @@
       </div>
 
       <div class="legend">
-        <span><i class="sw residential"></i>residential</span>
-        <span><i class="sw commercial"></i>commercial</span>
-        <span><i class="sw industrial"></i>industrial</span>
-        <span><i class="sw arterial"></i>arterial</span>
-        <span><i class="sw due"></i>due now</span>
-        <span><i class="sw overflow"></i>overflowing</span>
-        <span><i class="line route"></i>route</span>
-        <span><i class="line hazard"></i>hazard route</span>
+        <div class="legend-row">
+          <b>Shape</b>
+          <span><svg class="shape" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="2.5" width="11" height="11"/></svg>Depot (trucks start here)</span>
+          <span><svg class="shape" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/></svg>Household / business cluster</span>
+          <span><svg class="shape" viewBox="0 0 16 16" aria-hidden="true"><polygon points="8,2 14.5,13.5 1.5,13.5"/></svg>Disposal site</span>
+          <span><svg class="shape" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.5"/></svg>Road junction</span>
+        </div>
+        <div class="legend-row">
+          <b>Zone colour</b>
+          <span><i class="sw residential"></i>residential</span>
+          <span><i class="sw commercial"></i>commercial</span>
+          <span><i class="sw industrial"></i>industrial</span>
+          <span><i class="sw arterial"></i>arterial</span>
+        </div>
+        <div class="legend-row">
+          <b>Status</b>
+          <span><i class="sw due"></i>due now</span>
+          <span><i class="sw overflow"></i>overflowing</span>
+          <span><i class="line route"></i>route</span>
+          <span><i class="line hazard"></i>hazard route</span>
+        </div>
       </div>
     </div>
   </main>

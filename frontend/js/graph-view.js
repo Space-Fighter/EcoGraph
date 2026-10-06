@@ -176,7 +176,7 @@ const GraphView = (() => {
     const w = c.clientWidth, h = c.clientHeight;
     return cy.nodes().every((n) => {
       const p = n.position();
-      return p.x > 25 && p.x < w - 25 && p.y > 25 && p.y < h - 70;  // room for the legend
+      return p.x > 25 && p.x < w - 25 && p.y > 25 && p.y < h - 110;  // room for the 3-row legend
     });
   }
 

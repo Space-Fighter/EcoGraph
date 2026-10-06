@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <set>
+#include <stdexcept>
 
 #include "city_generator.hpp"
 #include "city_loader.hpp"
@@ -107,6 +108,91 @@ int main() {
         for (size_t i = 0; i < ba.nodeIds.size(); ++i) {
             CHECK(a.graph.getNode(ba.nodeIds[i]).lat == b.graph.getNode(bb.nodeIds[i]).lat);
         }
+    }
+
+    // Added nodes are flagged; the city file's nodes are not.
+    {
+        City c = base;
+        std::mt19937 rng(11);
+        GeneratedBatch b = generateNodes(c.graph, c.areas, GenKind::Home, false, 3, NOW, rng);
+        for (size_t i = 0; i < b.nodeIds.size(); ++i) CHECK(c.graph.getNode(b.nodeIds[i]).generated);
+        std::vector<std::string> ids = base.graph.nodeIds();
+        for (size_t i = 0; i < ids.size(); ++i) CHECK(!base.graph.getNode(ids[i]).generated);
+    }
+
+    // Graph::removeNode leaves no trace of the node.
+    {
+        City c = base;
+        std::mt19937 rng(5);
+        GeneratedBatch b = generateNodes(c.graph, c.areas, GenKind::Home, false, 1, NOW, rng);
+        std::string id = b.nodeIds[0];
+        size_t nodesBefore = c.graph.nodeIds().size();
+        c.graph.removeNode(id);
+        CHECK(!c.graph.hasNode(id));
+        CHECK(c.graph.nodeIds().size() == nodesBefore - 1);
+        std::vector<std::string> ids = c.graph.nodeIds();
+        for (size_t i = 0; i < ids.size(); ++i) {
+            const std::vector<Edge>& es = c.graph.neighbors(ids[i]);
+            for (size_t k = 0; k < es.size(); ++k) CHECK(es[k].to != id);
+        }
+        for (size_t i = 0; i < c.graph.edges().size(); ++i) {
+            CHECK(c.graph.edges()[i].from != id && c.graph.edges()[i].to != id);
+        }
+        bool threw = false;
+        try { c.graph.removeNode(id); } catch (const std::out_of_range&) { threw = true; }
+        CHECK(threw);
+    }
+
+    // Removing takes the newest added nodes of the kind, and only those.
+    {
+        City c = base;
+        std::mt19937 rng(21);
+        GeneratedBatch homes = generateNodes(c.graph, c.areas, GenKind::Home, false, 5, NOW, rng);
+        generateNodes(c.graph, c.areas, GenKind::Bin, false, 2, NOW, rng);
+        RemovalResult r = removeGeneratedNodes(c.graph, GenKind::Home, false, 2);
+        CHECK(r.removed.size() == 2);
+        CHECK(r.removed[0] == homes.nodeIds[4] && r.removed[1] == homes.nodeIds[3]);  // newest first
+        CHECK(!c.graph.hasNode(homes.nodeIds[4]) && c.graph.hasNode(homes.nodeIds[2]));
+        CHECK(c.graph.nodeIdsByType(NodeType::Bin).size() == base.graph.nodeIdsByType(NodeType::Bin).size() + 2);
+
+        // Asking for more than exist removes what there is, never original nodes.
+        removeGeneratedNodes(c.graph, GenKind::Home, false, 100);
+        CHECK(c.graph.nodeIdsByType(NodeType::Home).size() == base.graph.nodeIdsByType(NodeType::Home).size());
+        // Nothing left to remove -> empty result, no crash.
+        CHECK(removeGeneratedNodes(c.graph, GenKind::Home, false, 5).removed.empty());
+        // A kind that was never added: nothing happens either.
+        CHECK(removeGeneratedNodes(c.graph, GenKind::Junction, false, 5).removed.empty());
+    }
+
+    // Whatever mix is added and removed, the city stays connected, hazardous sites stay
+    // reachable by the restricted route, and every original node survives.
+    for (unsigned seed = 1; seed <= 8; ++seed) {
+        City c = base;
+        std::mt19937 rng(seed * 101);
+        generateNodes(c.graph, c.areas, GenKind::Junction, false, 5, NOW, rng);
+        generateNodes(c.graph, c.areas, GenKind::Home, false, 12, NOW, rng);
+        generateNodes(c.graph, c.areas, GenKind::Home, true, 6, NOW, rng);
+        generateNodes(c.graph, c.areas, GenKind::Bin, true, 3, NOW, rng);
+        generateNodes(c.graph, c.areas, GenKind::Bin, false, 3, NOW, rng);
+        // Remove junctions first: the nodes attached to them must follow, not be left stranded.
+        RemovalResult r = removeGeneratedNodes(c.graph, GenKind::Junction, false, 5);
+        CHECK(r.removed.size() == 5);
+        removeGeneratedNodes(c.graph, GenKind::Bin, true, 2);
+
+        std::string depot = c.graph.nodeIdsByType(NodeType::Depot)[0];
+        std::set<ZoneType> forbid;
+        forbid.insert(ZoneType::Residential);
+        forbid.insert(ZoneType::Commercial);
+        std::vector<std::string> ids = c.graph.nodeIds();
+        for (size_t i = 0; i < ids.size(); ++i) {
+            const Node& n = c.graph.getNode(ids[i]);
+            CHECK(shortestPath(c.graph, depot, n.id).cost >= 0);
+            bool hazard = (n.type == NodeType::Home && classifyWaste(n.wasteDescription).hazardous) ||
+                          (n.type == NodeType::Bin && (n.binType == "medical" || n.binType == "chemical"));
+            if (hazard) CHECK(constrainedShortestPath(c.graph, depot, n.id, forbid).cost >= 0);
+        }
+        std::vector<std::string> orig = base.graph.nodeIds();
+        for (size_t i = 0; i < orig.size(); ++i) CHECK(c.graph.hasNode(orig[i]));
     }
 
     // No localities -> a clear error rather than a crash.

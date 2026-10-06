@@ -2,9 +2,11 @@
 
 #include <algorithm>
 #include <cmath>
+#include <set>
 #include <stdexcept>
 
 #include "geo.hpp"
+#include "waste_classifier.hpp"
 
 namespace {
 
@@ -105,6 +107,7 @@ GeneratedBatch generateNodes(Graph& g, const std::vector<Area>& areas, GenKind k
         double dLng = r * std::cos(theta) / (111.19 * std::cos(area.lat * 3.14159265358979 / 180.0));
 
         Node n;
+        n.generated = true;
         n.area = area.name;
         n.lat = area.lat + dLat;
         n.lng = area.lng + dLng;
@@ -179,4 +182,65 @@ GeneratedBatch generateNodes(Graph& g, const std::vector<Area>& areas, GenKind k
     const std::vector<EdgeRecord>& all = g.edges();
     batch.edges.assign(all.begin() + edgesBefore, all.end());
     return batch;
+}
+
+namespace {
+
+bool isHazardBin(const std::string& binType) { return binType == "medical" || binType == "chemical"; }
+
+bool matches(const Node& n, GenKind kind, bool hazardous) {
+    if (!n.generated) return false;
+    if (kind == GenKind::Home) {
+        return n.type == NodeType::Home && classifyWaste(n.wasteDescription).hazardous == hazardous;
+    }
+    if (kind == GenKind::Bin) return n.type == NodeType::Bin && isHazardBin(n.binType) == hazardous;
+    return n.type == NodeType::Junction;
+}
+
+// Nodes reachable from `start`; with restricted=true residential/commercial roads are skipped
+// (the roads a hazard truck may not use).
+std::set<std::string> reachableFrom(const Graph& g, const std::string& start, bool restricted) {
+    std::set<std::string> seen;
+    std::vector<std::string> stack(1, start);
+    seen.insert(start);
+    while (!stack.empty()) {
+        std::string u = stack.back();
+        stack.pop_back();
+        const std::vector<Edge>& es = g.neighbors(u);
+        for (size_t i = 0; i < es.size(); ++i) {
+            if (restricted && (es[i].zone == ZoneType::Residential || es[i].zone == ZoneType::Commercial)) continue;
+            if (seen.insert(es[i].to).second) stack.push_back(es[i].to);
+        }
+    }
+    return seen;
+}
+
+}  // namespace
+
+RemovalResult removeGeneratedNodes(Graph& g, GenKind kind, bool hazardous, int count) {
+    RemovalResult out;
+
+    // Newest first: ids are kept in creation order, and a node only ever links to nodes that
+    // already existed, so this order rarely strands anything.
+    std::vector<std::string> ids = g.nodeIds();
+    for (size_t i = ids.size(); i-- > 0 && static_cast<int>(out.removed.size()) < count;) {
+        if (matches(g.getNode(ids[i]), kind, hazardous)) out.removed.push_back(ids[i]);
+    }
+    for (size_t i = 0; i < out.removed.size(); ++i) g.removeNode(out.removed[i]);
+
+    std::vector<std::string> depots = g.nodeIdsByType(NodeType::Depot);
+    if (depots.empty() || out.removed.empty()) return out;
+
+    std::set<std::string> any = reachableFrom(g, depots[0], false);
+    std::set<std::string> allowed = reachableFrom(g, depots[0], true);
+    ids = g.nodeIds();
+    for (size_t i = 0; i < ids.size(); ++i) {
+        const Node& n = g.getNode(ids[i]);
+        if (!n.generated) continue;
+        bool needsRestricted = (n.type == NodeType::Home && classifyWaste(n.wasteDescription).hazardous) ||
+                               (n.type == NodeType::Bin && isHazardBin(n.binType));
+        if (!any.count(n.id) || (needsRestricted && !allowed.count(n.id))) out.cascaded.push_back(n.id);
+    }
+    for (size_t i = 0; i < out.cascaded.size(); ++i) g.removeNode(out.cascaded[i]);
+    return out;
 }

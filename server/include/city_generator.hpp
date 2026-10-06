@@ -29,4 +29,16 @@ struct GeneratedBatch {
 GeneratedBatch generateNodes(Graph& g, const std::vector<Area>& areas, GenKind kind, bool hazardous,
                              int count, std::time_t now, std::mt19937& rng);
 
+struct RemovalResult {
+    std::vector<std::string> removed;   // the nodes that were asked for, newest first
+    std::vector<std::string> cascaded;  // added nodes that lost their only route and went too
+};
+
+// Removes up to `count` of the NEWEST nodes added by generateNodes() that match the kind
+// (same meaning of `hazardous` as above). Nodes from the city file are never touched.
+// An added node that is left with no route to the depot - or, for hazardous homes and
+// facilities, with no route that avoids residential/commercial roads - is removed too, so
+// the city never ends up with stranded nodes. Returns what was removed (possibly nothing).
+RemovalResult removeGeneratedNodes(Graph& g, GenKind kind, bool hazardous, int count);
+
 #endif

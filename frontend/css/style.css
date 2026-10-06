@@ -105,34 +105,25 @@ input[type=text], input[type=number], select { font: inherit; font-size: 13px; p
 
 .due-list { list-style: none; margin: 0; padding: 0; font-size: 13px; max-height: 150px; overflow-y: auto; }
 .due-list li { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px dashed var(--border); }
-.canvas-wrap { flex: 1; position: relative; min-width: 0; }
-.tabs { position: absolute; top: 0; left: 0; right: 0; height: 38px; display: flex; gap: 4px; padding: 5px 10px 0; background: var(--bg-head); border-bottom: 1px solid var(--border); z-index: 5; }
+/* The map area is a column: tab bar, the drawing (or the database), then the legend. Nothing
+   overlaps, so the legend can never cover a node. */
+.canvas-wrap { flex: 1; position: relative; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.tabs { flex: none; height: 38px; display: flex; gap: 4px; padding: 5px 10px 0; background: var(--bg-head); border-bottom: 1px solid var(--border); }
 .tab { border-radius: 6px 6px 0 0; border-bottom: 0; background: var(--bg-tab); }
 .tab.active { background: var(--bg); font-weight: 600; color: var(--accent); }
 .tab-action { margin-left: auto; margin-bottom: 4px; padding: 3px 10px; font-size: 12px; }
-#cy { position: absolute; top: 38px; left: 0; right: 0; bottom: 0; background: var(--bg); z-index: 1; }
-#map { position: absolute; top: 38px; left: 0; right: 0; bottom: 0; z-index: 0; display: none; background: var(--bg); }
+#cy { position: relative; flex: 1; min-height: 0; background: var(--bg); }
 
-/* With real map tiles: Leaflet is the interactive layer, Cytoscape draws on top of it. */
-.map-mode #map { display: block; }
-.map-mode #cy { background: transparent; pointer-events: none; }
-
-.leaflet-container { font: inherit; }
-.leaflet-tooltip { background: var(--bg-card); color: var(--text); border-color: var(--border); box-shadow: 0 1px 4px rgba(0,0,0,.3); }
-.leaflet-tooltip-top:before { border-top-color: var(--border); }
-.leaflet-tooltip.area-label {
-  background: transparent; border: 0; box-shadow: none; font-size: 11px; font-weight: 700;
-  color: var(--accent); text-shadow: 0 0 3px var(--bg), 0 0 3px var(--bg), 0 0 5px var(--bg); pointer-events: none;
-}
-.leaflet-tooltip.area-label:before { display: none; }
-.leaflet-container.zoom-low .area-label { display: none; }
-.leaflet-container { background: var(--bg); }
-.leaflet-control-zoom a { color: #1c1c1c; }
+.node-tip { position: absolute; z-index: 5; transform: translate(-50%, -100%); pointer-events: none; background: var(--bg-card); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; font-size: 12px; box-shadow: 0 1px 4px rgba(0,0,0,.3); white-space: nowrap; }
+.node-tip div { color: var(--muted); }
 
 .builder-msg { font-size: 12px; color: var(--muted); }
 .builder-msg.error { color: var(--red); }
+.builder-note { font-size: 11px; color: var(--muted); margin-top: 6px; }
+.builder-note:empty { display: none; }
+.builder-note b { color: var(--amber); }
 
-.db-panel { position: absolute; top: 38px; left: 0; right: 0; bottom: 0; overflow: auto; padding: 10px 14px; background: var(--bg); }
+.db-panel { flex: 1; min-height: 0; overflow: auto; padding: 10px 14px; background: var(--bg); }
 .db-panel h3 { margin: 14px 0 6px; font-size: 14px; color: var(--accent); }
 .db-panel h3 small { font-weight: normal; color: var(--muted); }
 .db-toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
@@ -164,7 +155,7 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .history li b { color: var(--accent); }
 #sim-days { width: 60px; flex: 0 0 auto; }
 
-.legend { position: absolute; z-index: 2; left: 10px; bottom: 22px; background: var(--legend-bg); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: 12px; display: flex; flex-direction: column; gap: 4px; max-width: 94%; }
+.legend { flex: none; background: var(--legend-bg); border-top: 1px solid var(--border); padding: 6px 12px; font-size: 12px; display: flex; flex-direction: column; gap: 4px; }
 .legend-row { display: flex; flex-wrap: wrap; align-items: center; gap: 3px 12px; }
 .legend-row > b { min-width: 74px; color: var(--muted); font-weight: 600; }
 .legend span { display: inline-flex; align-items: center; gap: 5px; }

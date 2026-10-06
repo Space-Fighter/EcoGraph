@@ -7,7 +7,7 @@ const DatabaseView = (() => {
 
   const NODE_COLS = [
     ['id', 'ID'], ['name', 'Name'], ['area', 'Locality'], ['type', 'Type'], ['zone', 'Zone'],
-    ['lat', 'Lat'], ['lng', 'Lng'], ['binType', 'Bin type'], ['waste', 'Waste'],
+    ['lat', 'Lat'], ['lng', 'Lng'], ['origin', 'Origin'], ['binType', 'Bin type'], ['waste', 'Waste'],
     ['fillRate', 'Fill rate (kg/day)'], ['capacity', 'Capacity (kg)'], ['fillLevel', 'Fill level (kg)'],
     ['percentFull', '% full'], ['lastCollected', 'Last collected'], ['daysSinceCollected', 'Days since'],
     ['intervalDays', 'Interval (d)'], ['nextDue', 'Next due'], ['overdueByDays', 'Overdue (d)'],
@@ -88,6 +88,7 @@ const DatabaseView = (() => {
       tr.appendChild(cell(n.zone));
       tr.appendChild(cell(num(n.lat, 4), 'num'));
       tr.appendChild(cell(num(n.lng, 4), 'num'));
+      tr.appendChild(cell(n.origin || ''));
       tr.appendChild(cell(n.binType || ''));
       const waste = cell((n.waste || '') + (n.hazardous ? '  [HAZARDOUS]' : ''));
       tr.appendChild(waste);
@@ -183,7 +184,6 @@ const DatabaseView = (() => {
     active = name === 'db';
     document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
     $('cy').hidden = active;
-    $('map').hidden = active;
     $('fit-all').hidden = active;
     document.querySelector('.legend').hidden = active;
     $('db-panel').hidden = !active;

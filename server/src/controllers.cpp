@@ -56,7 +56,8 @@ json nodeToJson(const Node& n, const Scheduler& sched, std::time_t now) {
               {"type", nodeTypeToString(n.type)},
               {"zone", zoneToString(n.zone)},
               {"lat", n.lat},
-              {"lng", n.lng}};
+              {"lng", n.lng},
+              {"generated", n.generated}};
     if (n.type == NodeType::Home || n.type == NodeType::Bin) {
         j["fillRate"] = n.fillRate;
         j["capacity"] = n.capacity;
@@ -89,6 +90,7 @@ json nodeRow(const Graph& g, const Node& n, const Scheduler& sched, std::time_t 
                 {"zone", zoneToString(n.zone)},
                 {"lat", n.lat},
                 {"lng", n.lng},
+                {"origin", n.generated ? "added" : "original"},
                 {"status", statusOf(n, sched, now)}};
     json neighbours = json::array();
     const std::vector<Edge>& es = g.neighbors(n.id);
@@ -268,6 +270,43 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
             sendError(res, 400, "bad_params", "Parameters have the wrong type");
         } catch (const std::invalid_argument& e) {
             sendError(res, 400, "cannot_generate", e.what());
+        }
+    });
+
+    // POST /nodes/remove   {"type": "home"|"bin"|"junction", "count": 1..100, "hazardous": bool}
+    // Removes the newest nodes of that kind that were ADDED via /nodes/generate. Nodes from the
+    // city file are never removed. Added nodes left without a route go too ("cascaded").
+    svr.Post("/nodes/remove", [&state](const httplib::Request& req, httplib::Response& res) {
+        json body;
+        if (!parseBody(req, res, body)) return;
+        try {
+            std::string type = body.value("type", std::string());
+            int count = body.value("count", 1);
+            bool hazardous = body.value("hazardous", false);
+
+            GenKind kind;
+            if (type == "home") kind = GenKind::Home;
+            else if (type == "bin") kind = GenKind::Bin;
+            else if (type == "junction") kind = GenKind::Junction;
+            else {
+                sendError(res, 400, "bad_type", "type must be \"home\", \"bin\" or \"junction\"");
+                return;
+            }
+            if (count < 1 || count > 100) {
+                sendError(res, 400, "bad_count", "count must be between 1 and 100");
+                return;
+            }
+
+            std::lock_guard<std::mutex> lock(state.mutex);
+            RemovalResult r = removeGeneratedNodes(state.graph, kind, hazardous, count);
+            if (r.removed.empty()) {
+                sendError(res, 409, "nothing_to_remove", "There are no added nodes of that kind to remove");
+                return;
+            }
+            sendJson(res, 200, {{"ok", true}, {"removed", r.removed}, {"cascaded", r.cascaded},
+                                {"totalNodes", state.graph.nodeIds().size()}});
+        } catch (const json::exception&) {
+            sendError(res, 400, "bad_params", "Parameters have the wrong type");
         }
     });
 

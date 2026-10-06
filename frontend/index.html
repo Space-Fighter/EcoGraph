@@ -16,7 +16,6 @@
       document.documentElement.dataset.theme = theme;
     })();
   </script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -68,10 +67,15 @@
             <option value="bin-haz">Hazardous waste facility</option>
             <option value="junction">Road junction</option>
           </select>
-          <input type="number" id="builder-count-input" value="10" min="1" max="100" title="How many to add">
-          <button id="builder-add" class="primary">Add</button>
+          <input type="number" id="builder-count-input" value="10" min="1" max="100" title="How many to add or remove">
         </div>
-        <div id="builder-msg" class="builder-msg">New nodes are placed inside the localities and linked to the nearest roads. Reset removes them.</div>
+        <div class="row">
+          <button id="builder-add" class="primary">Add</button>
+          <button id="builder-remove" title="Removes the newest nodes of the selected type that you added (never the original city)">Remove</button>
+          <button id="builder-reset" class="danger" title="Removes everything you added and restarts the simulation at day 0">Reset city</button>
+        </div>
+        <div id="builder-msg" class="builder-msg">New nodes are placed inside the localities and linked to the nearest roads.</div>
+        <div id="builder-note" class="builder-note"></div>
       </section>
 
       <section>
@@ -86,8 +90,8 @@
         <button class="tab" data-tab="db">Database</button>
         <button id="fit-all" class="tab-action" type="button" title="Zoom and centre so every node is visible">Fit all nodes</button>
       </div>
-      <div id="map"></div>
       <div id="cy"></div>
+      <div id="node-tip" class="node-tip" hidden></div>
 
       <div id="db-panel" class="db-panel" hidden>
         <div class="db-toolbar">
@@ -131,6 +135,7 @@
           <span><svg class="shape" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/></svg>Household / business cluster</span>
           <span><svg class="shape" viewBox="0 0 16 16" aria-hidden="true"><polygon points="8,2 14.5,13.5 1.5,13.5"/></svg>Disposal site</span>
           <span><svg class="shape" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.5"/></svg>Road junction</span>
+          <span><svg class="shape" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="3.5" width="13" height="9" rx="3" fill="none" stroke-dasharray="2 2"/></svg>Locality (named box)</span>
         </div>
         <div class="legend-row">
           <b>Zone colour</b>
@@ -150,7 +155,6 @@
     </div>
   </main>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.2/cytoscape.min.js"></script>
   <script src="config.js"></script>
   <script src="js/api.js"></script>

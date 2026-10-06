@@ -1,29 +1,39 @@
-// City view. With Leaflet available, Leaflet owns pan/zoom and the lat/lng projection (no map
-// tiles are drawn), and Cytoscape is a transparent overlay whose node positions are
-// re-projected from lat/lng whenever the map moves. Without Leaflet (offline CDN, or ?plain=1)
-// Cytoscape draws on its own canvas using a simple projection of the same coordinates.
+// City view: a clean schematic drawn with Cytoscape (no map underneath, so positions do not
+// have to match real coordinates).
+//   * every locality is a labelled box (a Cytoscape compound node) with its name ABOVE it;
+//   * nodes inside a box sit on an even sunflower pattern, junction first so it ends up in the
+//     middle of the star of roads around it;
+//   * the boxes start where the localities really are in Dehradun and are then pushed apart,
+//     so the overall shape is familiar but nothing overlaps.
 const GraphView = (() => {
   // Cytoscape cannot read CSS variables, so the palette is mirrored here per theme.
   // Zone fill colours match --res/--com/--ind/--art in style.css (used by the legend).
   const THEMES = {
     light: {
       zone: { residential: '#8fd19e', commercial: '#8fb8e8', industrial: '#b8b8b8', arterial: '#f0efe9' },
-      edge: { residential: '#5aa56b', commercial: '#5b8fd0', industrial: '#8a8a8a', arterial: '#c3c0b4' },
+      edge: { residential: '#4f9a62', commercial: '#4a82cc', industrial: '#7d7d7d', arterial: '#a39f90' },
       text: '#1c1c1c', nodeBorder: '#555555', depotBorder: '#143769',
-      edgeLabel: '#444444', edgeLabelBg: '#ffffff',
+      edgeLabel: '#444444', bg: '#ffffff', areaLabel: '#143769',
       due: '#f59e0b', route: '#143769', hazard: '#d62828',
     },
     dark: {
       zone: { residential: '#4f9e63', commercial: '#4d7fc2', industrial: '#7d8591', arterial: '#566070' },
-      edge: { residential: '#3f7d50', commercial: '#3d65a0', industrial: '#5f6670', arterial: '#4a5362' },
+      edge: { residential: '#5fb375', commercial: '#6a9be0', industrial: '#8f98a5', arterial: '#8691a4' },
       text: '#e6e9ee', nodeBorder: '#aab4c3', depotBorder: '#8ab4f8',
-      edgeLabel: '#c5cdd9', edgeLabelBg: '#11161d',
+      edgeLabel: '#c5cdd9', bg: '#11161d', areaLabel: '#8ab4f8',
       due: '#fbbf24', route: '#7db3ff', hazard: '#ef5350',
     },
   };
-  const NODE_LABEL_ZOOM = 13;  // node ids are drawn from this map zoom upwards
-  const LABEL_ZOOM = 14;       // edge distances are drawn from this map zoom upwards
-  const AREA_LABEL_ZOOM = 0;   // locality names stay visible at every zoom (no basemap to orient by)
+
+  // Layout constants (pixels in the unzoomed drawing)
+  const NODE_GAP = 60;                   // distance between neighbouring nodes in a locality
+  const RING = NODE_GAP / 1.9;           // sunflower scale that gives ~NODE_GAP spacing
+  const BUBBLE_PAD = 44;                 // room for the box padding and the name above it
+  const BUBBLE_GAP = 26;                 // free space kept between two locality boxes
+  const PX_PER_KM = 34;                  // where boxes start (real geography, scaled)
+  const GOLDEN_ANGLE = 2.399963229728653;
+  const EDGE_LABEL_ZOOM = 1.0;           // km labels on roads appear once zoomed in this far
+  const TYPE_RANK = { junction: 0, depot: 1, bin: 2, home: 3 };
 
   function currentTheme() {
     return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
@@ -32,183 +42,137 @@ const GraphView = (() => {
   function buildStyle(t) {
     return [
       { selector: 'node', style: {
-          label: 'data(label)', 'font-size': 11, 'text-valign': 'bottom', 'text-margin-y': 4, color: t.text,
-          'text-background-color': t.edgeLabelBg, 'text-background-opacity': 0.7, 'text-background-padding': 1,
+          label: 'data(label)', 'font-size': 10, 'text-valign': 'bottom', 'text-margin-y': 3, color: t.text,
+          'text-background-color': t.bg, 'text-background-opacity': 0.75, 'text-background-padding': 1,
           'background-color': (n) => t.zone[n.data('zone')] || '#ddd',
           'border-width': 2, 'border-color': t.nodeBorder, width: 22, height: 22 } },
       { selector: 'node[type="depot"]', style: { shape: 'rectangle', width: 32, height: 32, 'border-width': 3, 'border-color': t.depotBorder, 'font-weight': 'bold' } },
       { selector: 'node[type="home"]', style: { shape: 'ellipse' } },
       { selector: 'node[type="bin"]', style: { shape: 'triangle', width: 28, height: 28 } },
-      { selector: 'node[type="junction"]', style: { shape: 'ellipse', width: 11, height: 11, 'font-size': 9 } },
+      { selector: 'node[type="junction"]', style: { shape: 'ellipse', width: 12, height: 12, 'font-size': 9 } },
+      // a locality box: tinted by zone, name above it, never under a node
+      { selector: 'node:parent', style: {
+          shape: 'round-rectangle', padding: 22, 'background-opacity': 0.13,
+          'background-color': (n) => t.edge[n.data('zone')] || '#888',
+          'border-width': 1.5, 'border-color': (n) => t.edge[n.data('zone')] || '#888', 'border-opacity': 0.8,
+          label: 'data(label)', 'text-valign': 'top', 'text-halign': 'center', 'text-margin-y': -5,
+          'font-size': 13, 'font-weight': 'bold', color: t.areaLabel,
+          'text-background-color': t.bg, 'text-background-opacity': 0.9, 'text-background-padding': 3,
+          'text-background-shape': 'roundrectangle' } },
       { selector: 'edge', style: {
-          width: 3, 'line-color': (e) => t.edge[e.data('zone')] || '#bbb',
+          width: 3, 'line-color': (e) => t.edge[e.data('zone')] || '#bbb', opacity: 0.95,
           'font-size': 9, color: t.edgeLabel,
-          'text-background-color': t.edgeLabelBg, 'text-background-opacity': 0.85, 'text-background-padding': 2,
+          // road lengths run along the road and sit just above it, away from the node names
+          'edge-text-rotation': 'autorotate', 'text-margin-y': -7,
+          'text-background-color': t.bg, 'text-background-opacity': 0.85, 'text-background-padding': 1,
           'curve-style': 'straight' } },
       { selector: 'edge.labeled', style: { label: 'data(label)' } },
-      { selector: 'node.nolabel', style: { 'text-opacity': 0, 'text-background-opacity': 0 } },
       { selector: 'node.due', style: { 'border-color': t.due, 'border-width': 5 } },
       { selector: 'node.overflow', style: { 'border-color': t.hazard, 'border-width': 6 } },
       { selector: 'node.visited', style: { 'border-color': t.route, 'border-width': 5 } },
-      { selector: 'edge.route', style: { 'line-color': t.route, width: 6, 'z-index': 10 } },
-      { selector: 'edge.hazard-edge', style: { 'line-color': t.hazard, 'line-style': 'dashed', width: 6, 'z-index': 10 } },
+      { selector: 'edge.route', style: { 'line-color': t.route, width: 6, opacity: 1, 'z-index': 10 } },
+      { selector: 'edge.hazard-edge', style: { 'line-color': t.hazard, 'line-style': 'dashed', width: 6, opacity: 1, 'z-index': 10 } },
       { selector: 'node.hazard-visited', style: { 'border-color': t.hazard, 'border-width': 5 } },
     ];
   }
 
+  let cy = null;
+  let areas = [];            // localities from the server: name, zone, lat, lng
+  let edgeCount = 0;
+  let labelsOn = false;
+  let animationToken = 0;    // bumping this cancels an animation in progress
+
   // Re-skins the canvas without touching positions or highlighted routes.
   function applyTheme() {
     if (cy) cy.style(buildStyle(THEMES[currentTheme()]));
-    drawAreas();
   }
 
-  let cy = null;
-  let map = null;            // Leaflet map, or null in plain mode
-  let areaLayer = null;      // locality circles + labels
-  let hoverLayer = null;     // invisible markers that give nodes hover tooltips
-  let areas = [];
-  let spread = {};           // per node: pixel offset that keeps overlapping nodes apart
-  const hoverMarkers = {};   // node id -> Leaflet marker carrying its tooltip
-  let edgeCount = 0;
-  let animationToken = 0;    // bumping this cancels an animation in progress
+  // ---- layout -------------------------------------------------------------------------
 
-  const el = (id) => document.getElementById(id);
-
-  // Plain-mode projection: equirectangular around Dehradun, 1 km ~ 60 px.
-  function plainPoint(lat, lng) {
+  function project(lat, lng) {
     const kmPerDegLat = 111.19;
-    const kmPerDegLng = 111.32 * Math.cos(30.3 * Math.PI / 180);
-    return { x: (lng - 78.0) * kmPerDegLng * 60, y: -(lat - 30.33) * kmPerDegLat * 60 };
+    const kmPerDegLng = 111.32 * Math.cos(30.33 * Math.PI / 180);
+    return { x: (lng - 78.0) * kmPerDegLng * PX_PER_KM, y: -(lat - 30.33) * kmPerDegLat * PX_PER_KM };
   }
 
-  function pointFor(lat, lng) {
-    if (map) {
-      const p = map.latLngToContainerPoint([lat, lng]);
-      return { x: p.x, y: p.y };
-    }
-    return plainPoint(lat, lng);
+  function byTypeThenId(a, b) {
+    const ra = TYPE_RANK[a.data('type')], rb = TYPE_RANK[b.data('type')];
+    if (ra !== rb) return ra - rb;
+    return a.id().localeCompare(b.id(), undefined, { numeric: true });
   }
 
-  // Real coordinates put many nodes almost on top of each other (a locality is ~1 km across,
-  // the whole city ~20 km). Each node keeps its true position as an anchor, but nodes closer
-  // than MIN_GAP pixels are pushed apart so every node stays visible and hoverable. The offsets
-  // are in pixels at the current zoom, so they are recomputed when the zoom changes and simply
-  // carried along while panning. At high zoom nodes are naturally far apart and offsets vanish.
-  const MIN_GAP = 30;
-
-  function recomputeSpread() {
-    spread = {};
-    if (!map || !cy) return;
-    const nodes = cy.nodes().toArray();
-    const n = nodes.length;
-    const x0 = new Float64Array(n), y0 = new Float64Array(n);
-    const x = new Float64Array(n), y = new Float64Array(n);
-    nodes.forEach((nd, i) => {
-      const p = pointFor(nd.data('lat'), nd.data('lng'));
-      x0[i] = x[i] = p.x;
-      y0[i] = y[i] = p.y;
-    });
-
-    for (let iter = 0; iter < 300; iter++) {
-      const grid = new Map();
-      for (let i = 0; i < n; i++) {
-        const key = Math.floor(x[i] / MIN_GAP) + ',' + Math.floor(y[i] / MIN_GAP);
-        if (!grid.has(key)) grid.set(key, []);
-        grid.get(key).push(i);
-      }
+  // Pushes locality boxes apart until none overlap, with a faint pull back to where they
+  // really are so the city keeps a recognisable shape.
+  function separateBubbles(groups) {
+    for (let iter = 0; iter < 400; iter++) {
       let worst = 0;
-      for (let i = 0; i < n; i++) {
-        const cx = Math.floor(x[i] / MIN_GAP), cyy = Math.floor(y[i] / MIN_GAP);
-        for (let gx = cx - 1; gx <= cx + 1; gx++) {
-          for (let gy = cyy - 1; gy <= cyy + 1; gy++) {
-            const cell = grid.get(gx + ',' + gy);
-            if (!cell) continue;
-            for (const j of cell) {
-              if (j <= i) continue;
-              let dx = x[j] - x[i], dy = y[j] - y[i];
-              let d = Math.hypot(dx, dy);
-              if (d >= MIN_GAP) continue;
-              if (d < 1e-6) {  // identical position: separate along a deterministic angle
-                const a = i * 2.399963;
-                dx = Math.cos(a); dy = Math.sin(a); d = 1;
-              }
-              const push = (MIN_GAP - Math.hypot(x[j] - x[i], y[j] - y[i])) / 2;
-              const ux = dx / d, uy = dy / d;
-              x[i] -= ux * push; y[i] -= uy * push;
-              x[j] += ux * push; y[j] += uy * push;
-              worst = Math.max(worst, push);
-            }
-          }
+      for (let i = 0; i < groups.length; i++) {
+        for (let j = i + 1; j < groups.length; j++) {
+          const a = groups[i], b = groups[j];
+          let dx = b.x - a.x, dy = b.y - a.y;
+          let d = Math.hypot(dx, dy);
+          const need = a.r + b.r + BUBBLE_GAP;
+          if (d >= need) continue;
+          if (d < 1e-6) { const ang = (i * 7 + j) * GOLDEN_ANGLE; dx = Math.cos(ang); dy = Math.sin(ang); d = 1; }
+          const push = (need - Math.hypot(b.x - a.x, b.y - a.y)) / 2;
+          a.x -= (dx / d) * push; a.y -= (dy / d) * push;
+          b.x += (dx / d) * push; b.y += (dy / d) * push;
+          worst = Math.max(worst, push);
         }
       }
-      // A weak pull back to the true position keeps each cluster compact and recognisable.
-      for (let i = 0; i < n; i++) {
-        x[i] += (x0[i] - x[i]) * 0.004;
-        y[i] += (y0[i] - y[i]) * 0.004;
-      }
-      if (worst < 0.2) break;
+      groups.forEach((g) => { g.x += (g.x0 - g.x) * 0.004; g.y += (g.y0 - g.y) * 0.004; });
+      if (worst < 0.3) break;
     }
-
-    nodes.forEach((nd, i) => {
-      spread[nd.id()] = { dx: x[i] - x0[i], dy: y[i] - y0[i] };
-      const m = hoverMarkers[nd.id()];  // tooltip target follows the displaced node
-      if (m) m.setLatLng(map.containerPointToLatLng([x[i], y[i]]));
-    });
   }
 
-  function syncPositions() {
-    if (!cy || !map) return;
+  function runLayout() {
+    if (!cy) return;
+    const byArea = {};
+    cy.nodes(':childless').forEach((n) => {
+      const key = n.data('area') || '(unassigned)';
+      (byArea[key] = byArea[key] || []).push(n);
+    });
+
+    const groups = Object.keys(byArea).map((name) => {
+      const nodes = byArea[name].sort(byTypeThenId);
+      const known = areas.find((a) => a.name === name);
+      let lat = 0, lng = 0;
+      if (known) { lat = known.lat; lng = known.lng; }
+      else { nodes.forEach((n) => { lat += n.data('lat') / nodes.length; lng += n.data('lng') / nodes.length; }); }
+      const c = project(lat, lng);
+      return { name, nodes, x: c.x, y: c.y, x0: c.x, y0: c.y,
+               r: RING * Math.sqrt(nodes.length) + NODE_GAP / 2 + BUBBLE_PAD };
+    });
+
+    separateBubbles(groups);
+
     cy.batch(() => {
-      cy.nodes().forEach((n) => {
-        const p = pointFor(n.data('lat'), n.data('lng'));
-        const o = spread[n.id()];
-        n.position(o ? { x: p.x + o.dx, y: p.y + o.dy } : p);
+      groups.forEach((g) => {
+        g.nodes.forEach((n, i) => {
+          const rr = RING * Math.sqrt(i + 0.5), th = i * GOLDEN_ANGLE;
+          n.position({ x: g.x + rr * Math.cos(th), y: g.y + rr * Math.sin(th) });
+        });
       });
     });
   }
 
-  function allBounds() {
-    return L.latLngBounds(cy.nodes().map((n) => [n.data('lat'), n.data('lng')]));
-  }
+  // ---- elements -----------------------------------------------------------------------
 
-  function spreadFits() {
-    const c = map.getContainer();
-    const w = c.clientWidth, h = c.clientHeight;
-    return cy.nodes().every((n) => {
-      const p = n.position();
-      return p.x > 25 && p.x < w - 25 && p.y > 25 && p.y < h - 110;  // room for the 3-row legend
-    });
-  }
+  function areaId(name) { return 'area:' + name; }
 
-  // Zooms/centres so that every node (including the pushed-apart ones) is on screen at once.
-  function fitAll() {
-    if (!cy) return;
-    if (!map) { cy.fit(undefined, 40); return; }
-    map.invalidateSize();
-    map.fitBounds(allBounds(), { padding: [60, 60], animate: false });
-    recomputeSpread();
-    syncPositions();
-    for (let i = 0; i < 10 && !spreadFits(); i++) {
-      map.setZoom(map.getZoom() - 0.25, { animate: false });
-      recomputeSpread();
-      syncPositions();
-    }
-    syncLabels();
-  }
-
-  function syncLabels() {
-    if (!cy) return;
-    const show = !map || map.getZoom() >= LABEL_ZOOM;
-    cy.edges().forEach((e) => e.toggleClass('labeled', show));
-    cy.nodes().forEach((n) => n.toggleClass('nolabel', !!map && map.getZoom() < NODE_LABEL_ZOOM));
-    if (map) map.getContainer().classList.toggle('zoom-low', map.getZoom() < AREA_LABEL_ZOOM);
+  function areaZone(name) {
+    const a = areas.find((x) => x.name === name);
+    return a ? a.zone : 'arterial';
   }
 
   function nodeElement(n) {
+    const kind = n.type === 'home' ? (n.hazardous ? 'hazardous site' : 'household / business cluster')
+               : n.type === 'bin' ? 'disposal site (' + (n.binType || 'bin') + ')'
+               : n.type;
     return {
       group: 'nodes',
-      data: { id: n.id, label: n.id, type: n.type, zone: n.zone, lat: n.lat, lng: n.lng },
-      position: pointFor(n.lat, n.lng),
+      data: { id: n.id, label: n.id, type: n.type, zone: n.zone, lat: n.lat, lng: n.lng,
+              name: n.name || n.id, area: n.area || '', kind, parent: n.area ? areaId(n.area) : undefined },
     };
   }
 
@@ -220,86 +184,101 @@ const GraphView = (() => {
     };
   }
 
-  function addHover(n) {
-    if (!map) return;
-    const kind = n.type === 'home' ? (n.hazardous ? 'hazardous site' : 'cluster') : n.type;
-    const m = L.circleMarker([n.lat, n.lng], { radius: 12, stroke: false, fill: true, fillOpacity: 0 });
-    m.bindTooltip(n.name + ' (' + n.id + ')<br>' + n.area + ' · ' + kind, { direction: 'top', offset: [0, -8] });
-    hoverLayer.addLayer(m);
-    hoverMarkers[n.id] = m;
+  // Locality boxes that do not exist yet (parents must exist before their children).
+  function areaElements(nodes) {
+    const seen = new Set();
+    const out = [];
+    nodes.forEach((n) => {
+      if (!n.area || seen.has(n.area) || cy.getElementById(areaId(n.area)).nonempty()) return;
+      seen.add(n.area);
+      out.push({ group: 'nodes', data: { id: areaId(n.area), label: n.area, zone: areaZone(n.area), isArea: true } });
+    });
+    return out;
   }
 
-  function drawAreas() {
-    if (!map || !areaLayer) return;
-    areaLayer.clearLayers();
-    const colors = THEMES[currentTheme()].edge;
-    areas.forEach((a) => {
-      const color = colors[a.zone] || '#888';
-      const circle = L.circle([a.lat, a.lng], {
-        radius: a.radiusKm * 1000, color, weight: 1.5, fillColor: color, fillOpacity: 0.12, interactive: false,
-      });
-      circle.bindTooltip(a.name, { permanent: true, direction: 'center', className: 'area-label', interactive: false });
-      areaLayer.addLayer(circle);
+  function addAll(nodes, edges) {
+    cy.add(areaElements(nodes));
+    cy.add(nodes.map(nodeElement));
+    cy.add(edges.map(edgeElement));
+  }
+
+  // ---- view ---------------------------------------------------------------------------
+
+  // Road lengths ("2.4 km") are only drawn once zoomed in enough to read them.
+  function syncLabels(force) {
+    if (!cy) return;
+    const show = cy.zoom() >= EDGE_LABEL_ZOOM;
+    if (show === labelsOn && force !== true) return;
+    labelsOn = show;
+    cy.edges().toggleClass('labeled', show);
+  }
+
+  // Zooms/centres so that every node is on screen at once.
+  function fitAll() {
+    if (!cy) return;
+    cy.resize();
+    cy.fit(cy.elements(), 36);
+    syncLabels(true);  // new edges (after adding nodes) need the label state applied too
+  }
+
+  function setupTooltip(container) {
+    const tip = document.getElementById('node-tip');
+    if (!tip) return;
+    const hide = () => { tip.hidden = true; };
+    cy.on('mouseover', 'node:childless', (e) => {
+      const n = e.target;
+      tip.replaceChildren();
+      const title = document.createElement('b');
+      title.textContent = n.data('name') + ' (' + n.id() + ')';
+      const sub = document.createElement('div');
+      sub.textContent = (n.data('area') ? n.data('area') + ' · ' : '') + n.data('kind');
+      tip.append(title, sub);
+      const p = n.renderedPosition();
+      tip.style.left = (container.offsetLeft + p.x) + 'px';
+      tip.style.top = (container.offsetTop + p.y - 20) + 'px';
+      tip.hidden = false;
     });
+    cy.on('mouseout', 'node:childless', hide);
+    cy.on('viewport', hide);
   }
 
   function init(container, graph) {
     areas = graph.areas || [];
-    const usePlain = typeof L === 'undefined' || /[?&]plain=1/.test(location.search);
-    document.querySelector('.canvas-wrap').classList.toggle('map-mode', !usePlain);
-
-    if (!usePlain) {
-      // No tile layer: the map is only a pan/zoom/projection surface on the plain background.
-      // (Without tiles Leaflet needs explicit zoom limits.)
-      map = L.map('map', { zoomControl: true, zoomAnimation: false, zoomSnap: 0.25, attributionControl: false,
-                           minZoom: 9, maxZoom: 19 });
-      areaLayer = L.layerGroup().addTo(map);
-      hoverLayer = L.layerGroup().addTo(map);
-      map.fitBounds(L.latLngBounds(graph.nodes.map((n) => [n.lat, n.lng])), { padding: [60, 60] });
-    }
-
     cy = cytoscape({
       container,
       elements: [],
       layout: { name: 'preset' },
       wheelSensitivity: 0.3,
-      userPanningEnabled: !map,
-      userZoomingEnabled: !map,
+      minZoom: 0.15,
+      maxZoom: 3,
       boxSelectionEnabled: false,
       autoungrabify: true,
       style: buildStyle(THEMES[currentTheme()]),
     });
-    cy.add(graph.nodes.map(nodeElement));
-    cy.add(graph.edges.map(edgeElement));
-    graph.nodes.forEach(addHover);
-
-    if (map) {
-      map.on('move zoom viewreset resize', syncPositions);
-      map.on('zoomend', () => { recomputeSpread(); syncPositions(); syncLabels(); });
-      drawAreas();
-    } else {
-      cy.fit(undefined, 40);
-    }
-    syncPositions();
-    syncLabels();
-    if (map) {
-      // The container may not have its final size yet (CSS / layout still settling): measure
-      // again on the next frame and refit, otherwise the map renders in a corner of the panel.
-      // (timers, not requestAnimationFrame: browsers pause rAF in background tabs)
-      setTimeout(fitAll, 50);
-      window.addEventListener('load', fitAll);
-      window.addEventListener('resize', () => { map.invalidateSize(); syncPositions(); });
-    }
+    addAll(graph.nodes, graph.edges);
+    runLayout();
+    setupTooltip(container);
+    cy.on('zoom', syncLabels);
+    fitAll();
+    window.addEventListener('resize', () => { cy.resize(); });
     return cy;
   }
 
-  // Appends freshly generated nodes/edges without rebuilding (keeps the current view).
+  // Appends freshly generated nodes/edges and re-lays-out so boxes make room for them.
   function addElements(nodes, edges) {
     if (!cy) return;
-    cy.add(nodes.map(nodeElement));
-    cy.add(edges.map(edgeElement));
-    nodes.forEach(addHover);
+    addAll(nodes, edges);
+    runLayout();
     fitAll();  // new nodes must be visible too
+  }
+
+  // Removes nodes (their roads go with them) and any locality box left empty, then re-lays-out.
+  function removeNodes(ids) {
+    if (!cy) return;
+    ids.forEach((id) => cy.getElementById(id).remove());
+    cy.nodes(':parent').forEach((p) => { if (p.children().empty()) p.remove(); });
+    runLayout();
+    fitAll();
   }
 
   // Replaces everything from a fresh /graph response (after a reset).
@@ -307,16 +286,14 @@ const GraphView = (() => {
     if (!cy) return;
     animationToken++;
     cy.elements().remove();
-    if (hoverLayer) hoverLayer.clearLayers();
-    Object.keys(hoverMarkers).forEach((k) => delete hoverMarkers[k]);
     areas = graph.areas || areas;
     edgeCount = 0;
-    cy.add(graph.nodes.map(nodeElement));
-    cy.add(graph.edges.map(edgeElement));
-    graph.nodes.forEach(addHover);
-    drawAreas();
+    addAll(graph.nodes, graph.edges);
+    runLayout();
     fitAll();
   }
+
+  // ---- routes and highlighting --------------------------------------------------------
 
   function edgeBetween(a, b) {
     const hit = cy.edges().filter((e) => {
@@ -365,22 +342,13 @@ const GraphView = (() => {
 
   // Needed after the canvas was hidden (Database tab) and shown again.
   function resize() {
-    if (!cy) return;
-    if (map) {
-      map.invalidateSize();
-      cy.resize();
-      recomputeSpread();
-      syncPositions();
-    } else {
-      cy.resize();
-      cy.fit(undefined, 40);
-    }
+    if (cy) fitAll();
   }
 
-  // Current on-screen centre of every node (used by tests / debugging).
+  // Current drawing position of every real node, not the locality boxes (used by tests).
   function nodePositions() {
-    return cy.nodes().map((n) => ({ id: n.id(), x: n.position('x'), y: n.position('y') }));
+    return cy.nodes(':childless').map((n) => ({ id: n.id(), x: n.position('x'), y: n.position('y') }));
   }
 
-  return { init, addElements, rebuild, fitAll, nodePositions, animateRoute, clearRoute, markDue, resize, applyTheme };
+  return { init, addElements, removeNodes, rebuild, fitAll, nodePositions, animateRoute, clearRoute, markDue, resize, applyTheme };
 })();

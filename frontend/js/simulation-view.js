@@ -122,5 +122,5 @@ const SimulationView = (() => {
     showStatus(await Api.getSimulation());
   }
 
-  return { init, isRunning: () => running };
+  return { init, reset, isRunning: () => running };
 })();

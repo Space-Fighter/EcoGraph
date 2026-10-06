@@ -1,5 +1,6 @@
 #include "graph.hpp"
 
+#include <algorithm>
 #include <stdexcept>
 
 std::string zoneToString(ZoneType z) {
@@ -65,6 +66,21 @@ void Graph::addEdge(const std::string& from, const std::string& to, double weigh
         adjacency_[to].push_back(Edge{from, weight, zone});
     }
     edgeList_.push_back(EdgeRecord{from, to, weight, zone});
+}
+
+void Graph::removeNode(const std::string& id) {
+    if (!hasNode(id)) throw std::out_of_range("removeNode: unknown node " + id);
+    nodes_.erase(id);
+    adjacency_.erase(id);
+    for (std::unordered_map<std::string, std::vector<Edge> >::iterator it = adjacency_.begin();
+         it != adjacency_.end(); ++it) {
+        std::vector<Edge>& v = it->second;
+        v.erase(std::remove_if(v.begin(), v.end(), [&id](const Edge& e) { return e.to == id; }), v.end());
+    }
+    edgeList_.erase(std::remove_if(edgeList_.begin(), edgeList_.end(),
+                                   [&id](const EdgeRecord& r) { return r.from == id || r.to == id; }),
+                    edgeList_.end());
+    order_.erase(std::remove(order_.begin(), order_.end(), id), order_.end());
 }
 
 bool Graph::hasNode(const std::string& id) const {

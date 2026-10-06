@@ -41,5 +41,7 @@ const Api = (() => {
     getDatabase: () => request('GET', 'database'),
     // params: { type: 'home'|'bin'|'junction', count, hazardous, seed? }
     generateNodes: (params) => request('POST', 'nodes/generate', params),
+    // params: { type: 'home'|'bin'|'junction', count, hazardous } - removes the newest ADDED nodes
+    removeNodes: (params) => request('POST', 'nodes/remove', params),
   };
 })();

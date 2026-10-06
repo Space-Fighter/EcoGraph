@@ -28,6 +28,7 @@ struct Node {
     std::time_t lastCollected = 0;  // epoch seconds
     std::string binType;            // Bin: recyclable | compost | general | medical | chemical
     std::string wasteDescription;   // Home: what this home currently has out for pickup
+    bool generated = false;         // added by the city builder, not part of the city file
 };
 
 struct Edge {
@@ -49,6 +50,9 @@ public:
     // Adds the edge in both directions unless bidirectional is false.
     void addEdge(const std::string& from, const std::string& to, double weight,
                  ZoneType zone, bool bidirectional = true);
+
+    // Removes a node and every edge touching it. Throws std::out_of_range if id is unknown.
+    void removeNode(const std::string& id);
 
     bool hasNode(const std::string& id) const;
     // These throw std::out_of_range if id is unknown.

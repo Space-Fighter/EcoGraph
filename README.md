@@ -92,16 +92,206 @@ EcoGraph operates as a single persistent C++ process that serves both the JSON R
 
 ---
 
-## Data Structures & Algorithms Matrix
+## Theoretical Framework & Algorithmic Foundations
 
-| Concept / Task | Algorithmic Structure | Purpose & Time Complexity |
-|---|---|---|
-| **City Network Storage** | `std::unordered_map<std::string, Node>` + Adjacency List `std::vector<Edge>` | Fast $O(1)$ node lookup and efficient edge traversal $O(V + E)$. |
-| **Shortest Path Computation** | **Dijkstra's Algorithm** with `std::priority_queue` (Min-Heap) | Finds minimum-cost routes from source to target. Time complexity: $O((E + V) \log V)$. |
-| **Hazardous Route Exclusion** | **Constrained Dijkstra** (Forbidden Zone Filtering) | Filters out edges belonging to forbidden zones (`residential`/`commercial`) during graph relaxation. |
-| **Waste Classification** | String keyword match & rule mapping | Identifies waste type (`organic`, `recyclable`, `medical`, `chemical`) in $O(K)$ keyword string checks. |
-| **Collection Scheduling** | Formula: $\text{Interval} = \text{Clamp}\left(\lfloor\frac{\text{Capacity}}{\text{FillRate}}\rfloor, 1, 14\right)$ | Determines due dates per home/bin; ranks urgency using a max-heap. |
-| **Path Reconstruction** | Predecessor map vector backtracking | Traces backward from target node to source to reconstruct complete node path sequence. |
+EcoGraph grounds municipal waste logistics in formal graph theory, constrained optimization, priority queuing, and object-oriented architectural principles. The system addresses critical systemic inefficiencies identified in conventional waste collection networks.
+
+### 1. Problem Formulation & Theoretical Motivation
+
+Municipal solid waste collection has historically relied on static, empirical scheduling. This leads to three fundamental operational failures:
+1. **Inflexible Static Routing**: Collection vehicles follow static, pre-planned routes regardless of daily city traffic conditions or actual waste accumulation. This produces excessive Vehicle Kilometers Traveled (VKT), elevated fuel consumption, and unnecessary greenhouse gas emissions.
+2. **Indiscriminate Hazardous Waste Handling**: High-risk waste streams (such as biohazardous **medical waste** and toxic **chemical waste**) cannot be treated as ordinary municipal solid waste. Mixing them into regular collection loops or routing them through densely populated residential neighborhoods creates severe contamination and public health risks.
+3. **Decoupled Capacity Dynamics**: Calendar-based collections (e.g., visiting every street each Monday) ignore variable waste generation rates ($r_i$). Low-generation locations are serviced when nearly empty (wasting labor and transit overhead), while high-generation bins overflow before the next scheduled visit, causing sanitary hazards.
+
+**EcoGraph** resolves these challenges by formulating urban waste logistics as a **dynamically weighted, zone-constrained graph optimization problem** integrated with a **predictive fill-rate adaptive scheduler**.
+
+---
+
+### 2. Integration of Academic Course Concepts (PBL Foundations)
+
+The architecture maps core theoretical concepts from **Data Structures & Algorithms** and **Object-Oriented Programming with C++** into an integrated systems pipeline:
+
+#### A. Data Structures & Computational Complexity
+
+| Data Structure / Algorithm | Formal Role in EcoGraph | Time Complexity | Space Complexity |
+|---|---|---|---|
+| **Graph (Adjacency List)** | $G = (V, E)$ stored via `std::unordered_map<std::string, std::vector<Edge>>`. Nodes represent spatial entities (Depot, Homes, Junctions, Bins); edges represent weighted road segments tagged with zone types. | Traversal: $O(V + E)$ | $O(V + E)$ |
+| **Hash Map (`std::unordered_map`)** | Key-value store mapping node identifiers to node metadata, coordinates, fill levels, and adjacency vectors. | Average Lookup: $O(1)$ | $O(V)$ |
+| **Priority Queue (Min-Heap)** | `std::priority_queue` with `std::greater` comparator. Powers Dijkstra's frontier exploration to greedily extract the minimum tentative distance node. | Extraction: $O(\log V)$<br>Insertion: $O(\log V)$ | $O(V)$ |
+| **Priority Queue (Max-Heap)** | Evaluates dynamic scheduling urgency. Ranks due nodes by their calculated degree of "overdue-ness" ($\Delta t - \text{Interval}$). | Extract-Max: $O(\log V)$ | $O(V)$ |
+| **FIFO Queue (`std::queue`)** | First-In, First-Out sequence structure used in FIFO Collection Mode to sequence batched household pickups before disposal. | Enqueue/Dequeue: $O(1)$ | $O(V)$ |
+| **Predecessor Backtracking (Vector)** | Traces parent pointers $\pi[v]$ from target node back to origin source to reconstruct the complete ordered path sequence. | Path Recovery: $O(V)$ | $O(V)$ |
+
+#### B. Object-Oriented Design (OOP Pillars in C++)
+
+- **Encapsulation**: The `Graph` class strictly encapsulates internal adjacency lists and node data structures. External controllers cannot arbitrarily mutate topology; all access and mutation proceed through safe, well-defined public member functions (`neighbors()`, `getNode()`, `loadFromJson()`).
+- **Abstraction**: Internal algorithmic complexity is abstracted behind high-level interfaces. The `Scheduler` exposes a concise `getDueLocations()` interface hiding internal heap operations and time calculations. Similarly, the `WasteClassifier` exposes `classifyWaste()` hiding keyword parsing logic.
+- **Inheritance**: Route generation adheres to an extensible strategy pattern where specialized builders (`PriorityRouteBuilder`, `FIFORouteBuilder`) inherit from a unified `RouteStrategy` base class.
+- **Polymorphism**: The system utilizes runtime polymorphism via virtual method overrides (`virtual RouteResult buildRoute(...) = 0`), enabling dynamic switching between routing heuristics based on user parameters or operational conditions.
+
+---
+
+### 3. Graph Network Representation & Storage Architecture
+
+The municipal transit network is modeled as a directed, weighted, attribute-rich graph:
+
+$$G = (V, E)$$
+
+#### Vertex Set ($V$)
+Each vertex $v \in V$ represents a distinct spatial facility characterized by:
+- **Identifier**: Unique string key $v_{\text{id}} \in \Sigma^*$
+- **Node Classification**: $\tau(v) \in \{\text{Depot}, \text{Home}, \text{Junction}, \text{Bin}\}$
+- **Zone Tagging**: $z(v) \in \{\text{Residential}, \text{Commercial}, \text{Industrial}, \text{Arterial}\}$
+- **Volumetric Parameters**: Capacity $C(v) \in \mathbb{R}^+$, fill generation rate $r(v) \in \mathbb{R}^+$, and last collection timestamp $t_{\text{last}}(v)$.
+
+#### Edge Set ($E$)
+Each directed or bidirectional edge $e = (u, v) \in E$ carries:
+- **Cost / Distance Weight**: $w(u, v) \in \mathbb{R}^+$ (representing physical travel distance or transit time).
+- **Edge Zone Attribute**: $z(e) \in \{\text{Residential}, \text{Commercial}, \text{Industrial}, \text{Arterial}\}$, decoupled from endpoint zone classifications to accurately model cross-zonal transit links.
+
+#### Storage Architecture (Adjacency List)
+Rather than an $O(|V|^2)$ dense adjacency matrix, EcoGraph employs an in-memory adjacency list representation:
+
+```
+[DEPOT] ──(4.2 km, arterial)────► [J1]
+                                   │
+                    ┌──────────────┴──────────────┐
+       (3.1 km, residential)              (5.0 km, arterial)
+                    ▼                             ▼
+                  [H1]                          [IN1]
+                    │                             │
+       (6.0 km, industrial)               (3.0 km, industrial)
+                    ▼                             ▼
+                  [B1] ◄──────────────────────────┘
+```
+
+This guarantees optimal space utilization for sparse urban road graphs ($|E| \ll |V|^2$) and provides $O(\text{deg}(u))$ edge enumeration during path relaxation.
+
+---
+
+### 4. Shortest-Path Optimization: Dijkstra's Algorithm
+
+For standard non-hazardous routing (depot-to-home, home-to-home, and home-to-bin segments), EcoGraph computes minimum-cost traversals using Dijkstra's algorithm implemented with a binary min-heap priority queue.
+
+#### Algorithmic Execution Steps
+1. **Initialization**: Initialize distance table $\text{dist}[s] \leftarrow 0$ and $\text{dist}[v] \leftarrow \infty \quad \forall v \in V \setminus \{s\}$. Push $(0, s)$ into min-heap $Q$.
+2. **Min-Extraction**: Dequeue vertex $u$ with minimum tentative distance $\text{dist}[u]$ from $Q$. If $u$ is already processed, skip (lazy deletion).
+3. **Edge Relaxation**: For each outgoing edge $(u, v) \in E$ with weight $w(u, v)$:
+   $$\text{if } \text{dist}[u] + w(u, v) < \text{dist}[v] \implies \begin{cases} \text{dist}[v] \leftarrow \text{dist}[u] + w(u, v) \\ \pi[v] \leftarrow u \\ \text{push } (\text{dist}[v], v) \text{ to } Q \end{cases}$$
+4. **Path Reconstruction**: Backtrack through predecessor pointers $\pi$ starting from destination $t$ back to source $s$.
+
+**Computational Complexity**: With $|V|$ vertices and $|E|$ edges, min-heap extraction costs $O(|V| \log |V|)$ and edge relaxations cost $O(|E| \log |V|)$, yielding overall time complexity:
+
+$$T(V, E) = O((|V| + |E|) \log |V|)$$
+
+---
+
+### 5. Zone-Constrained Pathfinding for Hazardous Materials
+
+Hazardous substances (biohazardous medical sharps, cytotoxic pharmaceuticals, reactive chemicals) pose critical contagion and toxicity hazards. EcoGraph implements **Constrained Dijkstra** to enforce spatial isolation.
+
+#### Mathematical Formulation
+Given source $s$ and destination bin $t$, the constrained shortest path $P^*$ satisfies:
+
+$$P^* = \arg\min_{P \in \mathcal{P}_{s \to t}} \sum_{e \in P} w(e) \quad \text{subject to} \quad \forall e \in P, \ z(e) \notin \mathcal{Z}_{\text{forbidden}}$$
+
+where $\mathcal{Z}_{\text{forbidden}} = \{\text{Residential}, \text{Commercial}\}$.
+
+```
+   [J1 (Start)]
+      │
+      ├───(cost: 2, residential)───► [R1] ───(cost: 2)───► [Hazard Bin]  ❌ FORBIDDEN (Cost 4)
+      │                                                     ▲
+      └───(cost: 5, industrial)────► [IN1] ──(cost: 3)─────┘           ✅ ALLOWED (Cost 8)
+```
+
+#### Algorithmic Mechanism
+During the relaxation phase:
+- For each edge $(u, v)$, the algorithm inspects $z(u, v)$ and $z(v)$.
+- If $z(u, v) \in \mathcal{Z}_{\text{forbidden}}$ or $z(v) \in \mathcal{Z}_{\text{forbidden}}$, the edge is treated as having infinite cost ($w = \infty$) and relaxation is bypassed.
+- **Safety Guarantee**: The vehicle is mathematically restricted to arterial highways and industrial zones, preventing exposure to densely populated neighborhoods.
+- **Unreachability Handling**: If no valid path exists within the permitted zones, the router halts and returns an unprocessable response (`HTTP 422 Unprocessable Entity`), alerting operators to configure a designated transit corridor.
+
+---
+
+### 6. Dynamic Scheduling & Fill-Rate Mathematics
+
+Rather than static calendar schedules (e.g., every Tuesday), EcoGraph uses a volumetric predictive fill-rate model to determine optimal collection frequencies.
+
+#### Adaptive Interval Formulation
+For each node $i$, given capacity $C_i$ (in kg or liters) and daily fill generation rate $r_i$ (in units/day), the dynamic collection interval $\text{Interval}_i$ (in days) is calculated as:
+
+$$\text{Interval}_i = \text{clamp}\left( \left\lfloor \frac{C_i}{r_i} \right\rfloor, \ 1, \ 14 \right)$$
+
+- **Lower Bound ($\text{Floor} = 1 \text{ day}$)**: Prevents redundant multiple dispatches within the same operational day cycle.
+- **Upper Bound ($\text{Ceiling} = 14 \text{ days}$)**: Enforces a bi-weekly hygiene and sanitation ceiling to prevent odor and decomposition, regardless of how slowly a container fills.
+
+#### Urgency Metric & Max-Heap Priority Ranking
+At any simulation time $t_{\text{current}}$, the elapsed time since last service is:
+
+$$\Delta t_i = t_{\text{current}} - t_{\text{lastCollected}, i}$$
+
+A location is classified as **due for collection** when:
+
+$$\Delta t_i \ge \text{Interval}_i$$
+
+The degree of **overdue-ness (Urgency)** is defined as:
+
+$$\text{Urgency}_i = \Delta t_i - \text{Interval}_i$$
+
+All due locations are inserted into a **Max-Heap Priority Queue** ordered by $\text{Urgency}_i$. Locations with the largest backlog or risk of overflowing are prioritized at the top of the collection schedule.
+
+#### Worked Computational Example (From Evaluation Presentation)
+
+Consider four sample locations evaluated on a simulation day:
+
+| Location | Capacity ($C_i$) | Fill Rate ($r_i$) | Interval Formula ($\lfloor C_i / r_i \rfloor$) | Clamped Interval | Elapsed ($\Delta t$) | Overdue Margin ($\Delta t - \text{Interval}$) | Collection Status |
+|---|---|---|---|---|---|---|---|
+| **H1** (Home 1) | 50 units | 5 units/day | $50 / 5 = 10\text{d}$ | **10 days** | 9 days | $-1$ day | Not Due (1 day remaining) |
+| **H2** (Home 2) | 100 units | 20 units/day | $100 / 20 = 5\text{d}$ | **5 days** | 6 days | $+1$ day | **Due** (1 day overdue) |
+| **B1** (Bin 1) | 300 units | 40 units/day | $300 / 40 = 7.5\text{d}$ | **7 days** | 10 days | $+3$ days | **Due** (3 days overdue) |
+| **B2** (Bin 2) | 100 units | 2 units/day | $100 / 2 = 50\text{d}$ | **14 days** *(clamped)* | 20 days | $+6$ days | **Due** (6 days overdue) |
+
+**Max-Heap Dispatch Order**:
+$$\mathbf{B2 \ (+6d)} \ \longrightarrow \ \mathbf{B1 \ (+3d)} \ \longrightarrow \ \mathbf{H2 \ (+1d)}$$
+*(H1 is deferred until its interval elapsed threshold is reached).*
+
+---
+
+### 7. Multi-Stop Routing Strategies & Hazard Preemption
+
+Once due locations are identified, the routing engine constructs an optimal multi-stop tour using one of two selectable collection strategies:
+
+#### A. Priority Mode (Immediate Disposal Loop)
+- **Concept**: After collecting waste from a home, the truck immediately traverses to the nearest compatible disposal bin before proceeding to the next stop.
+- **Traversal Sequence**:
+  $$\text{Depot} \longrightarrow \text{Home}_1 \longrightarrow \text{Bin}_{\text{nearest}} \longrightarrow \text{Home}_2 \longrightarrow \text{Bin}_{\text{nearest}} \longrightarrow \dots \longrightarrow \text{Depot}$$
+- **Optimal Use Case**: Suitable for perishable, odorous organic waste or systems with limited onboard truck capacity where cross-contamination must be eliminated.
+
+#### B. FIFO Mode (Batched Route Optimization)
+- **Concept**: The truck visits all scheduled pickup locations in batch sequence, consolidating waste in its cargo hold, and subsequently traverses to designated disposal facilities.
+- **Traversal Sequence**:
+  $$\text{Depot} \longrightarrow \text{Home}_1 \longrightarrow \text{Home}_2 \longrightarrow \dots \longrightarrow \text{Home}_k \longrightarrow \text{Bin}_1 \longrightarrow \text{Bin}_2 \longrightarrow \dots \longrightarrow \text{Depot}$$
+- **Optimal Use Case**: General household recyclables and inert dry waste, minimizing total transit kilometers and fuel consumption.
+
+#### C. Hazard Preemption Mechanism
+When the waste classification engine identifies a waste description as hazardous (`medical` or `chemical`):
+1. **Bypasses Schedule Queue**: The pickup skips the standard scheduler queue and due-date wait intervals.
+2. **Immediate Emergency Dispatch**: Triggers an instant `POST /route/hazard` calculation.
+3. **Zone Isolation**: The vehicle is restricted strictly to arterial and industrial corridors via Constrained Dijkstra, keeping residential neighborhoods safe.
+
+---
+
+### 8. Rule-Based Waste Classification Engine
+
+The system integrates an in-process keyword classification engine that maps plain-text waste descriptions into standardized disposal categories and assigned bin types:
+
+$$\text{Description} \xrightarrow{\quad \text{Keyword Matching} \quad} (\text{Category}, \ \text{Bin Type}, \ \text{Hazard Flag})$$
+
+- **Organic Waste** (e.g., `food scraps`, `vegetables`, `leaves`) $\longrightarrow$ Target: `compost_bin` (Non-hazardous)
+- **Recyclable Waste** (e.g., `plastic bottles`, `cardboard`, `paper`) $\longrightarrow$ Target: `recyclable_bin` (Non-hazardous)
+- **Medical Waste** (e.g., `syringe`, `bandages`, `scalpel`) $\longrightarrow$ Target: `medical_bin` (**Hazardous — Triggers Emergency Constrained Dispatch**)
+- **Chemical Waste** (e.g., `solvents`, `battery acid`, `paint`) $\longrightarrow$ Target: `chemical_bin` (**Hazardous — Triggers Emergency Constrained Dispatch**)
 
 ---
 
@@ -121,10 +311,10 @@ EcoGraph/
 │   └── js/
 │       ├── api.js           # Fetch wrapper for C++ REST API endpoints
 │       ├── app.js           # Application bootstrap & event bindings
-│       ├── controls.js      # Form controls, selection toggles, dispatch handlers
+│       ├── city-builder.js  # Interactive city topology builder & node editor
 │       ├── database-view.js # Tabular data grid, search, zone statistics
 │       ├── graph-view.js    # Cytoscape.js graph rendering & truck path animation
-│       ├── schedule-view.js # Schedule renderer & due list list view
+│       ├── schedule-view.js # Schedule renderer & due list view
 │       ├── simulation-view.js# Time-step playback controls (+1 day, play, reset)
 │       └── theme.js         # Light/Dark mode state toggle
 │
@@ -134,15 +324,18 @@ EcoGraph/
     ├── data/
     │   └── city.json        # City network topology (nodes, edges, zones, fill rates)
     ├── include/
+    │   ├── city_generator.hpp # Synthetic & procedural city network generator
     │   ├── city_loader.hpp  # JSON loader for city topology
     │   ├── controllers.hpp  # HTTP endpoint route handler signatures & AppState
     │   ├── dijkstra.hpp     # Dijkstra & Constrained Dijkstra algorithms
+    │   ├── geo.hpp          # Geodesic & Haversine distance computations
     │   ├── graph.hpp        # Graph, Node, Edge, ZoneType definitions
     │   ├── router.hpp       # Priority & FIFO route builders
     │   ├── scheduler.hpp    # Dynamic fill-rate collection scheduler
     │   ├── simulation.hpp   # Time-step day simulation engine & logger
     │   └── waste_classifier.hpp # Keyword-based waste classification rules
     ├── src/
+    │   ├── city_generator.cpp # Procedural city generation implementation
     │   ├── city_loader.cpp  # Parsing data/city.json into Graph memory
     │   ├── controllers.cpp  # REST HTTP handlers logic & JSON responses
     │   ├── dijkstra.cpp     # Shortest path algorithms implementation
@@ -153,8 +346,10 @@ EcoGraph/
     │   ├── simulation.cpp   # Day advance & auto-collect logic
     │   └── waste_classifier.cpp # Waste classification engine implementation
     ├── tests/
+    │   ├── test_city_data.cpp  # City topology connectivity & reachability validation
     │   ├── test_dijkstra.cpp   # Dijkstra & constrained routing unit tests
     │   ├── test_domain.cpp     # Domain logic (Graph, Scheduler, Router) unit tests
+    │   ├── test_generator.cpp  # Procedural city graph generation tests
     │   └── test_simulation.cpp # Time-step simulation unit tests
     └── third_party/
         ├── httplib.h        # Header-only cpp-httplib HTTP server framework

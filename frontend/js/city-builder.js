@@ -1,6 +1,6 @@
-// "City builder": add or remove random nodes, or reset to the original city, so the simulation
+// "City builder": add random nodes, or reset to the original city, so the simulation
 // can be stress-tested. The city lives on the server, so added nodes survive a page refresh
-// until they are removed or the city is reset.
+// until the city is reset.
 const CityBuilder = (() => {
   const $ = (id) => document.getElementById(id);
   let total = 0;
@@ -8,7 +8,6 @@ const CityBuilder = (() => {
 
   function showCount() {
     $('builder-count').textContent = '(' + total + ' nodes' + (added ? ', ' + added + ' added' : '') + ')';
-    $('builder-remove').disabled = added === 0;  // only added nodes can be removed
     const status = $('status');  // keep the header badge's node count in step
     if (status.classList.contains('ok')) status.textContent = 'connected - ' + total + ' nodes';
   }
@@ -20,8 +19,8 @@ const CityBuilder = (() => {
   }
 
   function setBusy(busy) {
-    ['builder-add', 'builder-remove', 'builder-reset'].forEach((id) => { $(id).disabled = busy; });
-    if (!busy) showCount();  // restores the Remove button's own enabled state
+    ['builder-add', 'builder-reset'].forEach((id) => { $(id).disabled = busy; });
+    if (!busy) showCount();
   }
 
   // "home-haz" -> { type: 'home', hazardous: true }
@@ -54,33 +53,6 @@ const CityBuilder = (() => {
       say('Added ' + res.nodes.length + ' (' + res.nodes.map((n) => n.id).slice(0, 6).join(', ') +
           (res.nodes.length > 6 ? ', …' : '') + ') in ' + where + '.');
       $('builder-note').textContent = '';
-      await refreshViews();
-    } catch (e) {
-      say(e.message, true);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  // Removes the newest added nodes of the chosen type. Original nodes are never touched.
-  async function remove() {
-    const params = readParams();
-    setBusy(true);
-    try {
-      const res = await Api.removeNodes(params);
-      const gone = res.removed.concat(res.cascaded);
-      GraphView.removeNodes(gone);
-      total = res.totalNodes;
-      added = Math.max(0, added - gone.length);
-      let text = 'Removed ' + res.removed.length + ' (' + res.removed.slice(0, 6).join(', ') +
-                 (res.removed.length > 6 ? ', …' : '') + ').';
-      if (res.cascaded.length) {
-        text += ' ' + res.cascaded.length + ' more added node(s) went with them because they were only ' +
-                'connected through what you removed: ' + res.cascaded.slice(0, 6).join(', ') +
-                (res.cascaded.length > 6 ? ', …' : '') + '.';
-      }
-      say(text);
-      $('builder-note').textContent = '';  // the "still here from earlier" note is out of date now
       await refreshViews();
     } catch (e) {
       say(e.message, true);
@@ -122,10 +94,9 @@ const CityBuilder = (() => {
     if (added) {
       // The city is kept by the server, so a page refresh does not clear what was added.
       $('builder-note').textContent = added + ' added node(s) from earlier are still here: the server keeps ' +
-                                      'them until you press Remove or Reset city.';
+                                      'them until you press Reset city.';
     }
     $('builder-add').addEventListener('click', add);
-    $('builder-remove').addEventListener('click', remove);
     $('builder-reset').addEventListener('click', resetCity);
   }
 

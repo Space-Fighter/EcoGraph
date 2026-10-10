@@ -465,6 +465,12 @@ cd server/build
 
 ---
 
+## Future Work
+
+- A* pathfinding with coordinate heuristics
+- Multi-truck routing with capacity constraints
+- Route optimization (2-opt) for FIFO mode
+- CSV export of the collection log
 ## Run with Docker
 
 ```bash

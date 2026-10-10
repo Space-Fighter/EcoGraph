@@ -79,15 +79,32 @@ RouteResult RouteStrategy::buildRoute(const Graph& g, const std::vector<std::str
 
     std::string current = depotId(g);
     std::vector<std::string> binTypes;  // distinct bin types needed, in pickup order
+    std::set<std::string> done;  // homes already emptied (including en route)
+    auto noteBinType = [&](const std::string& home) {
+        std::string bt = classifyWaste(g.getNode(home).wasteDescription).binType;
+        if (std::find(binTypes.begin(), binTypes.end(), bt) == binTypes.end()) binTypes.push_back(bt);
+    };
     for (size_t i = 0; i < ordered.size(); ++i) {
         const std::string& home = ordered[i];
-        if (!addLeg(g, r, current, home, current + "->" + home)) {
+        if (done.count(home)) continue;  // already emptied on the way to an earlier stop
+        PathResult p = shortestPath(g, current, home);
+        if (p.cost < 0) {
             r.unreachable.push_back(home);
             continue;
         }
+        appendSegment(r.segments, r.totalCost, current + "->" + home, p);
+        // A later stop that lies on this path is emptied now instead of backtracking to it.
+        for (size_t k = 1; k + 1 < p.path.size(); ++k) {
+            const std::string& mid = p.path[k];
+            if (done.count(mid) || mid == home) continue;
+            if (std::find(ordered.begin() + i + 1, ordered.end(), mid) == ordered.end()) continue;
+            done.insert(mid);
+            r.collectedEnRoute.push_back(mid);
+            noteBinType(mid);
+        }
+        done.insert(home);
         current = home;
-        std::string bt = classifyWaste(g.getNode(home).wasteDescription).binType;
-        if (std::find(binTypes.begin(), binTypes.end(), bt) == binTypes.end()) binTypes.push_back(bt);
+        noteBinType(home);
     }
 
     // After the last pickup, unload at one bin per collected waste type.

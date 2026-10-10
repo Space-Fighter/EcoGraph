@@ -354,7 +354,8 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
                   {"totalCost", r.totalCost},
                   {"segments", segmentsToJson(r.segments)},
                   {"skippedHazardous", r.skippedHazardous},
-                  {"unreachable", r.unreachable}});
+                  {"unreachable", r.unreachable},
+                  {"collectedEnRoute", r.collectedEnRoute}});
     });
 
     // POST /classify   {"description": "..."}

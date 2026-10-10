@@ -20,6 +20,7 @@ struct RouteResult {
     double totalCost = 0;
     std::vector<std::string> skippedHazardous;  // homes pulled out for hazard dispatch
     std::vector<std::string> unreachable;       // homes/bins that could not be reached
+    std::vector<std::string> collectedEnRoute;  // later stops emptied while passing through
 };
 
 // Both modes work on locations that are due (the fill-rate schedule decides *when*);

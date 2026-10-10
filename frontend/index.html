@@ -67,11 +67,10 @@
             <option value="bin-haz">Hazardous waste facility</option>
             <option value="junction">Road junction</option>
           </select>
-          <input type="number" id="builder-count-input" value="10" min="1" max="100" title="How many to add or remove">
+          <input type="number" id="builder-count-input" value="10" min="1" max="100" title="How many to add">
         </div>
         <div class="row">
           <button id="builder-add" class="primary">Add</button>
-          <button id="builder-remove" title="Removes the newest nodes of the selected type that you added (never the original city)">Remove</button>
           <button id="builder-reset" class="danger" title="Removes everything you added and restarts the simulation at day 0">Reset city</button>
         </div>
         <div id="builder-msg" class="builder-msg">New nodes are placed inside the localities and linked to the nearest roads.</div>

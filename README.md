@@ -462,3 +462,14 @@ cd server/build
 
 ---
 
+
+---
+
+## Run with Docker
+
+```bash
+docker build -t ecograph .
+docker run -p 8080:8080 ecograph
+```
+
+Then open `http://localhost:8080`.

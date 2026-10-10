@@ -471,3 +471,11 @@ cd server/build
 - Multi-truck routing with capacity constraints
 - Route optimization (2-opt) for FIFO mode
 - CSV export of the collection log
+## Run with Docker
+
+```bash
+docker build -t ecograph .
+docker run -p 8080:8080 ecograph
+```
+
+Then open `http://localhost:8080`.

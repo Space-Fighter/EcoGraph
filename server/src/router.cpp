@@ -49,6 +49,7 @@ bool RouteStrategy::addLeg(const Graph& g, RouteResult& r, const std::string& fr
 std::string RouteStrategy::nearestBin(const Graph& g, const std::string& from,
                                       const std::string& binType) {
     std::vector<std::string> bins = g.nodeIdsByType(NodeType::Bin);
+    ShortestPathTree tree = shortestPathTree(g, from);  // one Dijkstra covers every bin
     // pass 0: bins of the wanted type, pass 1: general bins, pass 2: any non-hazardous bin
     for (int pass = 0; pass < 3; ++pass) {
         std::string best;
@@ -58,9 +59,9 @@ std::string RouteStrategy::nearestBin(const Graph& g, const std::string& from,
             if (isHazardousBinType(bt)) continue;
             if (pass == 0 && bt != binType) continue;
             if (pass == 1 && bt != "general") continue;
-            PathResult p = shortestPath(g, from, bins[i]);
-            if (p.cost >= 0 && (bestCost < 0 || p.cost < bestCost)) {
-                bestCost = p.cost;
+            double cost = tree.costTo(bins[i]);
+            if (cost >= 0 && (bestCost < 0 || cost < bestCost)) {
+                bestCost = cost;
                 best = bins[i];
             }
         }

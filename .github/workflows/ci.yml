@@ -20,9 +20,7 @@ jobs:
       - name: Build
         run: cmake --build server/build -j
 
+      # ctest runs every test registered in CMakeLists.txt from server/, where data/city.json lives
       - name: Run tests
         working-directory: server/build
-        run: |
-          ./test_dijkstra
-          ./test_domain
-          ./test_simulation
+        run: ctest --output-on-failure

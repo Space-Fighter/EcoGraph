@@ -16,14 +16,14 @@ curl http://localhost:8080/graph
 ```bash
 curl -X POST http://localhost:8080/route \
   -H "Content-Type: application/json" \
-  -d '{"homes": ["home1", "home2"], "mode": "priority"}'
+  -d '{"homeIds": ["H1", "H3"], "mode": "priority"}'
 ```
 
 ## Hazardous route
 ```bash
 curl -X POST http://localhost:8080/route/hazard \
   -H "Content-Type: application/json" \
-  -d '{"location": "home_med"}'
+  -d '{"locationId": "HZ1"}'
 ```
 
 ## Classify waste

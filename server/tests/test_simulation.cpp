@@ -270,6 +270,34 @@ static void testCollectedEnRoute() {
     CHECK(apart.collectedEnRoute.empty());
 }
 
+// An unreachable home must not take truck capacity that a reachable one could use.
+static void testUnreachableDoesNotUseCapacity() {
+    Graph g = makeGraph();
+    Node island = mk("ISLAND", NodeType::Home, ZoneType::Residential);  // no roads at all
+    island.fillRate = 20;
+    island.capacity = 100;
+    island.lastCollected = BASE - static_cast<std::time_t>(2 * DAY);  // fullest, so ordered first
+    island.wasteDescription = "plastic bottle";
+    g.addNode(island);
+    Scheduler s;
+    Simulation sim;
+    sim.start(BASE);
+    PriorityRouteBuilder st;
+    Fleet f;
+    f.normalTrucks = 1;
+    f.normalCapacity = 150;  // room for exactly one 100-unit home
+    f.hazardTrucks = 5;
+    advanceTo(sim, g, s, 4, st, f);
+
+    DayReport d5 = sim.advanceDay(g, s, true, st, f);  // ISLAND, H1, H2, H3 are all due
+    CHECK(d5.failed.size() == 1 && d5.failed[0] == "ISLAND");
+    const TruckRun* n1 = nullptr;
+    for (size_t i = 0; i < d5.trucks.size(); ++i) if (d5.trucks[i].id == "N1") n1 = &d5.trucks[i];
+    CHECK(n1 && n1->homes.size() == 1 && n1->homes[0] != "ISLAND");
+    CHECK(!has(d5.carriedOver, "ISLAND"));
+    CHECK(d5.carriedOver.size() == 2);  // the other two reachable homes wait for tomorrow
+}
+
 int main() {
     testClockAndDue();
     testTruckCapacityAndCarryOver();
@@ -277,6 +305,7 @@ int main() {
     testOrderingMatters();
     testBinsAndManual();
     testCollectedEnRoute();
+    testUnreachableDoesNotUseCapacity();
     if (failures == 0) {
         std::cout << "All simulation tests passed" << std::endl;
         return 0;

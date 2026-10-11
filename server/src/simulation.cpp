@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "dijkstra.hpp"
 #include "waste_classifier.hpp"
 
 namespace {
@@ -73,9 +74,18 @@ DayReport Simulation::advanceDay(Graph& g, const Scheduler& sched, bool autoColl
         }
     }
 
+    // Homes no road reaches from the depot fail now, before they take up truck capacity.
+    std::vector<std::string> depots = g.nodeIdsByType(NodeType::Depot);
+    ShortestPathTree fromDepot = shortestPathTree(g, depots.empty() ? std::string() : depots[0]);
+    std::vector<std::string> reachable;
+    for (size_t i = 0; i < normalHomes.size(); ++i) {
+        if (fromDepot.costTo(normalHomes[i]) < 0) rep.failed.push_back(normalHomes[i]);
+        else reachable.push_back(normalHomes[i]);
+    }
+
     // ---- Normal trucks: first-fit in strategy order. A truck always takes at least one
     // home (even an overflowing one bigger than its capacity); otherwise load must fit.
-    std::vector<std::string> ordered = strategy.order(g, normalHomes, now());
+    std::vector<std::string> ordered = strategy.order(g, reachable, now());
     std::vector<TruckRun> trucks;
     for (int t = 0; t < fleet.normalTrucks; ++t) {
         TruckRun run;

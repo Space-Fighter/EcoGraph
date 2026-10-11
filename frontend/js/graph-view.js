@@ -272,15 +272,6 @@ const GraphView = (() => {
     fitAll();  // new nodes must be visible too
   }
 
-  // Removes nodes (their roads go with them) and any locality box left empty, then re-lays-out.
-  function removeNodes(ids) {
-    if (!cy) return;
-    ids.forEach((id) => cy.getElementById(id).remove());
-    cy.nodes(':parent').forEach((p) => { if (p.children().empty()) p.remove(); });
-    runLayout();
-    fitAll();
-  }
-
   // Replaces everything from a fresh /graph response (after a reset).
   function rebuild(graph) {
     if (!cy) return;
@@ -350,5 +341,5 @@ const GraphView = (() => {
     return cy.nodes(':childless').map((n) => ({ id: n.id(), x: n.position('x'), y: n.position('y') }));
   }
 
-  return { init, addElements, removeNodes, rebuild, fitAll, nodePositions, animateRoute, clearRoute, markDue, resize, applyTheme };
+  return { init, addElements, rebuild, fitAll, nodePositions, animateRoute, clearRoute, markDue, resize, applyTheme };
 })();

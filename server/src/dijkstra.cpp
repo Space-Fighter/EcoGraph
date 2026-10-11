@@ -9,15 +9,17 @@
 
 namespace {
 
-PathResult run(const Graph& g, const std::string& source, const std::string& dest,
-               const std::set<ZoneType>& forbidden) {
-    PathResult result;
-    result.cost = -1;
-    if (!g.hasNode(source) || !g.hasNode(dest)) return result;
+// Dijkstra from source. Stops as soon as stopAt is settled; an empty stopAt settles every
+// reachable node. Edges whose zone is in forbidden are treated as if they did not exist.
+ShortestPathTree run(const Graph& g, const std::string& source, const std::string& stopAt,
+                     const std::set<ZoneType>& forbidden) {
+    ShortestPathTree tree;
+    tree.source = source;
+    if (!g.hasNode(source)) return tree;
 
     const double INF = std::numeric_limits<double>::infinity();
-    std::unordered_map<std::string, double> dist;
-    std::unordered_map<std::string, std::string> prev;
+    std::unordered_map<std::string, double>& dist = tree.dist;
+    std::unordered_map<std::string, std::string>& prev = tree.prev;
 
     typedef std::pair<double, std::string> Entry;
     std::priority_queue<Entry, std::vector<Entry>, std::greater<Entry> > pq;
@@ -32,7 +34,7 @@ PathResult run(const Graph& g, const std::string& source, const std::string& des
         const std::string u = top.second;
 
         if (d > dist[u]) continue;  // stale entry: a shorter route to u was already found
-        if (u == dest) break;       // dest popped, its distance is final
+        if (u == stopAt) break;     // dest popped, its distance is final
 
         const std::vector<Edge>& edges = g.neighbors(u);
         for (size_t i = 0; i < edges.size(); ++i) {
@@ -48,32 +50,48 @@ PathResult run(const Graph& g, const std::string& source, const std::string& des
             }
         }
     }
-
-    if (dist.find(dest) == dist.end()) return result;  // unreachable
-
-    // Walk prev[] back from dest to source, then reverse.
-    std::vector<std::string> path;
-    std::string cur = dest;
-    path.push_back(cur);
-    while (cur != source) {
-        cur = prev[cur];
-        path.push_back(cur);
-    }
-    std::reverse(path.begin(), path.end());
-
-    result.path = path;
-    result.cost = dist[dest];
-    return result;
+    return tree;
 }
 
 }  // namespace
 
+double ShortestPathTree::costTo(const std::string& dest) const {
+    std::unordered_map<std::string, double>::const_iterator it = dist.find(dest);
+    return it == dist.end() ? -1 : it->second;
+}
+
+PathResult ShortestPathTree::pathTo(const std::string& dest) const {
+    PathResult result;
+    result.cost = costTo(dest);
+    if (result.cost < 0) return result;  // unreachable
+
+    // Walk prev[] back from dest to source, then reverse.
+    std::string cur = dest;
+    result.path.push_back(cur);
+    while (cur != source) {
+        cur = prev.at(cur);
+        result.path.push_back(cur);
+    }
+    std::reverse(result.path.begin(), result.path.end());
+    return result;
+}
+
+ShortestPathTree shortestPathTree(const Graph& g, const std::string& source,
+                                  const std::set<ZoneType>& forbiddenZones) {
+    return run(g, source, std::string(), forbiddenZones);
+}
+
 PathResult shortestPath(const Graph& g, const std::string& source, const std::string& dest) {
-    return run(g, source, dest, std::set<ZoneType>());
+    return constrainedShortestPath(g, source, dest, std::set<ZoneType>());
 }
 
 PathResult constrainedShortestPath(const Graph& g, const std::string& source,
                                    const std::string& dest,
                                    const std::set<ZoneType>& forbiddenZones) {
-    return run(g, source, dest, forbiddenZones);
+    if (!g.hasNode(dest)) {
+        PathResult none;
+        none.cost = -1;
+        return none;
+    }
+    return run(g, source, dest, forbiddenZones).pathTo(dest);
 }

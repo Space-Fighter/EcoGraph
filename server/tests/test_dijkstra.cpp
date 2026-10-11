@@ -69,6 +69,23 @@ int main() {
     CHECK(near(shortestPath(d, "X", "Y").cost, 2));
     CHECK(shortestPath(d, "Y", "X").cost == -1);
 
+    // One tree from DEPOT answers every destination, matching shortestPath for each.
+    ShortestPathTree t = shortestPathTree(g, "DEPOT");
+    CHECK(near(t.costTo("DEPOT"), 0) && near(t.costTo("A"), 4));
+    CHECK(near(t.costTo("B"), 5) && near(t.costTo("BIN"), 6));
+    CHECK(join(t.pathTo("BIN").path) == "DEPOT>A>B>BIN");
+    CHECK(t.costTo("ISLAND") == -1 && t.pathTo("ISLAND").path.empty());
+    CHECK(t.costTo("NOPE") == -1);
+
+    // Forbidden zones apply to the tree too: without the residential A-B edge, BIN is 10 away.
+    std::set<ZoneType> noResidential;
+    noResidential.insert(ZoneType::Residential);
+    ShortestPathTree c = shortestPathTree(g, "DEPOT", noResidential);
+    CHECK(near(c.costTo("BIN"), 10));
+    CHECK(join(c.pathTo("BIN").path) == "DEPOT>BIN");
+    CHECK(near(c.costTo("B"), 11));  // reached from BIN's side instead
+    CHECK(shortestPathTree(g, "NOPE").costTo("NOPE") == -1);
+
     if (failures == 0) {
         std::cout << "All Dijkstra tests passed" << std::endl;
         return 0;

@@ -187,17 +187,17 @@ HazardResult dispatchHazard(const Graph& g, const std::string& locationId) {
         return out;
     }
 
+    ShortestPathTree fromLocation = shortestPathTree(g, locationId, forbidden);
     std::string bestBin;
-    PathResult best;
-    best.cost = -1;
+    double bestCost = -1;
     for (int pass = 0; pass < 2 && bestBin.empty(); ++pass) {
         for (size_t i = 0; i < bins.size(); ++i) {
             const std::string& bt = g.getNode(bins[i]).binType;
             if (!isHazardousBinType(bt)) continue;
             if (pass == 0 && bt != wanted) continue;
-            PathResult p = constrainedShortestPath(g, locationId, bins[i], forbidden);
-            if (p.cost >= 0 && (best.cost < 0 || p.cost < best.cost)) {
-                best = p;
+            double cost = fromLocation.costTo(bins[i]);
+            if (cost >= 0 && (bestCost < 0 || cost < bestCost)) {
+                bestCost = cost;
                 bestBin = bins[i];
             }
         }
@@ -210,7 +210,8 @@ HazardResult dispatchHazard(const Graph& g, const std::string& locationId) {
     }
 
     appendSegment(out.segments, out.totalCost, depots[0] + "->" + locationId, toLocation);
-    appendSegment(out.segments, out.totalCost, locationId + "->" + bestBin, best);
+    appendSegment(out.segments, out.totalCost, locationId + "->" + bestBin,
+                  fromLocation.pathTo(bestBin));
     out.binId = bestBin;
     out.ok = true;
     return out;

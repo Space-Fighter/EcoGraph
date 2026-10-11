@@ -226,12 +226,57 @@ static void testBinsAndManual() {
     CHECK(sim.day() == 0 && sim.log().empty());
 }
 
+// DEPOT - NEAR - FAR - BIN in a line. FAR is fuller, so it is visited first and NEAR, which lies
+// on the way, is emptied en route instead of backtracking to it afterwards.
+static void testCollectedEnRoute() {
+    Graph g;
+    g.addNode(mk("DEPOT", NodeType::Depot, ZoneType::Industrial));
+    const char* homes[] = {"NEAR", "FAR", "OTHER"};
+    for (int i = 0; i < 3; ++i) {
+        Node h = mk(homes[i], NodeType::Home, ZoneType::Residential);
+        h.fillRate = 20;
+        h.capacity = 100;
+        h.lastCollected = BASE;
+        h.wasteDescription = "plastic bottle";
+        g.addNode(h);
+    }
+    g.getNodeMutable("FAR").lastCollected = BASE - static_cast<std::time_t>(2 * DAY);
+    Node b = mk("BIN", NodeType::Bin, ZoneType::Industrial);
+    b.binType = "recyclable";
+    g.addNode(b);
+    g.addEdge("DEPOT", "NEAR", 1, ZoneType::Residential);
+    g.addEdge("NEAR", "FAR", 1, ZoneType::Residential);
+    g.addEdge("FAR", "BIN", 1, ZoneType::Industrial);
+    g.addEdge("DEPOT", "OTHER", 5, ZoneType::Residential);  // dead end, never on the way
+    const std::time_t now = BASE + static_cast<std::time_t>(DAY);
+    PriorityRouteBuilder st;
+
+    RouteResult r = st.buildRoute(g, {"NEAR", "FAR"}, now);
+    CHECK(r.collectedEnRoute.size() == 1 && r.collectedEnRoute[0] == "NEAR");
+    CHECK(r.unreachable.empty());
+    CHECK(r.totalCost == 3);  // DEPOT>NEAR>FAR (2) + FAR>BIN (1); backtracking would cost 5
+
+    // Asking for the same home twice changes nothing.
+    RouteResult dup = st.buildRoute(g, {"NEAR", "FAR", "NEAR"}, now);
+    CHECK(dup.totalCost == r.totalCost && dup.collectedEnRoute == r.collectedEnRoute);
+
+    // A home that was not requested is never collected, even when the truck drives past it.
+    RouteResult farOnly = st.buildRoute(g, {"FAR"}, now);
+    CHECK(farOnly.collectedEnRoute.empty());
+    CHECK(farOnly.totalCost == 3);
+
+    // Nothing lies on the way between unrelated stops, so nothing is collected en route.
+    RouteResult apart = st.buildRoute(g, {"FAR", "OTHER"}, now);
+    CHECK(apart.collectedEnRoute.empty());
+}
+
 int main() {
     testClockAndDue();
     testTruckCapacityAndCarryOver();
     testHazardQueue();
     testOrderingMatters();
     testBinsAndManual();
+    testCollectedEnRoute();
     if (failures == 0) {
         std::cout << "All simulation tests passed" << std::endl;
         return 0;

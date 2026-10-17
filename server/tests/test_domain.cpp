@@ -213,12 +213,62 @@ static void testHazard() {
     HazardResult h = dispatchHazard(g, "J1");  // J1 has no waste: still dispatchable
     CHECK(h.ok);
     CHECK(h.binId == "BMED");
-    CHECK(near(h.totalCost, 1 + 6));
+    CHECK(near(h.totalCost, 1 + 6));  // takes the arterial J1-J2, not the residential shortcut
     CHECK(h.segments.size() == 2);
+    CHECK(join(h.segments[1].path) == "J1>J2>BMED");
+    CHECK(near(h.residentialKm, 0) && near(h.commercialKm, 0));
 
-    HazardResult bad = dispatchHazard(g, "H1");  // H1 only reachable via residential edges
+    // H1 sits on a residential street: it is still served, through as little of it as possible.
+    HazardResult inside = dispatchHazard(g, "H1");
+    CHECK(inside.ok);
+    CHECK(join(inside.segments[0].path) == "DEPOT>J1>H1");
+    CHECK(join(inside.segments[1].path) == "H1>J2>BMED");
+    CHECK(near(inside.residentialKm, 4));
+
+    Graph empty;
+    empty.addNode(mk("DEPOT", NodeType::Depot, ZoneType::Industrial));
+    empty.addNode(mk("ISLAND", NodeType::Junction, ZoneType::Arterial));
+    HazardResult bad = dispatchHazard(empty, "ISLAND");  // no road at all
     CHECK(!bad.ok);
     CHECK(bad.error == "no_hazard_route");
+}
+
+// A clinic inside a neighbourhood. Straight through the colony is 3 km of residential street;
+// the ring road is 10 km of arterial plus a 0.2 km residential lane to the clinic.
+//
+//   DEPOT --(res 3)-- CLINIC --(res 0.2)-- RING --(art 10)-- DEPOT
+//                       \--(ind 1)-- BMED
+static void testHazardMinimalExposure() {
+    Graph g;
+    g.addNode(mk("DEPOT", NodeType::Depot, ZoneType::Industrial));
+    g.addNode(mk("RING", NodeType::Junction, ZoneType::Arterial));
+    Node c = mk("CLINIC", NodeType::Home, ZoneType::Residential);
+    c.wasteDescription = "used syringe";
+    g.addNode(c);
+    Node b = mk("BMED", NodeType::Bin, ZoneType::Industrial);
+    b.binType = "medical";
+    g.addNode(b);
+    g.addEdge("DEPOT", "CLINIC", 3, ZoneType::Residential);
+    g.addEdge("DEPOT", "RING", 10, ZoneType::Arterial);
+    g.addEdge("RING", "CLINIC", 0.2, ZoneType::Residential);
+    g.addEdge("CLINIC", "BMED", 1, ZoneType::Industrial);
+
+    HazardResult h = dispatchHazard(g, "CLINIC");
+    CHECK(h.ok);
+    CHECK(join(h.segments[0].path) == "DEPOT>RING>CLINIC");  // longer, but 0.2 km among homes
+    CHECK(near(h.residentialKm, 0.2));
+    CHECK(near(h.totalCost, 10 + 0.2 + 1));
+
+    // A ring road so long that the detour is worse than the exposure: go straight through.
+    Graph far = g;
+    far.removeNode("RING");
+    far.addNode(mk("RING", NodeType::Junction, ZoneType::Arterial));
+    far.addEdge("DEPOT", "RING", 60, ZoneType::Arterial);
+    far.addEdge("RING", "CLINIC", 0.2, ZoneType::Residential);
+    HazardResult direct = dispatchHazard(far, "CLINIC");
+    CHECK(direct.ok);
+    CHECK(join(direct.segments[0].path) == "DEPOT>CLINIC");
+    CHECK(near(direct.residentialKm, 3));
 }
 
 int main() {
@@ -228,6 +278,7 @@ int main() {
     testRouters();
     testPriorityTieBreak();
     testHazard();
+    testHazardMinimalExposure();
     if (failures == 0) {
         std::cout << "All domain tests passed" << std::endl;
         return 0;

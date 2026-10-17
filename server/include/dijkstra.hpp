@@ -36,4 +36,19 @@ struct ShortestPathTree {
 ShortestPathTree shortestPathTree(const Graph& g, const std::string& source,
                                   const std::set<ZoneType>& forbiddenZones = std::set<ZoneType>());
 
+// Cost multiplier per road zone: an edge costs weight * factor(zone). Used for risk-weighted
+// routing, where a road through a sensitive zone is allowed but counts as several km of
+// "exposure" so the search avoids it unless the detour around it is even longer.
+struct ZoneFactors {
+    double residential = 1, commercial = 1, industrial = 1, arterial = 1;
+    double of(ZoneType z) const;
+};
+
+// Dijkstra on weight * factor. dist/cost are in that weighted unit, not km; Edge weights
+// along the returned path still give the real distance.
+ShortestPathTree weightedShortestPathTree(const Graph& g, const std::string& source,
+                                          const ZoneFactors& factors);
+PathResult weightedShortestPath(const Graph& g, const std::string& source, const std::string& dest,
+                                const ZoneFactors& factors);
+
 #endif

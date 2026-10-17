@@ -1,6 +1,6 @@
 # EcoGraph — Smart Waste Collection Routing & Scheduling System
 
-> **EcoGraph** is an algorithmic, graph-based waste management system built with a high-performance **C++17 backend** and an interactive **Cytoscape.js visualizer**. It replaces inefficient fixed collection routes with **dynamic shortest-path routing**, **zone-constrained hazardous material dispatching**, **fill-rate-adaptive scheduling**, and **time-step simulation**.
+> **EcoGraph** is an algorithmic, graph-based waste management system built with a high-performance **C++17 backend** and an interactive **Cytoscape.js visualizer**. It replaces inefficient fixed collection routes with **dynamic shortest-path routing**, **risk-weighted hazardous material dispatching**, **fill-rate-adaptive scheduling**, and **time-step simulation**.
 
 ---
 
@@ -17,7 +17,7 @@ Municipal waste collection routes are traditionally static: trucks follow fixed 
           │
           ├──► ( Home 2: Plastic )  ──────► [ Recyclable Bin ]
           │
-          └──► ( Home 3: Biohazard ) ──(Industrial Arterial Only)──► [ Chemical Disposal Bin ]
+          └──► ( Home 3: Biohazard ) ──(Industrial/Arterial first)► [ Chemical Disposal Bin ]
 ```
 
 ---
@@ -33,10 +33,10 @@ Municipal waste collection routes are traditionally static: trucks follow fixed 
   - **FIFO Mode**: Route truck from depot → home1 → home2 → ... → homeN, then to disposal bins. Collects from all queued homes before visiting bins.
   - Powered by **Dijkstra's Algorithm** with min-heap priority queues.
 
-- **Zone-Constrained Hazardous Waste Dispatch**
+- **Risk-Weighted Hazardous Waste Dispatch**
   - Rule-based detection of **Medical** and **Chemical** waste.
   - Triggers **immediate priority dispatch**, bypassing normal collection queues.
-  - Uses **Constrained Dijkstra** which restricts travel exclusively to `industrial` or arterial roads, strictly excluding `residential` and `commercial` zones to protect public health.
+  - Uses **Risk-Weighted Dijkstra**: trucks keep to `industrial` and `arterial` roads wherever possible and drive through `residential` and `commercial` streets only where nothing else reaches the site (e.g. a clinic inside a market). Each trip reports how many km it spent on populated roads.
 
 - **Fill-Rate Adaptive Scheduler**
   - Tracks individual node fill rates ($\text{units/day}$) and container capacities.
@@ -186,31 +186,37 @@ $$T(V, E) = O((|V| + |E|) \log |V|)$$
 
 ---
 
-### 5. Zone-Constrained Pathfinding for Hazardous Materials
+### 5. Risk-Weighted Pathfinding for Hazardous Materials
 
-Hazardous substances (biohazardous medical sharps, cytotoxic pharmaceuticals, reactive chemicals) pose critical contagion and toxicity hazards. EcoGraph implements **Constrained Dijkstra** to enforce spatial isolation.
+Hazardous substances (biohazardous medical sharps, cytotoxic pharmaceuticals, reactive chemicals) pose critical contagion and toxicity hazards. Banning residential and commercial roads outright does not work in a real city: clinics, labs and workshops sit *inside* neighbourhoods and markets, and the only way to reach them is through a local street. EcoGraph therefore uses **Risk-Weighted Dijkstra**: populated roads are allowed but expensive, so the truck stays on industrial and arterial corridors and spends as little distance among people as possible.
 
 #### Mathematical Formulation
-Given source $s$ and destination bin $t$, the constrained shortest path $P^*$ satisfies:
+Each road zone has a risk factor $\alpha$:
 
-$$P^* = \arg\min_{P \in \mathcal{P}_{s \to t}} \sum_{e \in P} w(e) \quad \text{subject to} \quad \forall e \in P, \ z(e) \notin \mathcal{Z}_{\text{forbidden}}$$
+| Zone | $\alpha(z)$ | Reason |
+|---|---|---|
+| Industrial | 1 | No residents, built for heavy vehicles |
+| Arterial | 1.5 | Public highway, but wide and built for heavy traffic |
+| Commercial | 10 | Markets and shops: crowds on foot |
+| Residential | 15 | Homes and schools: highest public exposure |
 
-where $\mathcal{Z}_{\text{forbidden}} = \{\text{Residential}, \text{Commercial}\}$.
+Given source $s$ and destination bin $t$, the hazard route $P^*$ is
+
+$$P^* = \arg\min_{P \in \mathcal{P}_{s \to t}} \sum_{e \in P} \alpha(z(e)) \cdot w(e)$$
+
+So 1 km of residential street "costs" as much as 10 km of arterial road, and the router takes any detour shorter than that. When a populated street cannot be avoided (the last stretch to a clinic), the truck still uses it, but for as short a distance as possible.
 
 ```
-   [J1 (Start)]
-      │
-      ├───(cost: 2, residential)───► [R1] ───(cost: 2)───► [Hazard Bin]  ❌ FORBIDDEN (Cost 4)
-      │                                                     ▲
-      └───(cost: 5, industrial)────► [IN1] ──(cost: 3)─────┘           ✅ ALLOWED (Cost 8)
+   [Depot]
+      ├──(3 km, residential)──────────────────────────► [Clinic]   risk 45  ❌ straight through the colony
+      └──(10 km, arterial)──► [Ring] ──(0.2 km, residential)──┘    risk 18  ✅ only 0.2 km among homes
 ```
 
 #### Algorithmic Mechanism
-During the relaxation phase:
-- For each edge $(u, v)$, the algorithm inspects $z(u, v)$ and $z(v)$.
-- If $z(u, v) \in \mathcal{Z}_{\text{forbidden}}$ or $z(v) \in \mathcal{Z}_{\text{forbidden}}$, the edge is treated as having infinite cost ($w = \infty$) and relaxation is bypassed.
-- **Safety Guarantee**: The vehicle is mathematically restricted to arterial highways and industrial zones, preventing exposure to densely populated neighborhoods.
-- **Unreachability Handling**: If no valid path exists within the permitted zones, the router halts and returns an unprocessable response (`HTTP 422 Unprocessable Entity`), alerting operators to configure a designated transit corridor.
+- During relaxation, edge $(u, v)$ costs $\alpha(z(u,v)) \cdot w(u,v)$ instead of $w(u,v)$.
+- The nearest matching hazardous bin (medical/chemical) is chosen by risk cost, not raw distance.
+- Each hazard trip reports its real distance (`totalCost`, km), its `riskCost`, and its **exposure**: km driven on residential and commercial roads.
+- **Unreachability Handling**: only a site with no road at all to the depot or to any hazardous bin is rejected (`HTTP 422`, `no_hazard_route`).
 
 ---
 
@@ -278,7 +284,7 @@ Once due locations are identified, the routing engine constructs an optimal mult
 When the waste classification engine identifies a waste description as hazardous (`medical` or `chemical`):
 1. **Bypasses Schedule Queue**: The pickup skips the standard scheduler queue and due-date wait intervals.
 2. **Immediate Emergency Dispatch**: Triggers an instant `POST /route/hazard` calculation.
-3. **Zone Isolation**: The vehicle is restricted strictly to arterial and industrial corridors via Constrained Dijkstra, keeping residential neighborhoods safe.
+3. **Minimal Exposure**: The vehicle follows arterial and industrial corridors via Risk-Weighted Dijkstra and enters residential/commercial streets only for the unavoidable last stretch.
 
 ---
 
@@ -290,8 +296,8 @@ $$\text{Description} \xrightarrow{\quad \text{Keyword Matching} \quad} (\text{Ca
 
 - **Organic Waste** (e.g., `food scraps`, `vegetables`, `leaves`) $\longrightarrow$ Target: `compost_bin` (Non-hazardous)
 - **Recyclable Waste** (e.g., `plastic bottles`, `cardboard`, `paper`) $\longrightarrow$ Target: `recyclable_bin` (Non-hazardous)
-- **Medical Waste** (e.g., `syringe`, `bandages`, `scalpel`) $\longrightarrow$ Target: `medical_bin` (**Hazardous — Triggers Emergency Constrained Dispatch**)
-- **Chemical Waste** (e.g., `solvents`, `battery acid`, `paint`) $\longrightarrow$ Target: `chemical_bin` (**Hazardous — Triggers Emergency Constrained Dispatch**)
+- **Medical Waste** (e.g., `syringe`, `bandages`, `scalpel`) $\longrightarrow$ Target: `medical_bin` (**Hazardous — Triggers Emergency Risk-Weighted Dispatch**)
+- **Chemical Waste** (e.g., `solvents`, `battery acid`, `paint`) $\longrightarrow$ Target: `chemical_bin` (**Hazardous — Triggers Emergency Risk-Weighted Dispatch**)
 
 ---
 
@@ -321,6 +327,7 @@ EcoGraph/
 └── server/                  # C++ Backend Engine
     ├── CMakeLists.txt       # CMake build configuration
     ├── build.sh             # POSIX build script using GCC/G++
+    ├── build.bat            # Windows build script (PowerShell / cmd)
     ├── data/
     │   └── city.json        # City network topology (nodes, edges, zones, fill rates)
     ├── include/
@@ -371,8 +378,8 @@ EcoGraph/
   - Request: `{"homes": ["home1", "home2"], "mode": "priority" | "fifo"}`
   - Response: `{"ok": true, "path": [...], "cost": 42.5, "segments": [...]}`
 - **`POST /route/hazard`**
-  - Request: `{"location": "home_med"}`
-  - Response: `{"ok": true, "path": [...], "cost": 18.2, "hazardous": true, "forbiddenZones": ["residential", "commercial"]}`
+  - Request: `{"locationId": "HZ1"}`
+  - Response: `{"ok": true, "locationId": "HZ1", "binId": "B_MED", "totalCost": 24.3, "riskCost": 33.1, "segments": [...], "exposureKm": {"residential": 0, "commercial": 0.58}, "zoneFactors": {"industrial": 1, "arterial": 1.5, "commercial": 10, "residential": 15}}`
 
 ### 3. Classification & Scheduling
 - **`POST /classify`**

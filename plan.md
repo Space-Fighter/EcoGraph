@@ -123,7 +123,7 @@ instructions.md
 ```cpp
 enum class ZoneType { Residential, Commercial, Industrial, Arterial };
 ```
-`Arterial` = road-only junction nodes with no dwelling, always passable by hazardous routes.
+`Arterial` = road-only junction nodes with no dwelling; hazardous routes prefer arterial/industrial roads and use residential/commercial ones only where unavoidable (risk-weighted, see `hazardZoneFactors()`).
 
 ### 3.2 `NodeType` enum
 ```cpp

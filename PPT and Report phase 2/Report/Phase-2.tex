@@ -78,7 +78,7 @@
 
 \fancyhead[L]{%
     \fontsize{10.5}{12}\selectfont
-    DSA \& OOPs in C++ -- Team DSCPP-III-2026-T186
+    DSA \& OOPs in C++ (DSCPP) -- Team DSCPP-III-2026-T186
 }
 
 \fancyhead[R]{%
@@ -141,7 +141,7 @@
 \newcommand{\taskrow}[2]{%
     \parbox[t]{\linewidth}{\vspace{3pt}\fontsize{10.5}{12.5}\selectfont #1\vspace{4pt}}
     &
-    \parbox[t]{\linewidth}{\vspace{3pt}\fontsize{10.5}{12.5}\selectfont #2\vspace{4pt}}
+    \parbox[t]{\linewidth}{\raggedright\vspace{3pt}\fontsize{10.5}{12.5}\selectfont #2\vspace{4pt}}
     \\
     \hline
 }
@@ -179,11 +179,10 @@
 
 \vspace{0.05cm}
 
-\instruction{(Try to choose a catchy title. Max 20 words).}
 
 \vspace{0.40cm}
 
-\answerbox{1.45cm}{EcoGraph: Graph-Based Algorithmic Waste Management with Hazard-Aware Routing and Fill-Rate-Adaptive Collection Scheduling}
+\answerbox{1.00cm}{EcoRouting Engine: Hazard-Aware Path Optimization and Fill-Rate-Adaptive Waste Scheduling}
 
 \newpage
 
@@ -216,8 +215,7 @@
 \hline
 \begin{minipage}[t][6.0cm][t]{\linewidth}
 \vspace{1.5mm}
-\textbf{Team member 1 (Team Lead)}\\[-1mm]
-\textit{(Last Name, name: student ID: email, picture):}
+\textbf{Team member 1 (Team Lead)}
 \vspace{2.0cm}
 \end{minipage}
 &
@@ -235,8 +233,7 @@
 \hline
 \begin{minipage}[t][6.0cm][t]{\linewidth}
 \vspace{1.5mm}
-\textbf{Team member 2}\\[-1mm]
-\textit{(Last Name, name: student ID: email, picture):}
+\textbf{Team member 2}
 \vspace{2.0cm}
 \end{minipage}
 &
@@ -254,8 +251,7 @@
 \hline
 \begin{minipage}[t][6.0cm][t]{\linewidth}
 \vspace{1.5mm}
-\textbf{Team member 3}\\[-1mm]
-\textit{(Last Name, name: student ID: email, picture):}
+\textbf{Team member 3}
 \vspace{2.0cm}
 \end{minipage}
 &
@@ -287,41 +283,31 @@
     {\color{GEUYellow}
     \fontsize{17}{21}\selectfont
     \bfseries
-    PHASE-II PROJECT PROGRESS DESCRIPTION (35 pts)}
+    PHASE-II PROJECT PROGRESS DESCRIPTION}
     \vspace{0.18cm}
 }}
 
 \vspace{0.70cm}
 
 % PROJECT ABSTRACT
-\sectiontitle{Project Abstract (2 pts)}
+\sectiontitle{Project Abstract}
 
 \vspace{0.05cm}
 
-\instruction{
-(Brief restatement of your project's main goal. Max 300 words).
-}
 
 \vspace{0.12cm}
 
-\answerbox{6.55cm}{Garbage trucks in most Indian cities still run the same fixed route every day, whether a street has anything to collect or not. Bins that fill fast overflow, bins that barely fill get visited anyway, and hazardous waste like used syringes or old batteries is often picked up by the same truck, on the same roads, as kitchen scraps.
+\answerbox{7.2cm}{Anyone who has watched a municipal garbage truck on its route notices the same thing: it drives the same streets every day, in the same order, whether or not there is anything to collect. Routes are fixed by habit rather than the actual shortest path between the depot, the homes on the list, and the disposal bins, wasting fuel, driver time, and public money. Two problems compound this. Hazardous waste -- medical sharps, expired chemicals, batteries -- is often collected the same way as ordinary household waste, even though it should be picked up immediately and kept off residential and commercial streets on its way to disposal; delays or careless routing here are a genuine safety and environmental risk. Second, every bin is treated as if it fills at the same rate, so a fixed weekly schedule either visits a bin that is nowhere near full or leaves an overflowing one unattended. We wanted a system that treats the city as the graph it actually is, and routes, restricts, and schedules collection accordingly.
 
-EcoGraph is our attempt to fix that with plain graph algorithms. We model Dehradun as a weighted graph of depots, homes, road junctions and disposal bins, where every road carries a distance in km and a zone tag: residential, commercial, industrial or arterial. On top of that graph the system does three jobs. It works out which homes and bins are actually due for pickup from how fast each one fills. It builds a shortest-path collection route for each truck using Dijkstra's algorithm. And whenever a waste description reads as medical or chemical, it sends a separate truck that is only allowed on industrial and arterial roads, so that waste never passes through a neighbourhood or a market.
-
-Everything runs inside one C++17 server that also serves a browser front end, where you can watch trucks move across the map and step the city forward day by day to see how the schedule holds up.}
+Our goal is a working C++ backend that models the city as a weighted, zone-tagged graph and answers three questions on demand: the shortest route to collect from a given set of homes, which locations are actually due today based on fill-rate, and how to route hazardous waste safely away from residential streets -- all exposed through a REST API and shown live on a Cytoscape.js frontend that animates the computed route.}
 
 \newpage
 
 % UPDATED PROJECT APPROACH
-\sectiontitle{Updated Project Approach and Architecture (2 pts)}
+\sectiontitle{Updated Project Approach and Architecture}
 
 \vspace{0.05cm}
 
-\instruction{
-(Describe your current approach, including system design,
-communication protocols, libraries used, etc.\\
-Max 300 words).
-}
 
 \vspace{0.25cm}
 
@@ -331,12 +317,12 @@ Max 300 words).
 
 \textbf{Protocol.} REST over HTTP with JSON, 13 endpoints, one error format.
 
-\textbf{Front end.} Plain JavaScript with no build step, plus a day-by-day simulation, a limited fleet and a city builder.
+\textbf{Front end.} Plain JavaScript with no build step, plus a day-by-day simulation and a limited fleet.
 
 \textbf{Libraries.} cpp-httplib, nlohmann/json, Cytoscape.js.
 
 \vspace{2mm}
-{\color{GEUBlue}\bfseries\fontsize{12}{14}\selectfont One day, step by step} \quad {\small(diagrams (a)--(g) below)}
+{\color{GEUBlue}\bfseries\fontsize{12}{14}\selectfont System overview} \quad {\small(diagrams (a)--(g) below)}
 
 \textbf{1.} The clock moves forward one day.
 
@@ -375,11 +361,9 @@ arrow/.style={-{Latex[length=2mm]},thick,draw=GEUBlue}
 \node[box,right=of c] (d) {Domain classes\\Graph, Dijkstra,\\Router, Scheduler,\\Simulation};
 \node[box,right=of d] (e) {In-memory\\city state};
 \node[box,below=6mm of e] (f) {\texttt{city.json}};
-\node[box,below=6mm of e,xshift=-3.6cm] (g) {City generator};
 \draw[arrow] (a)--node[above,font=\tiny]{REST}(b);
 \draw[arrow] (b)--(c); \draw[arrow] (c)--(d); \draw[arrow] (d)--(e);
 \draw[arrow] (f)--node[right,font=\tiny]{load once}(e);
-\draw[arrow] (g)--node[below,font=\tiny]{add/remove}(f);
 \end{tikzpicture}
 \end{center}}
 
@@ -570,14 +554,10 @@ arrow/.style={-{Latex[length=2mm]},thick,draw=GEUBlue}
 \vspace*{0.20cm}
 
 % TASKS COMPLETED
-\sectiontitle{Tasks Completed (7 pts)}
+\sectiontitle{Tasks Completed}
 
 \vspace{0.05cm}
 
-\instruction{
-(Describe the main tasks that have been assigned and already completed.
-Max 250 words).
-}
 
 \vspace{0.20cm}
 
@@ -595,24 +575,22 @@ Max 250 words).
 \taskrow{Priority and FIFO route builders sharing one template method, with en-route pickup and unloading at the nearest matching bin}{Tejas Jain}
 \taskrow{Keyword-based waste classifier and automatic hazard dispatch to the nearest medical or chemical bin, on industrial and arterial roads only}{Tejas Jain}
 \taskrow{Fill-rate scheduler (interval, due, overdue, percent full) with a max-heap that ranks due locations by how overdue they are}{Tejas Jain}
-\taskrow{Day-by-day simulation with a limited fleet, truck capacity, carry-over to the next day and a collection log}{Tejas Jain}
-\taskrow{City generator for adding and removing localities, plus five unit test suites covering every backend module}{Tejas Jain}
+\taskrow{Day-by-day simulation with a limited fleet, truck capacity, carry-over to the next day and a collection log}{Tejas Jain, Apoorv Negi, Yash Nigam}
+\taskrow{Four unit test suites covering every backend module, plus a check of the city data}{Yash Nigam, Apoorv Negi, Tejas Jain}
 \taskrow{Project README with build steps, folder layout and the full API reference}{Apoorv Negi, Yash Nigam}
-\taskrow{Map view in Cytoscape.js with truck route animation, hazard-route styling and a shape legend}{Tejas Jain, Apoorv Negi}
-\taskrow{Schedule, simulation and database views, the city builder panel and the light/dark theme}{Tejas Jain, Yash Nigam}
+\taskrow{Map view in Cytoscape.js with truck route animation, hazard-route styling and a shape legend}{Yash Nigam, Tejas Jain, Apoorv Negi}
+\taskrow{Schedule, simulation and database views and the light/dark theme}{Tejas Jain, Yash Nigam}
+\taskrow{Project report}{Apoorv Negi, Yash Nigam}
+\taskrow{Project presentation}{Apoorv Negi, Yash Nigam}
 \end{tabularx}
 
 \newpage
 
 % CHALLENGES
-\sectiontitle{Challenges/Roadblocks (7 pts)}
+\sectiontitle{Challenges/Roadblocks}
 
 \vspace{0.05cm}
 
-\instruction{
-(Describe the challenges that you have faced or are facing so far
-and how you plan to solve them. Max 300 words).
-}
 
 \vspace{0.18cm}
 
@@ -629,14 +607,10 @@ and how you plan to solve them. Max 300 words).
 \vspace{0.65cm}
 
 % TASKS PENDING
-\sectiontitle{Tasks Pending (7 pts)}
+\sectiontitle{Tasks Pending}
 
 \vspace{0.05cm}
 
-\instruction{
-(Describe the main tasks that you still need to complete.
-Max 250 words).
-}
 
 \vspace{0.18cm}
 
@@ -669,14 +643,10 @@ Max 250 words).
 \newpage
 
 % PROJECT OUTCOME
-\sectiontitle{Project Outcome/Deliverables (2 pts)}
+\sectiontitle{Project Outcome/Deliverables}
 
 \vspace{0.05cm}
 
-\instruction{
-(Describe what are the key outcomes / deliverables of the project.
-Max 200 words).
-}
 
 \vspace{0.10cm}
 
@@ -684,7 +654,6 @@ Max 200 words).
 \begin{itemize}
 \item A C++17 server that loads a city graph and answers routing, hazard dispatch, classification, scheduling and simulation requests over a REST/JSON API.
 \item A browser front end that draws the Dehradun map, animates each truck's route, highlights hazardous trips, lists what's due today, and lets you run the city forward one day at a time.
-\item A city builder for adding or removing localities, so the system can be tried on maps other than the one we drew.
 \item Unit tests for every core module, plus a sample city file someone else can modify.
 \item A hosted demo link, the README and API docs, and the Phase-II and Phase-III reports and presentations.
 \end{itemize}
@@ -693,33 +662,26 @@ The real outcome we care about is simple: given a list of homes, the system shou
 \vspace{0.35cm}
 
 % PROGRESS OVERVIEW
-\sectiontitle{Progress Overview (2 pts)}
+\sectiontitle{Progress Overview}
 
 \vspace{0.05cm}
 
-\instruction{
-(Summarize how much of the project is done, what's behind schedule,
-what's ahead of schedule. Max 200 words.)
-}
 
 \vspace{0.10cm}
 
 \answerbox{4.9cm}{We would put the project at roughly 80\% done. Everything we promised for Phase-II is working: the graph model, both versions of Dijkstra, the two route builders, the waste classifier, the fill-rate scheduler and the REST API, all with unit tests.
 
-The front end is up as well: the map, route animation, schedule view and database view all work. On top of that we built a day-by-day simulation, a limited truck fleet and a city builder, because a single route on a static map didn't show whether the scheduling actually worked.
+The front end is up as well: the map, route animation, schedule view and database view all work. On top of that we built a day-by-day simulation and a limited truck fleet, because a single route on a static map didn't show whether the scheduling actually worked.
 
-Deployment is the one task left. There is no Dockerfile yet, so the demo runs locally for now. Packaging and hosting it is next on our list.}
+We are on schedule: the front end and the back end are both complete. What is left is a fully deployed version of the system, along with further improvements to the front end and some code cleanup.}
 
 \newpage
 
 % CODEBASE
-\sectiontitle{Codebase Information (2 pts)}
+\sectiontitle{Codebase Information}
 
 \vspace{0.05cm}
 
-\instruction{
-(Repository link, branch, and information about important commits.)
-}
 
 \vspace{0.10cm}
 
@@ -745,12 +707,10 @@ Layout: \texttt{server/} (C++ source, headers, tests, \texttt{data/city.json}) a
 \texttt{server/src/router.cpp} & Priority and FIFO route builders, en-route pickup, nearest-bin unloading, hazard dispatch\\
 \texttt{server/src/simulation.cpp} & Advances days, loads trucks, runs routes and hazard trips, keeps the collection log\\
 \texttt{server/src/city\_loader.cpp} & Reads \texttt{city.json} into the graph\\
-\texttt{server/src/city\_generator.cpp} & Adds and removes localities for the city builder\\
 \texttt{server/data/city.json} & The Dehradun city: localities, nodes, roads, zones, fill rates\\
-\texttt{server/tests/} & Five unit test programs (Dijkstra, domain, simulation, city data, generator)\\
+\texttt{server/tests/} & Unit test programs (Dijkstra, domain, simulation, city data)\\
 \texttt{frontend/js/graph-view.js} & Cytoscape.js map and truck route animation\\
 \texttt{frontend/js/schedule-view.js}, \texttt{simulation-view.js}, \texttt{database-view.js} & Schedule, simulation and database panels\\
-\texttt{frontend/js/city-builder.js} & City builder panel\\
 \texttt{frontend/js/api.js} & Thin \texttt{fetch} wrapper around the REST API\\
 \hline
 \end{tabularx}}
@@ -769,9 +729,9 @@ Graph model and Dijkstra & \texttt{graph}, \texttt{dijkstra} (plain and constrai
 REST API server, city data and front end & \texttt{scheduler}, \texttt{waste\_classifier}, \texttt{router} (Priority / FIFO), \texttt{controllers}, map view\\
 Day-by-day simulation and database view & \texttt{simulation}, database view, simulation tests\\
 Hazard truck dispatch and limited fleet & automatic hazard trucks, truck count and capacity in \texttt{simulation} and \texttt{router}\\
-City mapped to Dehradun (km/kg units) & real coordinates and localities, \texttt{city\_generator}, city builder\\
+City mapped to Dehradun (km/kg units) & real coordinates and localities\\
 Full README with API reference & README, API docs\\
-Locality layout, city builder remove/reset & schematic map layout, remove/reset in the city builder\\
+Schematic locality layout & cleaner map layout of the localities\\
 En-route pickup (latest) & en-route collection in \texttt{router}\\
 \hline
 \end{tabularx}}}
@@ -779,11 +739,10 @@ En-route pickup (latest) & en-route collection in \texttt{router}\\
 \newpage
 
 % TESTING
-\sectiontitle{Testing and Validation Status (2 pts)}
+\sectiontitle{Testing and Validation Status}
 
 \vspace{0.05cm}
 
-\instruction{(Provide information about any tests conducted)}
 
 \vspace{0.30cm}
 
@@ -803,30 +762,24 @@ En-route pickup (latest) & en-route collection in \texttt{router}\\
 \parbox[t]{\linewidth}{\raggedright\vspace{3pt}\small Unit: domain (\texttt{test\_domain})\vspace{3pt}} & \parbox[t]{\linewidth}{\vspace{3pt}\small Pass} & \parbox[t]{\linewidth}{\raggedright\vspace{3pt}\small Classifier rules, scheduler intervals clamped to 1--14 days, Priority vs FIFO ordering and tie-breaks, hazard split\vspace{3pt}}\\ \hline
 \parbox[t]{\linewidth}{\raggedright\vspace{3pt}\small Unit: simulation (\texttt{test\_simulation})\vspace{3pt}} & \parbox[t]{\linewidth}{\vspace{3pt}\small Pass} & \parbox[t]{\linewidth}{\raggedright\vspace{3pt}\small Truck capacity limits, carry-over to next day, one hazard trip per truck per day\vspace{3pt}}\\ \hline
 \parbox[t]{\linewidth}{\raggedright\vspace{3pt}\small Data: city file (\texttt{test\_city\_data})\vspace{3pt}} & \parbox[t]{\linewidth}{\vspace{3pt}\small Pass} & \parbox[t]{\linewidth}{\raggedright\vspace{3pt}\small Every home reachable, every hazard home has a legal route to its bin\vspace{3pt}}\\ \hline
-\parbox[t]{\linewidth}{\raggedright\vspace{3pt}\small Unit: generator (\texttt{test\_generator})\vspace{3pt}} & \parbox[t]{\linewidth}{\vspace{3pt}\small Pass} & \parbox[t]{\linewidth}{\raggedright\vspace{3pt}\small Generated localities stay connected; remove and reset behave correctly\vspace{3pt}}\\ \hline
 \parbox[t]{\linewidth}{\raggedright\vspace{3pt}\small Manual API checks (curl and browser)\vspace{3pt}} & \parbox[t]{\linewidth}{\vspace{3pt}\small Pass} & \parbox[t]{\linewidth}{\raggedright\vspace{3pt}\small \texttt{/health}, \texttt{/classify}, \texttt{/schedule}, \texttt{/route}, \texttt{/simulate/advance} return the expected JSON; bad input gets a clean error\vspace{3pt}}\\ \hline
 \end{tabularx}
 
 \vspace{0.65cm}
 
 % DELIVERABLES PROGRESS
-\sectiontitle{Deliverables Progress (2 pts)}
+\sectiontitle{Deliverables Progress}
 
 \vspace{0.05cm}
 
-\instruction{
-(Summarize the current status of all key project deliverables
-mentioned earlier. Indicate whether each deliverable is completed,
-in progress, or pending.)
-}
 
 \vspace{0.25cm}
 
 \answerbox{4.9cm}{\begin{itemize}
 \item C++ backend: routing, hazard dispatch, classifier, scheduler, simulation, REST API -- \textbf{Completed}
 \item Browser front end with map, route animation, schedule and database views -- \textbf{Completed} (polish \textbf{in progress})
-\item City builder and Dehradun city data -- \textbf{Completed}
-\item Unit tests (5 suites) -- \textbf{Completed}
+\item Dehradun city data -- \textbf{Completed}
+\item Unit tests (4 suites + city data check) -- \textbf{Completed}
 \item README and API documentation -- \textbf{Completed}
 \item Hosted demo (Dockerfile + deployment) -- \textbf{Pending}
 \item Phase-II report -- \textbf{Completed}; Phase-III report, presentation and demo -- \textbf{Pending}

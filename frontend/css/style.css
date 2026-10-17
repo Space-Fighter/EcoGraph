@@ -130,6 +130,7 @@ input[type=text], input[type=number], select { font: inherit; font-size: 13px; p
 .db-toolbar input, .db-toolbar select { flex: 0 1 auto; width: auto; min-width: 120px; }
 .db-asof { margin-left: auto; font-size: 12px; color: var(--muted); }
 .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; max-height: 360px; overflow-y: auto; }
+.days-wrap { max-height: 220px; }
 table { border-collapse: collapse; width: 100%; font-size: 12px; }
 th, td { padding: 5px 8px; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--border-soft); }
 th { position: sticky; top: 0; background: var(--bg-head); color: var(--accent); cursor: pointer; user-select: none; }

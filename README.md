@@ -406,6 +406,25 @@ EcoGraph/
 
 ## 🛠️ Build & Installation Guide
 
+### Quick Start (Windows)
+
+**If `server\build\ecorouting.exe` already exists**, just run it (PowerShell or cmd):
+```powershell
+cd server
+.\build\ecorouting.exe 8080 data\city.json ..\frontend
+```
+Then open **http://localhost:8080**. Press `Ctrl+C` to stop.
+
+**If the build folder is missing (or you changed the C++ code)**, build first, then run:
+```powershell
+cd server
+.\build.bat
+.\build\ecorouting.exe 8080 data\city.json ..\frontend
+```
+`build.bat` needs a g++ with C++17 support (e.g. Strawberry Perl's GCC in `C:\Strawberry\c\bin`, which it uses automatically if present). Older MinGW g++ will not work.
+
+> Note: `sh build.sh` and `&&` do not work in Windows PowerShell — use `build.bat` there. The commands below are for Linux/macOS or Git Bash.
+
 ### Prerequisites
 - **GCC / G++ compiler** with C++17 support and POSIX thread support (GCC 7+ recommended).
 - **CMake 3.14+** (optional, for CMake builds) or standard `make` / `sh`.

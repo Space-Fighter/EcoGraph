@@ -550,8 +550,19 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
                            {"overdueByDays", e.overdueByDays},
                            {"percentFull", e.percentFull}});
         }
+        json days = json::array();
+        const std::vector<DaySummary>& summary = state.sim.summary();
+        for (size_t i = 0; i < summary.size(); ++i) {
+            const DaySummary& d = summary[i];
+            days.push_back({{"day", d.day},
+                            {"date", formatDate(d.time)},
+                            {"overflowCount", d.overflowCount},
+                            {"baselineOverflow", d.baselineOverflow},
+                            {"served", d.served},
+                            {"totalCost", d.totalCost}});
+        }
         sendJson(res, 200, {{"ok", true}, {"simulation", simStatus(state.sim)}, {"nodes", nodes},
-                            {"zones", zoneArr}, {"localities", localityArr}, {"log", log}});
+                            {"zones", zoneArr}, {"localities", localityArr}, {"log", log}, {"days", days}});
     });
 
     svr.set_exception_handler([](const httplib::Request&, httplib::Response& res, std::exception_ptr) {

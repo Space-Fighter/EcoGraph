@@ -720,32 +720,63 @@ Docker image and hosting\\
 % SLIDE 10 -- Prototype
 % ============================================================
 \begin{frame}{Working Prototype / Demonstration}
-\small
-
-\begin{columns}[T,totalwidth=\textwidth]
-
-\column{.45\textwidth}
 
 \textbf{\color{GEUBlue}Implemented Features}
 
-\begin{itemize}\itemsep3pt
-\item Dehradun city map with zone-coloured localities
-\item Truck routes animated on the map
-\item Hazard trucks routed only on industrial and arterial roads
-\item Day-by-day simulation with a limited fleet
+\vspace{2mm}
+
+\begin{itemize}\itemsep6pt
+\item City modelled as a weighted, zone-tagged graph
+\item Shortest-path collection route for each truck with Dijkstra's algorithm
+\item Pickups scheduled from each home's fill rate
+\item Hazardous waste routed on industrial and arterial roads only, to the right disposal bin
 \end{itemize}
 
-\column{.51\textwidth}
+\end{frame}
 
-\begin{block}{Prototype / Output}
+% ============================================================
+% SLIDE 10a -- Map view with legend
+% ============================================================
+\begin{frame}{Working Prototype -- Map View}
+\begin{center}
+\includegraphics[width=\textwidth,height=5.8cm,keepaspectratio]{map_with_legend.png}
+\end{center}
+\end{frame}
 
-\centering
-\includegraphics[width=\linewidth,height=4.2cm,keepaspectratio]{app_map.png}
+% ============================================================
+% SLIDE 10b -- Database view: day-by-day summary
+% ============================================================
+\begin{frame}{Working Prototype -- Day-by-Day Summary}
+\begin{center}
+\includegraphics[width=\textwidth,height=6.0cm,keepaspectratio]{db_days.png}
+\end{center}
+\end{frame}
 
-\end{block}
+% ============================================================
+% SLIDE 10c -- Database view: node table with fill bars
+% ============================================================
+\begin{frame}{Working Prototype -- Database View: Nodes and \% Full}
+\begin{center}
+\includegraphics[width=\textwidth,height=6.0cm,keepaspectratio]{db_bars.png}
+\end{center}
+\end{frame}
 
-\end{columns}
+% ============================================================
+% SLIDE 10d -- Database view: locality and zone summaries
+% ============================================================
+\begin{frame}{Working Prototype -- Database View: Localities and Zones}
+\begin{center}
+\includegraphics[width=\textwidth,height=5.7cm,keepaspectratio]{db_groups.png}
+\end{center}
+\end{frame}
 
+% ============================================================
+% SLIDE 10e -- Database view: collection log
+% ============================================================
+\begin{frame}{Working Prototype -- Database View: Collection Log}
+\begin{center}
+\includegraphics[width=\textwidth,height=6.0cm,keepaspectratio]{db_log.png}
+\end{center}
 \end{frame}
 
 % ============================================================

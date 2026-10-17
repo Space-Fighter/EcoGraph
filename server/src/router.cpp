@@ -163,11 +163,43 @@ std::unique_ptr<RouteStrategy> makeRouteStrategy(const std::string& mode) {
 
 // ---------------------------------------------------------------- Hazard
 
+namespace {
+
+// Real km of a path found by weighted Dijkstra, adding the km driven in residential and
+// commercial zones to the result. Between two nodes it takes the edge the search would have
+// used: the one with the lowest weighted cost.
+double measureHazardPath(const Graph& g, const std::vector<std::string>& path, const ZoneFactors& f,
+                         HazardResult& out) {
+    double km = 0;
+    for (size_t i = 0; i + 1 < path.size(); ++i) {
+        const std::vector<Edge>& edges = g.neighbors(path[i]);
+        const Edge* best = nullptr;
+        for (size_t k = 0; k < edges.size(); ++k) {
+            if (edges[k].to != path[i + 1]) continue;
+            if (!best || edges[k].weight * f.of(edges[k].zone) < best->weight * f.of(best->zone)) best = &edges[k];
+        }
+        if (!best) continue;
+        km += best->weight;
+        if (best->zone == ZoneType::Residential) out.residentialKm += best->weight;
+        if (best->zone == ZoneType::Commercial) out.commercialKm += best->weight;
+    }
+    return km;
+}
+
+}  // namespace
+
+ZoneFactors hazardZoneFactors() {
+    ZoneFactors f;
+    f.industrial = 1;
+    f.arterial = 1.5;     // public highway, but wide and built for heavy traffic
+    f.commercial = 10;    // markets and shops: crowds on foot
+    f.residential = 15;   // homes, schools: the people we most want to keep away from
+    return f;
+}
+
 HazardResult dispatchHazard(const Graph& g, const std::string& locationId) {
     HazardResult out;
-    std::set<ZoneType> forbidden;
-    forbidden.insert(ZoneType::Residential);
-    forbidden.insert(ZoneType::Commercial);
+    const ZoneFactors risk = hazardZoneFactors();
 
     std::vector<std::string> depots = g.nodeIdsByType(NodeType::Depot);
     if (depots.empty()) {
@@ -180,14 +212,14 @@ HazardResult dispatchHazard(const Graph& g, const std::string& locationId) {
     std::string wanted = classifyWaste(g.getNode(locationId).wasteDescription).binType;
     std::vector<std::string> bins = g.nodeIdsByType(NodeType::Bin);
 
-    PathResult toLocation = constrainedShortestPath(g, depots[0], locationId, forbidden);
+    PathResult toLocation = weightedShortestPath(g, depots[0], locationId, risk);
     if (toLocation.cost < 0) {
         out.error = "no_hazard_route";
-        out.message = "No path avoiding residential/commercial zones exists from the depot to " + locationId;
+        out.message = "No road connects the depot to " + locationId;
         return out;
     }
 
-    ShortestPathTree fromLocation = shortestPathTree(g, locationId, forbidden);
+    ShortestPathTree fromLocation = weightedShortestPathTree(g, locationId, risk);
     std::string bestBin;
     double bestCost = -1;
     for (int pass = 0; pass < 2 && bestBin.empty(); ++pass) {
@@ -204,14 +236,16 @@ HazardResult dispatchHazard(const Graph& g, const std::string& locationId) {
     }
     if (bestBin.empty()) {
         out.error = "no_hazard_route";
-        out.message = "No path avoiding residential/commercial zones exists from " + locationId +
-                      " to a hazardous-waste bin";
+        out.message = "No road connects " + locationId + " to a hazardous-waste bin";
         return out;
     }
 
+    PathResult toBin = fromLocation.pathTo(bestBin);
+    out.riskCost = toLocation.cost + toBin.cost;
+    toLocation.cost = measureHazardPath(g, toLocation.path, risk, out);
+    toBin.cost = measureHazardPath(g, toBin.path, risk, out);
     appendSegment(out.segments, out.totalCost, depots[0] + "->" + locationId, toLocation);
-    appendSegment(out.segments, out.totalCost, locationId + "->" + bestBin,
-                  fromLocation.pathTo(bestBin));
+    appendSegment(out.segments, out.totalCost, locationId + "->" + bestBin, toBin);
     out.binId = bestBin;
     out.ok = true;
     return out;

@@ -49,6 +49,11 @@ json segmentsToJson(const std::vector<RouteSegment>& segs) {
     return arr;
 }
 
+json zoneFactorsToJson(const ZoneFactors& f) {
+    return {{"residential", f.residential}, {"commercial", f.commercial},
+            {"industrial", f.industrial}, {"arterial", f.arterial}};
+}
+
 json nodeToJson(const Node& n, const Scheduler& sched, std::time_t now) {
     json j = {{"id", n.id},
               {"name", n.name},
@@ -174,6 +179,7 @@ json dayReportToJson(const DayReport& r) {
                           {"capacity", t.capacity},
                           {"cost", t.cost},
                           {"bin", t.bin},
+                          {"exposureKm", t.exposureKm},
                           {"segments", segmentsToJson(t.segments)}});
     }
     return {{"day", r.day},
@@ -396,7 +402,9 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
                   {"binId", h.binId},
                   {"totalCost", h.totalCost},
                   {"segments", segmentsToJson(h.segments)},
-                  {"forbiddenZones", {"residential", "commercial"}}});
+                  {"riskCost", h.riskCost},
+                  {"exposureKm", {{"residential", h.residentialKm}, {"commercial", h.commercialKm}}},
+                  {"zoneFactors", zoneFactorsToJson(hazardZoneFactors())}});
     });
 
     // GET /schedule

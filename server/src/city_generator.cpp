@@ -169,7 +169,7 @@ GeneratedBatch generateNodes(Graph& g, const std::vector<Area>& areas, GenKind k
             if (!bins.empty() && bins[0] != first) connect(g, n.id, bins[0], ZoneType::Industrial);
         } else {  // home
             std::string first = !junctions.empty() ? junctions[0] : (!byDist.empty() ? byDist[0] : "");
-            if (!first.empty()) connect(g, n.id, first, hazardous ? ZoneType::Arterial : area.zone);
+            if (!first.empty()) connect(g, n.id, first, area.zone);
             for (size_t k = 0; k < byDist.size(); ++k) {
                 if (byDist[k] != first) {
                     connect(g, n.id, byDist[k], area.zone);
@@ -197,9 +197,8 @@ bool matches(const Node& n, GenKind kind, bool hazardous) {
     return n.type == NodeType::Junction;
 }
 
-// Nodes reachable from `start`; with restricted=true residential/commercial roads are skipped
-// (the roads a hazard truck may not use).
-std::set<std::string> reachableFrom(const Graph& g, const std::string& start, bool restricted) {
+// Nodes reachable from `start`.
+std::set<std::string> reachableFrom(const Graph& g, const std::string& start) {
     std::set<std::string> seen;
     std::vector<std::string> stack(1, start);
     seen.insert(start);
@@ -208,7 +207,6 @@ std::set<std::string> reachableFrom(const Graph& g, const std::string& start, bo
         stack.pop_back();
         const std::vector<Edge>& es = g.neighbors(u);
         for (size_t i = 0; i < es.size(); ++i) {
-            if (restricted && (es[i].zone == ZoneType::Residential || es[i].zone == ZoneType::Commercial)) continue;
             if (seen.insert(es[i].to).second) stack.push_back(es[i].to);
         }
     }
@@ -231,15 +229,11 @@ RemovalResult removeGeneratedNodes(Graph& g, GenKind kind, bool hazardous, int c
     std::vector<std::string> depots = g.nodeIdsByType(NodeType::Depot);
     if (depots.empty() || out.removed.empty()) return out;
 
-    std::set<std::string> any = reachableFrom(g, depots[0], false);
-    std::set<std::string> allowed = reachableFrom(g, depots[0], true);
+    std::set<std::string> reachable = reachableFrom(g, depots[0]);
     ids = g.nodeIds();
     for (size_t i = 0; i < ids.size(); ++i) {
         const Node& n = g.getNode(ids[i]);
-        if (!n.generated) continue;
-        bool needsRestricted = (n.type == NodeType::Home && classifyWaste(n.wasteDescription).hazardous) ||
-                               (n.type == NodeType::Bin && isHazardBin(n.binType));
-        if (!any.count(n.id) || (needsRestricted && !allowed.count(n.id))) out.cascaded.push_back(n.id);
+        if (n.generated && !reachable.count(n.id)) out.cascaded.push_back(n.id);
     }
     for (size_t i = 0; i < out.cascaded.size(); ++i) g.removeNode(out.cascaded[i]);
     return out;

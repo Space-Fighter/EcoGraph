@@ -39,6 +39,7 @@ struct TruckRun {
     double capacity = 0;  // 0 for hazard trucks (one trip, no load limit)
     double cost = 0;
     std::string bin;      // hazard trips: the bin they delivered to
+    double exposureKm = 0;  // hazard trips: km driven on residential/commercial roads
     std::vector<RouteSegment> segments;
 };
 

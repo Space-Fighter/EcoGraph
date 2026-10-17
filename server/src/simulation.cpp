@@ -147,6 +147,7 @@ DayReport Simulation::advanceDay(Graph& g, const Scheduler& sched, bool autoColl
         run.load = sched.fillLevel(g.getNode(id), now());
         run.cost = h.totalCost;
         run.bin = h.binId;
+        run.exposureKm = h.residentialKm + h.commercialKm;
         run.segments = h.segments;
         collect(g, sched, id, "hazard", run.id);
         rep.totalCost += run.cost;

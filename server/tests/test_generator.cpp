@@ -43,9 +43,6 @@ static void checkBatch(const City& city, const Graph& g, const GeneratedBatch& b
     CHECK(static_cast<int>(b.nodeIds.size()) == count);
     CHECK(!b.edges.empty());
     std::string depot = g.nodeIdsByType(NodeType::Depot)[0];
-    std::set<ZoneType> forbid;
-    forbid.insert(ZoneType::Residential);
-    forbid.insert(ZoneType::Commercial);
 
     std::set<std::string> seen;
     for (size_t i = 0; i < b.nodeIds.size(); ++i) {
@@ -63,12 +60,11 @@ static void checkBatch(const City& city, const Graph& g, const GeneratedBatch& b
         if (type == NodeType::Home) {
             CHECK(n.fillRate > 0 && n.capacity > 0 && n.lastCollected <= NOW);
             CHECK(classifyWaste(n.wasteDescription).hazardous == hazardous);
-            if (hazardous) CHECK(dispatchHazard(g, id).ok);  // reachable by the restricted route
+            if (hazardous) CHECK(dispatchHazard(g, id).ok);  // a hazard truck can serve it
         }
         if (type == NodeType::Bin) {
             bool hazBin = n.binType == "medical" || n.binType == "chemical";
             CHECK(hazBin == hazardous);
-            CHECK(constrainedShortestPath(g, depot, id, forbid).cost >= 0);
         }
     }
 }
@@ -164,8 +160,8 @@ int main() {
         CHECK(removeGeneratedNodes(c.graph, GenKind::Junction, false, 5).removed.empty());
     }
 
-    // Whatever mix is added and removed, the city stays connected, hazardous sites stay
-    // reachable by the restricted route, and every original node survives.
+    // Whatever mix is added and removed, the city stays connected, hazardous sites can still
+    // be served by a hazard truck, and every original node survives.
     for (unsigned seed = 1; seed <= 8; ++seed) {
         City c = base;
         std::mt19937 rng(seed * 101);
@@ -180,16 +176,13 @@ int main() {
         removeGeneratedNodes(c.graph, GenKind::Bin, true, 2);
 
         std::string depot = c.graph.nodeIdsByType(NodeType::Depot)[0];
-        std::set<ZoneType> forbid;
-        forbid.insert(ZoneType::Residential);
-        forbid.insert(ZoneType::Commercial);
         std::vector<std::string> ids = c.graph.nodeIds();
         for (size_t i = 0; i < ids.size(); ++i) {
             const Node& n = c.graph.getNode(ids[i]);
             CHECK(shortestPath(c.graph, depot, n.id).cost >= 0);
-            bool hazard = (n.type == NodeType::Home && classifyWaste(n.wasteDescription).hazardous) ||
-                          (n.type == NodeType::Bin && (n.binType == "medical" || n.binType == "chemical"));
-            if (hazard) CHECK(constrainedShortestPath(c.graph, depot, n.id, forbid).cost >= 0);
+            if (n.type == NodeType::Home && classifyWaste(n.wasteDescription).hazardous) {
+                CHECK(dispatchHazard(c.graph, n.id).ok);
+            }
         }
         std::vector<std::string> orig = base.graph.nodeIds();
         for (size_t i = 0; i < orig.size(); ++i) CHECK(c.graph.hasNode(orig[i]));

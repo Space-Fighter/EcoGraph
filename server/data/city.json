@@ -134,7 +134,7 @@
     { "from": "H1",        "to": "H3",  "zone": "residential" },
     { "from": "H3",        "to": "H4",  "zone": "commercial" },
     { "from": "H2",        "to": "H4",  "zone": "commercial" },
-    { "from": "J_CLEMENT", "to": "HZ3", "zone": "arterial" },
+    { "from": "J_CLEMENT", "to": "HZ3", "zone": "residential" },
     { "from": "J_CLEMENT", "to": "B_GEN_C",  "zone": "industrial" },
     { "from": "B_GEN_C",   "to": "B_COMP_B", "zone": "industrial" },
 
@@ -145,13 +145,13 @@
     { "from": "J_RAIPUR", "to": "H7",  "zone": "residential" },
     { "from": "J_RAIPUR", "to": "H8",  "zone": "residential" },
     { "from": "H7",       "to": "H8",  "zone": "residential" },
-    { "from": "J_RAIPUR", "to": "HZ2", "zone": "arterial" },
+    { "from": "J_RAIPUR", "to": "HZ2", "zone": "residential" },
     { "from": "J_RAIPUR", "to": "B_COMP_A", "zone": "industrial" },
 
     { "from": "J_SAHASTRA", "to": "H9",  "zone": "residential" },
     { "from": "J_SAHASTRA", "to": "H10", "zone": "residential" },
     { "from": "H9",         "to": "H10", "zone": "residential" },
-    { "from": "J_SAHASTRA", "to": "HZ5", "zone": "arterial" },
+    { "from": "J_SAHASTRA", "to": "HZ5", "zone": "residential" },
 
     { "from": "J_RAJPUR1", "to": "H11", "zone": "residential" },
     { "from": "J_RAJPUR1", "to": "H12", "zone": "residential" },
@@ -165,7 +165,7 @@
     { "from": "J_CENTRE",  "to": "H15", "zone": "commercial" },
     { "from": "J_CENTRE",  "to": "H16", "zone": "commercial" },
     { "from": "H15",       "to": "H16", "zone": "commercial" },
-    { "from": "J_CENTRE",  "to": "HZ1", "zone": "arterial" },
+    { "from": "J_CENTRE",  "to": "HZ1", "zone": "commercial" },
     { "from": "J_STATION", "to": "H16", "zone": "commercial" },
 
     { "from": "J_STATION", "to": "H17", "zone": "commercial" },

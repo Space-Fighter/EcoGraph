@@ -23,8 +23,9 @@ struct GeneratedBatch {
 //   - bins    : an industrial road to the nearest junction (+ the nearest other bin)
 //   - junctions: arterial roads to the 3 nearest junctions
 // `hazardous` makes a hazardous home (medical/chemical waste) or a hazardous bin
-// (medical/chemical). Hazardous homes always get an arterial spur, so the zone-restricted
-// hazard route can still reach them. Ids are the next free H#, HZ#, B#, J#.
+// (medical/chemical). A hazardous home is wired like any other home in its locality (a clinic
+// in a market street gets a commercial road); the hazard router keeps the truck's time on
+// such roads as short as it can. Ids are the next free H#, HZ#, B#, J#.
 // Throws std::invalid_argument if there are no localities to place nodes in.
 GeneratedBatch generateNodes(Graph& g, const std::vector<Area>& areas, GenKind kind, bool hazardous,
                              int count, std::time_t now, std::mt19937& rng);
@@ -36,9 +37,8 @@ struct RemovalResult {
 
 // Removes up to `count` of the NEWEST nodes added by generateNodes() that match the kind
 // (same meaning of `hazardous` as above). Nodes from the city file are never touched.
-// An added node that is left with no route to the depot - or, for hazardous homes and
-// facilities, with no route that avoids residential/commercial roads - is removed too, so
-// the city never ends up with stranded nodes. Returns what was removed (possibly nothing).
+// An added node that is left with no route to the depot is removed too, so the city never
+// ends up with stranded nodes. Returns what was removed (possibly nothing).
 RemovalResult removeGeneratedNodes(Graph& g, GenKind kind, bool hazardous, int count);
 
 #endif

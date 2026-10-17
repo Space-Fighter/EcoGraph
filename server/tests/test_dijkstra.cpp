@@ -86,6 +86,18 @@ int main() {
     CHECK(near(c.costTo("B"), 11));  // reached from BIN's side instead
     CHECK(shortestPathTree(g, "NOPE").costTo("NOPE") == -1);
 
+    // Zone factors scale edge costs: a residential factor of 3 makes the A-B detour cost
+    // 4 + 3 + 1 = 8, still cheaper than the 10 km DEPOT-BIN road; a factor of 10 is not.
+    ZoneFactors light;
+    light.residential = 3;
+    PathResult wp = weightedShortestPath(g, "DEPOT", "BIN", light);
+    CHECK(near(wp.cost, 8) && join(wp.path) == "DEPOT>A>B>BIN");
+    ZoneFactors heavy;
+    heavy.residential = 10;
+    CHECK(join(weightedShortestPath(g, "DEPOT", "BIN", heavy).path) == "DEPOT>BIN");
+    CHECK(near(weightedShortestPathTree(g, "DEPOT", heavy).costTo("BIN"), 10));
+    CHECK(weightedShortestPath(g, "DEPOT", "NOPE", heavy).cost == -1);
+
     if (failures == 0) {
         std::cout << "All Dijkstra tests passed" << std::endl;
         return 0;

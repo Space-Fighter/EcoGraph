@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "dijkstra.hpp"
 #include "graph.hpp"
 
 struct RouteSegment {
@@ -75,11 +76,22 @@ struct HazardResult {
     std::string error;    // machine code when !ok
     std::string message;  // human text when !ok
     std::string binId;
-    std::vector<RouteSegment> segments;
-    double totalCost = 0;
+    std::vector<RouteSegment> segments;  // segment costs in km
+    double totalCost = 0;                // km driven
+    double riskCost = 0;                 // km weighted by hazardZoneFactors()
+    double residentialKm = 0;            // km driven on residential roads (public exposure)
+    double commercialKm = 0;             // km driven on commercial roads (public exposure)
 };
 
-// depot -> location -> hazardous bin, never using residential or commercial edges.
+// Risk weights for hazard trucks: industrial and arterial roads cost their length, while
+// commercial and residential roads count several times over. A route through a populated
+// zone is still allowed (a clinic in a market street can only be reached through it), but
+// only for the part that cannot be bypassed by a reasonable industrial/arterial detour.
+ZoneFactors hazardZoneFactors();
+
+// depot -> location -> hazardous bin along the route with the least risk cost: it keeps to
+// industrial/arterial roads where possible and minimises the km driven through residential
+// and commercial zones. Fails only when the location or every hazardous bin is unreachable.
 HazardResult dispatchHazard(const Graph& g, const std::string& locationId);
 
 #endif

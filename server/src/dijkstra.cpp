@@ -9,10 +9,20 @@
 
 namespace {
 
-// Dijkstra from source. Stops as soon as stopAt is settled; an empty stopAt settles every
-// reachable node. Edges whose zone is in forbidden are treated as if they did not exist.
+ZoneFactors forbidding(const std::set<ZoneType>& forbidden) {
+    const double INF = std::numeric_limits<double>::infinity();
+    ZoneFactors f;
+    if (forbidden.count(ZoneType::Residential)) f.residential = INF;
+    if (forbidden.count(ZoneType::Commercial)) f.commercial = INF;
+    if (forbidden.count(ZoneType::Industrial)) f.industrial = INF;
+    if (forbidden.count(ZoneType::Arterial)) f.arterial = INF;
+    return f;
+}
+
+// Dijkstra from source on weight * factor(zone). Stops as soon as stopAt is settled; an empty
+// stopAt settles every reachable node. An infinite factor makes the edge invisible.
 ShortestPathTree run(const Graph& g, const std::string& source, const std::string& stopAt,
-                     const std::set<ZoneType>& forbidden) {
+                     const ZoneFactors& factors) {
     ShortestPathTree tree;
     tree.source = source;
     if (!g.hasNode(source)) return tree;
@@ -39,8 +49,9 @@ ShortestPathTree run(const Graph& g, const std::string& source, const std::strin
         const std::vector<Edge>& edges = g.neighbors(u);
         for (size_t i = 0; i < edges.size(); ++i) {
             const Edge& e = edges[i];
-            if (forbidden.count(e.zone)) continue;  // constrained mode: edge is invisible
-            double nd = d + e.weight;
+            double factor = factors.of(e.zone);
+            if (factor == INF) continue;  // constrained mode: edge is invisible
+            double nd = d + e.weight * factor;
             std::unordered_map<std::string, double>::iterator it = dist.find(e.to);
             double current = (it == dist.end()) ? INF : it->second;
             if (nd < current) {
@@ -54,6 +65,16 @@ ShortestPathTree run(const Graph& g, const std::string& source, const std::strin
 }
 
 }  // namespace
+
+double ZoneFactors::of(ZoneType z) const {
+    switch (z) {
+        case ZoneType::Residential: return residential;
+        case ZoneType::Commercial: return commercial;
+        case ZoneType::Industrial: return industrial;
+        case ZoneType::Arterial: return arterial;
+    }
+    return arterial;
+}
 
 double ShortestPathTree::costTo(const std::string& dest) const {
     std::unordered_map<std::string, double>::const_iterator it = dist.find(dest);
@@ -78,7 +99,22 @@ PathResult ShortestPathTree::pathTo(const std::string& dest) const {
 
 ShortestPathTree shortestPathTree(const Graph& g, const std::string& source,
                                   const std::set<ZoneType>& forbiddenZones) {
-    return run(g, source, std::string(), forbiddenZones);
+    return run(g, source, std::string(), forbidding(forbiddenZones));
+}
+
+ShortestPathTree weightedShortestPathTree(const Graph& g, const std::string& source,
+                                          const ZoneFactors& factors) {
+    return run(g, source, std::string(), factors);
+}
+
+PathResult weightedShortestPath(const Graph& g, const std::string& source, const std::string& dest,
+                                const ZoneFactors& factors) {
+    if (!g.hasNode(dest)) {
+        PathResult none;
+        none.cost = -1;
+        return none;
+    }
+    return run(g, source, dest, factors).pathTo(dest);
 }
 
 PathResult shortestPath(const Graph& g, const std::string& source, const std::string& dest) {
@@ -93,5 +129,5 @@ PathResult constrainedShortestPath(const Graph& g, const std::string& source,
         none.cost = -1;
         return none;
     }
-    return run(g, source, dest, forbiddenZones).pathTo(dest);
+    return run(g, source, dest, forbidding(forbiddenZones)).pathTo(dest);
 }

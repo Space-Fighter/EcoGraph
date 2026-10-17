@@ -1,4 +1,5 @@
-// "Database" tab: node table (sortable / filterable), locality and zone summaries, collection log.
+// "Database" tab: day-by-day summary, node table (sortable / filterable), locality and zone
+// summaries, collection log.
 const DatabaseView = (() => {
   const $ = (id) => document.getElementById(id);
   let data = null;
@@ -171,9 +172,39 @@ const DatabaseView = (() => {
     table.appendChild(tbody);
   }
 
+  // One row per simulated day: overflow with collection vs. with no pickups since day 0.
+  function renderDays() {
+    const table = $('db-days');
+    table.replaceChildren();
+    header(table, [['day', 'Day'], ['date', 'Date'], ['baselineOverflow', 'Overflowing (no pickups)'],
+                   ['overflowCount', 'Overflowing (EcoRouting)'], ['served', 'Homes served'],
+                   ['totalCost', 'Distance (km)']], false);
+    const tbody = document.createElement('tbody');
+    const days = data.days || [];
+    if (!days.length) {
+      const tr = document.createElement('tr');
+      const td = cell('No days simulated yet. Use +1 day or Play days.');
+      td.colSpan = 6;
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+    }
+    days.forEach((d) => {
+      const tr = document.createElement('tr');
+      tr.appendChild(cell(d.day, 'num'));
+      tr.appendChild(cell(d.date));
+      tr.appendChild(cell(d.baselineOverflow, 'num'));
+      tr.appendChild(cell(d.overflowCount, 'num'));
+      tr.appendChild(cell(d.served, 'num'));
+      tr.appendChild(cell(num(d.totalCost), 'num'));
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+  }
+
   async function refresh() {
     data = await Api.getDatabase();
     $('db-asof').textContent = 'As of day ' + data.simulation.day + ' (' + data.simulation.date + ')';
+    renderDays();
     renderNodes();
     renderGroups('db-localities', data.localities, 'area', 'Locality');
     renderGroups('db-zones', data.zones, 'zone', 'Zone');

@@ -78,16 +78,13 @@ int main() {
             if (n.area == "Clement Town") ++clementHomes;
             if (classifyWaste(n.wasteDescription).hazardous) {
                 ++hazardHomes;
-                // A hazard truck must be able to serve it without crossing homes/shops.
+                // A hazard truck can always serve it, even when it sits in a populated area.
                 HazardResult h = dispatchHazard(g, n.id);
                 CHECK(h.ok);
-                // And the data should contain the "shortcut trap" the restriction avoids.
-                std::set<ZoneType> forbid;
-                forbid.insert(ZoneType::Residential);
-                forbid.insert(ZoneType::Commercial);
+                // And the data should contain a "shortcut trap": a shorter route through
+                // homes/shops that the hazard truck skips for a safer detour.
                 PathResult plain = shortestPath(g, depot, n.id);
-                PathResult restricted = constrainedShortestPath(g, depot, n.id, forbid);
-                if (restricted.cost > plain.cost + 1e-9) ++trapHazardHomes;
+                if (h.ok && h.segments[0].cost > plain.cost + 1e-9) ++trapHazardHomes;
             }
         }
     }

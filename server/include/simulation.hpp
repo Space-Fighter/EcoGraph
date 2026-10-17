@@ -2,6 +2,7 @@
 #define SIMULATION_HPP
 
 #include <ctime>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -31,6 +32,16 @@ struct LogEntry {
     double percentFull;
 };
 
+// One line of the day-by-day summary shown at the top of the database view.
+struct DaySummary {
+    int day;
+    std::time_t time;
+    int overflowCount;     // homes/bins past 100% this morning, with collection running
+    int baselineOverflow;  // same count if nothing had been collected since day 0
+    int served;            // homes emptied by trucks today
+    double totalCost;      // km driven today
+};
+
 struct TruckRun {
     std::string id;     // N1.. for normal, HT1.. for hazard trucks
     std::string kind;   // "normal" | "hazard"
@@ -39,6 +50,7 @@ struct TruckRun {
     double capacity = 0;  // 0 for hazard trucks (one trip, no load limit)
     double cost = 0;
     std::string bin;      // hazard trips: the bin they delivered to
+    double exposureKm = 0;  // hazard trips: km driven on residential/commercial roads
     std::vector<RouteSegment> segments;
 };
 
@@ -75,11 +87,18 @@ public:
                  const std::string& truck = "");
 
     const std::vector<LogEntry>& log() const { return log_; }
+    const std::vector<DaySummary>& summary() const { return summary_; }
 
 private:
+    DayReport playDay(Graph& g, const Scheduler& sched, bool autoCollect,
+                      const RouteStrategy& strategy, const Fleet& fleet);
+
     std::time_t base_ = 0;
     int day_ = 0;
     std::vector<LogEntry> log_;
+    std::vector<DaySummary> summary_;
+    // lastCollected of every home/bin on day 0, for the "no pickups" comparison
+    std::map<std::string, std::time_t> startCollected_;
 };
 
 #endif

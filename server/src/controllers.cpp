@@ -49,6 +49,11 @@ json segmentsToJson(const std::vector<RouteSegment>& segs) {
     return arr;
 }
 
+json zoneFactorsToJson(const ZoneFactors& f) {
+    return {{"residential", f.residential}, {"commercial", f.commercial},
+            {"industrial", f.industrial}, {"arterial", f.arterial}};
+}
+
 json nodeToJson(const Node& n, const Scheduler& sched, std::time_t now) {
     json j = {{"id", n.id},
               {"name", n.name},
@@ -174,6 +179,7 @@ json dayReportToJson(const DayReport& r) {
                           {"capacity", t.capacity},
                           {"cost", t.cost},
                           {"bin", t.bin},
+                          {"exposureKm", t.exposureKm},
                           {"segments", segmentsToJson(t.segments)}});
     }
     return {{"day", r.day},
@@ -396,7 +402,9 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
                   {"binId", h.binId},
                   {"totalCost", h.totalCost},
                   {"segments", segmentsToJson(h.segments)},
-                  {"forbiddenZones", {"residential", "commercial"}}});
+                  {"riskCost", h.riskCost},
+                  {"exposureKm", {{"residential", h.residentialKm}, {"commercial", h.commercialKm}}},
+                  {"zoneFactors", zoneFactorsToJson(hazardZoneFactors())}});
     });
 
     // GET /schedule
@@ -542,8 +550,19 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
                            {"overdueByDays", e.overdueByDays},
                            {"percentFull", e.percentFull}});
         }
+        json days = json::array();
+        const std::vector<DaySummary>& summary = state.sim.summary();
+        for (size_t i = 0; i < summary.size(); ++i) {
+            const DaySummary& d = summary[i];
+            days.push_back({{"day", d.day},
+                            {"date", formatDate(d.time)},
+                            {"overflowCount", d.overflowCount},
+                            {"baselineOverflow", d.baselineOverflow},
+                            {"served", d.served},
+                            {"totalCost", d.totalCost}});
+        }
         sendJson(res, 200, {{"ok", true}, {"simulation", simStatus(state.sim)}, {"nodes", nodes},
-                            {"zones", zoneArr}, {"localities", localityArr}, {"log", log}});
+                            {"zones", zoneArr}, {"localities", localityArr}, {"log", log}, {"days", days}});
     });
 
     svr.set_exception_handler([](const httplib::Request&, httplib::Response& res, std::exception_ptr) {

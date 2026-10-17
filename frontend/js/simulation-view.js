@@ -55,7 +55,9 @@ const SimulationView = (() => {
 
     d.trucks.forEach((t) => {
       const load = t.kind === 'normal' ? ' (' + t.load.toFixed(0) + '/' + t.capacity.toFixed(0) + ' kg)' : ' (' + t.load.toFixed(0) + ' kg)';
-      const dest = t.kind === 'hazard' ? ' -> ' + t.bin : '';
+      const dest = t.kind === 'hazard'
+        ? ' -> ' + t.bin + (t.exposureKm > 0 ? ' (' + t.exposureKm.toFixed(1) + ' km through populated roads)' : '')
+        : '';
       li.appendChild(line(t.id + ': ' + t.homes.join(', ') + load + dest + ', ' + t.cost.toFixed(1) + ' km', 'truck'));
     });
     if (d.carriedOver.length) li.appendChild(line('Waiting for a free truck: ' + d.carriedOver.join(', '), 'alert'));

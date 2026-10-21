@@ -18,6 +18,8 @@ std::string setting(int argc, char** argv, int argIndex, const char* envName, co
 
 // usage: ecorouting [port] [city.json] [frontend-dir]
 // env:   PORT, CITY_FILE, FRONTEND_DIR, CORS_ORIGIN (e.g. https://my-app.vercel.app or *)
+// Initializes the EcoRouting engine, loads city data, configures the HTTP server,
+// registers API routes, and starts the application.
 int main(int argc, char** argv) {
     int port = std::atoi(setting(argc, argv, 1, "PORT", "8080").c_str());
     std::string cityPath = setting(argc, argv, 2, "CITY_FILE", "data/city.json");

@@ -96,7 +96,7 @@ PathResult ShortestPathTree::pathTo(const std::string& dest) const {
     std::reverse(result.path.begin(), result.path.end());
     return result;
 }
-
+// Computes shortest paths from a source node while excluding edges belonging to forbidden zones.
 ShortestPathTree shortestPathTree(const Graph& g, const std::string& source,
                                   const std::set<ZoneType>& forbiddenZones) {
     return run(g, source, std::string(), forbidding(forbiddenZones));
@@ -116,7 +116,7 @@ PathResult weightedShortestPath(const Graph& g, const std::string& source, const
     }
     return run(g, source, dest, factors).pathTo(dest);
 }
-
+// Reconstructs the shortest path by tracing predecessor nodes from the destination back to the source.
 PathResult shortestPath(const Graph& g, const std::string& source, const std::string& dest) {
     return constrainedShortestPath(g, source, dest, std::set<ZoneType>());
 }

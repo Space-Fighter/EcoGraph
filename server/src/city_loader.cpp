@@ -7,7 +7,8 @@
 #include "json.hpp"
 
 using json = nlohmann::json;
-
+// Loads city data from a JSON file, constructs the graph, and initializes
+// nodes, edges, and geographical areas with appropriate validation.
 City loadCity(const std::string& path, std::time_t now) {
     std::ifstream in(path);
     if (!in) throw std::runtime_error("cannot open city file: " + path);
@@ -42,6 +43,8 @@ City loadCity(const std::string& path, std::time_t now) {
             }
             city.graph.addNode(n);
         }
+        // Loads graph edges, calculates missing weights from geographic coordinates,
+        // and validates that both endpoint nodes exist.
         for (const json& je : doc.at("edges")) {
             std::string from = je.at("from").get<std::string>();
             std::string to = je.at("to").get<std::string>();

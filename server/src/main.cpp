@@ -39,7 +39,8 @@ int main(int argc, char** argv) {
 
     httplib::Server svr;
     registerRoutes(svr, state, cors ? cors : "");
-    if (!svr.set_mount_point("/", frontendDir)) {
+    // no-cache: browsers revalidate each load, so a rebuilt frontend shows up without a hard refresh.
+    if (!svr.set_mount_point("/", frontendDir, {{"Cache-Control", "no-cache"}})) {
         std::cerr << "Note: no frontend served (directory not found: " << frontendDir << ")\n";
     }
 

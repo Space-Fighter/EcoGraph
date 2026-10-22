@@ -25,7 +25,6 @@ void Simulation::start(std::time_t base) {
     day_ = 0;
     log_.clear();
     summary_.clear();
-    startCollected_.clear();
 }
 
 void Simulation::collect(Graph& g, const Scheduler& sched, const std::string& id,
@@ -166,32 +165,18 @@ DayReport Simulation::playDay(Graph& g, const Scheduler& sched, bool autoCollect
 
 DayReport Simulation::advanceDay(Graph& g, const Scheduler& sched, bool autoCollect,
                                  const RouteStrategy& strategy, const Fleet& fleet) {
-    std::vector<std::string> ids = g.nodeIds();
-    if (day_ == 0 && startCollected_.empty()) {
-        for (size_t i = 0; i < ids.size(); ++i) {
-            const Node& n = g.getNode(ids[i]);
-            if (n.type == NodeType::Home || n.type == NodeType::Bin) startCollected_[n.id] = n.lastCollected;
-        }
-    }
-
     DayReport rep = playDay(g, sched, autoCollect, strategy, fleet);
-
-    // How many homes/bins would be overflowing today if nothing had been collected since day 0.
-    int baseline = 0;
-    for (size_t i = 0; i < ids.size(); ++i) {
-        if (!g.hasNode(ids[i])) continue;
-        Node n = g.getNode(ids[i]);
-        if (n.type != NodeType::Home && n.type != NodeType::Bin) continue;
-        std::map<std::string, std::time_t>::const_iterator it = startCollected_.find(n.id);
-        if (it != startCollected_.end()) n.lastCollected = it->second;
-        if (sched.percentFull(n, rep.time) > 100.0) ++baseline;
-    }
 
     DaySummary s;
     s.day = rep.day;
     s.time = rep.time;
-    s.overflowCount = static_cast<int>(rep.overflowIds.size());
-    s.baselineOverflow = baseline;
+    // Homes still past 100% after today's pickups.
+    s.overflowCount = 0;
+    std::vector<std::string> ids = g.nodeIds();
+    for (size_t i = 0; i < ids.size(); ++i) {
+        const Node& n = g.getNode(ids[i]);
+        if (n.type == NodeType::Home && sched.percentFull(n, rep.time) > 100.0) ++s.overflowCount;
+    }
     s.served = 0;
     for (size_t t = 0; t < rep.trucks.size(); ++t) s.served += static_cast<int>(rep.trucks[t].homes.size());
     s.totalCost = rep.totalCost;

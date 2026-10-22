@@ -26,7 +26,7 @@ ShortestPathTree run(const Graph& g, const std::string& source, const std::strin
     ShortestPathTree tree;
     tree.source = source;
     if (!g.hasNode(source)) return tree;
-
+    
     const double INF = std::numeric_limits<double>::infinity();
     std::unordered_map<std::string, double>& dist = tree.dist;
     std::unordered_map<std::string, std::string>& prev = tree.prev;

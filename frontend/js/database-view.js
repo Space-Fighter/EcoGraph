@@ -172,19 +172,18 @@ const DatabaseView = (() => {
     table.appendChild(tbody);
   }
 
-  // One row per simulated day: overflow with collection vs. with no pickups since day 0.
+  // One row per simulated day: homes still overflowing after that day's pickups.
   function renderDays() {
     const table = $('db-days');
     table.replaceChildren();
-    header(table, [['day', 'Day'], ['date', 'Date'], ['baselineOverflow', 'Overflowing (no pickups)'],
-                   ['overflowCount', 'Overflowing (EcoRouting)'], ['served', 'Homes served'],
+    header(table, [['day', 'Day'], ['date', 'Date'], ['overflowCount', 'Overflowing bins'], ['served', 'Homes served'],
                    ['totalCost', 'Distance (km)']], false);
     const tbody = document.createElement('tbody');
     const days = data.days || [];
     if (!days.length) {
       const tr = document.createElement('tr');
       const td = cell('No days simulated yet. Use +1 day or Play days.');
-      td.colSpan = 6;
+      td.colSpan = 5;
       tr.appendChild(td);
       tbody.appendChild(tr);
     }
@@ -192,7 +191,6 @@ const DatabaseView = (() => {
       const tr = document.createElement('tr');
       tr.appendChild(cell(d.day, 'num'));
       tr.appendChild(cell(d.date));
-      tr.appendChild(cell(d.baselineOverflow, 'num'));
       tr.appendChild(cell(d.overflowCount, 'num'));
       tr.appendChild(cell(d.served, 'num'));
       tr.appendChild(cell(num(d.totalCost), 'num'));

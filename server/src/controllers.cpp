@@ -557,7 +557,6 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
             days.push_back({{"day", d.day},
                             {"date", formatDate(d.time)},
                             {"overflowCount", d.overflowCount},
-                            {"baselineOverflow", d.baselineOverflow},
                             {"served", d.served},
                             {"totalCost", d.totalCost}});
         }

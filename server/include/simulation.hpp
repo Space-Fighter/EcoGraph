@@ -36,8 +36,7 @@ struct LogEntry {
 struct DaySummary {
     int day;
     std::time_t time;
-    int overflowCount;     // homes/bins past 100% this morning, with collection running
-    int baselineOverflow;  // same count if nothing had been collected since day 0
+    int overflowCount;     // homes still past 100% at the end of the day, after pickups
     int served;            // homes emptied by trucks today
     double totalCost;      // km driven today
 };
@@ -97,8 +96,6 @@ private:
     int day_ = 0;
     std::vector<LogEntry> log_;
     std::vector<DaySummary> summary_;
-    // lastCollected of every home/bin on day 0, for the "no pickups" comparison
-    std::map<std::string, std::time_t> startCollected_;
 };
 
 #endif

@@ -36,6 +36,11 @@
     \end{center}
 }
 
+
+% follow-on slides use a smaller title; screenshots may use the full paper width
+\newcommand{\subhead}[1]{{\large #1}}
+\newcommand{\shot}[2]{\makebox[\textwidth][c]{\includegraphics[width=.97\paperwidth,height=#2,keepaspectratio]{#1}}}
+
 % ============================================================
 % BEAMER SETTINGS
 % ============================================================
@@ -356,7 +361,7 @@ arrow/.style={-{Latex[length=2mm]},thick,draw=GEUBlue}
 % ============================================================
 % SLIDE 5a -- System overview (from the report)
 % ============================================================
-\begin{frame}{System Overview}
+\begin{frame}{\subhead{System Overview}}
 \scriptsize
 \setlength{\parskip}{1pt}
 \textbf{1.} The clock moves forward one day.
@@ -379,9 +384,9 @@ then visit the nearest bin for each waste type collected}
 \end{frame}
 
 % ============================================================
-\begin{frame}{Graph Storage, Dijkstra \& Fill-Rate Scheduling}
+\begin{frame}{\subhead{Graph Storage, Dijkstra \& Fill-Rate Scheduling}}
 \begin{center}
-{\color{GEUBlue}\bfseries\large (a) Graph Storage and Dijkstra}\\[1mm]
+{\color{GEUBlue}\bfseries\small (a) Graph Storage and Dijkstra}\\[1mm]
 \resizebox{.62\textwidth}{!}{\begin{tikzpicture}[
 node distance=13mm,
 nd/.style={draw=GEUBlue,fill=DiagFill,thick,rounded corners,minimum width=1.3cm,minimum height=7mm,font=\scriptsize,align=center},
@@ -407,7 +412,7 @@ arrow/.style={-{Latex[length=2mm]},thick,draw=GEUBlue}
 \draw[arrow] (a)--(b); \draw[arrow] (b)--(c); \draw[arrow] (c)--(d);
 \draw[arrow] (c.north) to[out=90,in=90] node[midway,above,font=\tiny]{until heap empty} (b.north);
 \end{tikzpicture}}\\[1mm]
-{\color{GEUBlue}\bfseries\large (b) Fill-Rate Scheduling}\\[1mm]
+{\color{GEUBlue}\bfseries\small (b) Fill-Rate Scheduling}\\[1mm]
 \resizebox{.8\textwidth}{!}{\begin{tikzpicture}[font=\scriptsize]
 \draw[thick,GEUBlue,-{Latex[length=2mm]}] (0,0) -- (14,0) node[right]{days};
 \draw[thick,GEUBlue] (0,0.15) -- (0,-0.15) node[below,yshift=-1mm]{last collected};
@@ -420,7 +425,7 @@ arrow/.style={-{Latex[length=2mm]},thick,draw=GEUBlue}
 \end{frame}
 
 % ============================================================
-\begin{frame}{(c) En-Route Pickup}
+\begin{frame}{\subhead{(c) En-Route Pickup}}
 \begin{center}
 \resizebox{.95\textwidth}{!}{\begin{tikzpicture}[
 nd/.style={circle,draw=GEUBlue,fill=DiagFill,thick,minimum size=8mm,font=\scriptsize\bfseries},
@@ -448,7 +453,7 @@ lbl/.style={font=\tiny,draw=none,fill=none}
 \end{frame}
 
 % ============================================================
-\begin{frame}{(d) Truck Fleet and Capacity}
+\begin{frame}{\subhead{(d) Truck Fleet and Capacity}}
 \begin{center}
 \resizebox{.95\textwidth}{!}{\begin{tikzpicture}[
 node distance=5mm and 6mm,
@@ -481,7 +486,7 @@ arrow/.style={-{Latex[length=2mm]},thick,draw=GEUBlue}
 \end{frame}
 
 % ============================================================
-\begin{frame}{(e) Hazard Dispatch \& Constrained Dijkstra}
+\begin{frame}{\subhead{(e) Hazard Dispatch \& Constrained Dijkstra}}
 \begin{center}
 \resizebox{.95\textwidth}{!}{\begin{tikzpicture}[
 node distance=11mm,
@@ -517,7 +522,7 @@ lbl/.style={font=\tiny,draw=none,fill=none}
 \end{frame}
 
 % ============================================================
-\begin{frame}{(f) Simulation Architecture}
+\begin{frame}{\subhead{(f) Simulation Architecture}}
 \begin{center}
 \resizebox{.95\textwidth}{!}{\begin{tikzpicture}[
 node distance=6mm and 7mm,
@@ -737,46 +742,41 @@ Docker image and hosting\\
 % ============================================================
 % SLIDE 10a -- Map view with legend
 % ============================================================
-\begin{frame}{Working Prototype -- Map View}
-\begin{center}
-\includegraphics[width=\textwidth,height=5.8cm,keepaspectratio]{map_with_legend.png}
-\end{center}
+\begin{frame}{\subhead{Map View}}
+\vspace{-2mm}
+\shot{map_with_legend.png}{6.35cm}
 \end{frame}
 
 % ============================================================
 % SLIDE 10b -- Database view: day-by-day summary
 % ============================================================
-\begin{frame}{Working Prototype -- Day-by-Day Summary}
-\begin{center}
-\includegraphics[width=\textwidth,height=6.0cm,keepaspectratio]{db_days.png}
-\end{center}
+\begin{frame}{\subhead{Database View}}
+\vspace{-2mm}
+\shot{db_view_top.png}{6.75cm}
 \end{frame}
 
 % ============================================================
 % SLIDE 10c -- Database view: node table with fill bars
 % ============================================================
-\begin{frame}{Working Prototype -- Database View: Nodes and \% Full}
-\begin{center}
-\includegraphics[width=\textwidth,height=6.0cm,keepaspectratio]{db_bars.png}
-\end{center}
+\begin{frame}{\subhead{Nodes and \% Full}}
+\vspace{-2mm}
+\shot{db_bars.png}{6.35cm}
 \end{frame}
 
 % ============================================================
 % SLIDE 10d -- Database view: locality and zone summaries
 % ============================================================
-\begin{frame}{Working Prototype -- Database View: Localities and Zones}
-\begin{center}
-\includegraphics[width=\textwidth,height=5.7cm,keepaspectratio]{db_groups.png}
-\end{center}
+\begin{frame}{\subhead{Localities and Zones}}
+\vspace{-2mm}
+\shot{db_groups.png}{6.35cm}
 \end{frame}
 
 % ============================================================
 % SLIDE 10e -- Database view: collection log
 % ============================================================
-\begin{frame}{Working Prototype -- Database View: Collection Log}
-\begin{center}
-\includegraphics[width=\textwidth,height=6.0cm,keepaspectratio]{db_log.png}
-\end{center}
+\begin{frame}{\subhead{Collection Log}}
+\vspace{-2mm}
+\shot{db_log.png}{6.75cm}
 \end{frame}
 
 % ============================================================
@@ -884,42 +884,31 @@ all pass. In the A, C, B example, en-route pickup cuts the route from 6 km to 4 
 \renewcommand{\arraystretch}{1.35}
 
 \begin{tabularx}{.96\textwidth}
-{@{}p{2.0cm}>{\raggedright\arraybackslash}p{2.0cm}X p{1.6cm}@{}}
+{@{}p{2.0cm}>{\raggedright\arraybackslash}p{2.4cm}X@{}}
 
 \toprule
 Member &
 Role &
-Technical Contribution &
-GitHub Commits\\
+Technical Contribution\\
 \midrule
 
 Tejas Jain &
 Team Lead, Backend &
-Graph, Dijkstra, scheduler, classifier, route builders, hazard dispatch, simulation, REST server, unit tests &
-17\\
+Graph, Dijkstra, scheduler, classifier, route builders, hazard dispatch, simulation, REST server, unit tests\\
 
 Apoorv Negi &
 Front End, Docs &
-README and API docs, map view, simulation, unit tests, report and presentation &
-3\\
+README and API docs, map view, simulation, unit tests, report and presentation\\
 
 Yash Nigam &
-Front End &
-Schedule, simulation and database views, map view, unit tests, report and presentation &
-0\\
+Front End, Docs &
+README and API docs, schedule, simulation and database views, map view, unit tests, report and presentation\\
 
 \bottomrule
 
 \end{tabularx}
 
 \end{center}
-
-\vspace{3mm}
-
-\begin{block}{Individual Evaluation}
-Every member should be prepared to explain and demonstrate
-their own technical contribution to the project.
-\end{block}
 
 \end{frame}
 

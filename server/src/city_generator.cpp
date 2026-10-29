@@ -89,7 +89,8 @@ std::time_t randomLastCollected(const Node& n, std::time_t now, std::mt19937& rn
 }
 
 }  // namespace
-
+// Generates city nodes with randomized locations, assigns node properties,
+// and connects each new node to nearby nodes in the existing graph.
 GeneratedBatch generateNodes(Graph& g, const std::vector<Area>& areas, GenKind kind, bool hazardous,
                              int count, std::time_t now, std::mt19937& rng) {
     if (areas.empty()) throw std::invalid_argument("the city has no localities to place nodes in");
@@ -214,7 +215,8 @@ std::set<std::string> reachableFrom(const Graph& g, const std::string& start) {
 }
 
 }  // namespace
-
+// Removes generated nodes matching the specified type and hazard category,
+// then removes remaining generated nodes that are unreachable from a depot.
 RemovalResult removeGeneratedNodes(Graph& g, GenKind kind, bool hazardous, int count) {
     RemovalResult out;
 

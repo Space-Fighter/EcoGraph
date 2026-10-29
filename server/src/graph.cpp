@@ -110,3 +110,4 @@ std::vector<std::string> Graph::nodeIdsByType(NodeType type) const {
     }
     return out;
 }
+//It handles node and edge operations, zone and node-type conversions, adjacency list maintenance, and input validation. The removeNode() function also cleans up connected edges to maintain graph consistency. The code provides a solid foundation for managing the graph structure in the project.

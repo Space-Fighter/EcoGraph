@@ -15,7 +15,7 @@ using json = nlohmann::json;
 namespace {
 
 const size_t MAX_NODES = 500;  // keeps per-request Dijkstra work and the map readable
-
+// Sends a JSON response with the specified HTTP status code and response body.
 void sendJson(httplib::Response& res, int status, const json& body) {
     res.status = status;
     res.set_content(body.dump(), "application/json");
@@ -199,7 +199,8 @@ json simStatus(const Simulation& sim) {
 }
 
 }  // namespace
-
+// Registers HTTP API endpoints for graph operations, node management,
+// route planning, waste classification, scheduling, and simulation control.
 void registerRoutes(httplib::Server& svr, AppState& state, const std::string& corsOrigin) {
     if (!corsOrigin.empty()) {
         svr.set_default_headers({{"Access-Control-Allow-Origin", corsOrigin},

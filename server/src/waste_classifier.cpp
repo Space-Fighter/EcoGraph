@@ -24,7 +24,8 @@ const std::vector<Rule>& rules() {
 }
 
 }  // namespace
-
+// Normalizes waste descriptions and matches keywords against predefined rules
+// to determine the appropriate bin category and hazardous status.
 ClassificationResult classifyWaste(const std::string& description) {
     std::string text = description;
     std::transform(text.begin(), text.end(), text.begin(),

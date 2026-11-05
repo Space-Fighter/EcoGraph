@@ -427,24 +427,4 @@ function truck(a, dir, c) {
   make('truck-hazard-' + dir, (a) => truck(a, dir, { body: '#f0c21f', band: '#20242e', cab: '#e2492f', beacon: true }));
 });
 
-// ---- status bubbles (flat, the tip is the origin) -------------------------------------------
-
-function bubble(name, fill, ring, drawIcon) {
-  make(name, (a) => {
-    const cy = -24, r = 17;
-    a.see([-r - 2, cy - r - 2]); a.see([r + 2, 2]);
-    a.parts.push(`<path d="M-7 ${cy + 14} L0 0 L7 ${cy + 14} Z" fill="${ring}"/>`);
-    a.parts.push(`<circle cx="0" cy="${cy}" r="${r}" fill="${fill}" stroke="${ring}" stroke-width="3"/>`);
-    drawIcon(a, cy);
-  });
-}
-
-const CAN = (cy) => `<path d="M-7.5 ${cy - 5} H7.5 L5.8 ${cy + 10} H-5.8 Z" fill="#fff"/><rect x="-9" y="${cy - 9}" width="18" height="3" rx="1.2" fill="#fff"/><rect x="-3" y="${cy - 12}" width="6" height="2.6" rx="1" fill="#fff"/>`;
-
-bubble('bubble-due', '#f59e0b', '#8a5300', (a, cy) => { a.parts.push(CAN(cy)); });
-bubble('bubble-overflow', '#dd2c2c', '#7a0f0f', (a, cy) => {
-  a.parts.push(CAN(cy + 1));
-  a.parts.push(`<path d="M0 ${cy - 3} V${cy + 3}" stroke="#dd2c2c" stroke-width="2.4" stroke-linecap="round"/><circle cx="0" cy="${cy + 6.8}" r="1.5" fill="#dd2c2c"/>`);
-});
-
 console.log('Wrote ' + fs.readdirSync(OUT).filter((f) => f.endsWith('.svg')).length + ' sprites to ' + OUT);

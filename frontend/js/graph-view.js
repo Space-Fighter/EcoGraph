@@ -1,5 +1,5 @@
 // City view: an isometric grass city drawn with PixiJS. iso-layout.js plans it, map-bake.js paints
-// the ground once, and this file adds what changes: buildings, status bubbles, labels and trucks.
+// the ground once, and this file adds what changes: buildings, labels and trucks.
 const GraphView = (() => {
   const MAX_ZOOM = 2.4;
   const FOLLOW_ZOOM = 1.15;
@@ -19,13 +19,11 @@ const GraphView = (() => {
   let city = { nodes: [], edges: [], areas: [] };
   let nodeById = new Map();
   let plan = null;
-  let world, groundSprite, groundNight, warmOverlay, trailLayer, objectLayer, roadLabelLayer, labelLayer, signLayer, fillLayer, bubbleLayer;
+  let world, groundSprite, groundNight, warmOverlay, trailLayer, objectLayer, roadLabelLayer, labelLayer, signLayer;
   let groundTextures = [];        // baked day and night ground
   let buildings = [];             // { sprite, lights }
   let hotspots = [];              // hover/click rectangles for buildings
   let nodeLabels = [], roadLabels = [], signs = [];
-  const bubbles = new Map();      // node id -> { sprite, phase }
-  const fillBars = new Map();     // node id -> the bar drawn over the fullest nodes
 
   const cam = { x: 0, y: 0, zoom: 1, minZoom: 0.2 };
   let followId = null;
@@ -129,12 +127,10 @@ const GraphView = (() => {
   }
 
   function clearScene() {
-    [objectLayer, labelLayer, roadLabelLayer, signLayer, fillLayer, bubbleLayer].forEach((layer) => {
+    [objectLayer, labelLayer, roadLabelLayer, signLayer].forEach((layer) => {
       layer.removeChildren().forEach((c) => c.destroy({ children: true }));
     });
     buildings = []; hotspots = []; nodeLabels = []; roadLabels = []; signs = [];
-    bubbles.clear();
-    fillBars.clear();
     groundTextures.forEach((t) => t.destroy(true));
     groundTextures = [];
   }
@@ -162,15 +158,12 @@ const GraphView = (() => {
       });
       const c = IsoLayout.toWorld(p.cx, p.cy);
       hotspots.push({ id: p.id, cx: c.x, top: c.y - tallest, bottom: c.y, half: widest / 2, depth: c.y, hx: p.hx, hy: p.hy });
-      node._bubbleY = c.y - tallest - 4;
-      node._bubbleX = c.x;
     });
     plan.hubs.forEach((h, id) => {
       const node = nodeById.get(id);
       const w = IsoLayout.toWorld(h.x, h.y);
       if (node.type === 'junction') {
         hotspots.push({ id, cx: w.x, top: w.y - 14, bottom: w.y + 14, half: 18, depth: w.y });
-        node._bubbleY = w.y; node._bubbleX = w.x;
       }
       const text = label(id, { size: 9.5 });
       text.position.set(w.x, w.y + 13);
@@ -330,10 +323,6 @@ const GraphView = (() => {
     roadLabels.forEach((t) => { t.visible = z >= ROAD_LABEL_ZOOM; });
     const signScale = Math.min(2.4, Math.max(1, 0.82 / z));
     signs.forEach((s) => s.scale.set(signScale));
-    const bubbleScale = Math.min(1.7, Math.max(0.85, 0.85 / z));
-    bubbles.forEach((b) => b.sprite.scale.set(b.baseX * bubbleScale, b.baseY * bubbleScale));
-    const barScale = Math.min(3.4, Math.max(0.9, 0.9 / z));
-    fillBars.forEach((bar) => bar.scale.set(barScale));
     truckRuns.forEach((t) => { t.scale = Math.min(1.8, Math.max(1, 0.7 / z)); t.dirty = true; });
   }
 
@@ -545,10 +534,7 @@ const GraphView = (() => {
       while (t.nextStop < t.route.stops.length && t.route.stops[t.nextStop].at <= t.dist + 0.01) {
         const id = t.route.stops[t.nextStop].id;
         t.nextStop++;
-        if (t.homes.has(id)) {
-          truckArrived(id);
-          if (day.onArrive) day.onArrive(id);
-        }
+        if (t.homes.has(id) && day.onArrive) day.onArrive(id);
       }
       if (t.dist >= t.route.total) t.done = true;
       placeTruck(t);
@@ -572,7 +558,6 @@ const GraphView = (() => {
     day = null;
     d.trucks.forEach((t) => {
       t.dist = t.route.total;
-      t.route.stops.forEach((s) => { if (t.homes.has(s.id)) truckArrived(s.id); });
       if (t.route.points.length > 1) placeTruck(t);
       t.done = true;
     });
@@ -641,69 +626,6 @@ const GraphView = (() => {
     setFollow(null);
   }
 
-  // ---- status bubbles -----------------------------------------------------------------------
-
-  function setBubble(id, kind) {
-    const node = nodeById.get(id);
-    if (!node || node._bubbleY === undefined) return;
-    const old = bubbles.get(id);
-    if (old && old.kind === kind) return;
-    if (old) { old.sprite.destroy(); bubbles.delete(id); }
-    const sprite = Sprites.make(kind === 'overflow' ? 'bubble-overflow' : 'bubble-due');
-    sprite.position.set(node._bubbleX, node._bubbleY);
-    bubbleLayer.addChild(sprite);
-    bubbles.set(id, { sprite, kind, phase: hash(id) % 100 / 16, baseX: sprite.scale.x, baseY: sprite.scale.y, y: node._bubbleY });
-    syncZoomDetail();
-  }
-
-  function clearBubble(id) {
-    const b = bubbles.get(id);
-    if (!b) return;
-    b.sprite.destroy();
-    bubbles.delete(id);
-  }
-
-  function truckArrived(id) {
-    clearBubble(id);
-    const bar = fillBars.get(id);
-    if (bar) { bar.destroy({ children: true }); fillBars.delete(id); }
-  }
-
-  // Draws a fill bar over each listed node: [{ id, percent, status }], using the same colours as
-  // the Database view (green ok, amber due, red overflowing).
-  function setFillBars(rows) {
-    if (!plan) return;
-    fillBars.forEach((bar) => bar.destroy({ children: true }));
-    fillBars.clear();
-    const W = 46, H = 8;
-    const colors = { ok: 0x2fae5a, due: 0xf0a020, overflow: 0xe03131 };
-    rows.forEach(({ id, percent, status }) => {
-      const node = nodeById.get(id);
-      if (!node || node._bubbleY === undefined) return;
-      const bar = new PIXI.Container();
-      const g = new PIXI.Graphics();
-      g.roundRect(-W / 2, -H / 2, W, H, 4).fill(0x20242e).stroke({ width: 1.5, color: 0xffffff, alpha: 0.9 });
-      const fill = (W - 3) * Math.min(1, Math.max(0, percent / 100));
-      if (fill > 1) g.roundRect(-W / 2 + 1.5, -H / 2 + 1.5, fill, H - 3, 2.5).fill(colors[status] || colors.ok);
-      const text = label(percent.toFixed(0) + '%', { size: 10, weight: '700' });
-      text.position.set(0, -H / 2 - 7);
-      bar.addChild(g, text);
-      bar.position.set(node._bubbleX, node._bubbleY + 10);
-      fillLayer.addChild(bar);
-      fillBars.set(id, bar);
-    });
-    syncZoomDetail();
-  }
-
-  function markDue(ids, overflowIds) {
-    if (!plan) return;
-    const over = new Set(overflowIds || []);
-    const wanted = new Set(ids);
-    over.forEach((id) => wanted.add(id));
-    Array.from(bubbles.keys()).forEach((id) => { if (!wanted.has(id)) clearBubble(id); });
-    wanted.forEach((id) => setBubble(id, over.has(id) ? 'overflow' : 'due'));
-  }
-
   // ---- pointer: pan, zoom, hover, click ------------------------------------------------------
 
   function toWorldPoint(ev) {
@@ -722,15 +644,9 @@ const GraphView = (() => {
     return best;
   }
 
-  // What the pointer is on, most specific first: a status bubble always names its own node, then
-  // the ground of a plot, then a building rising above its plot (the nearest one wins).
+  // What the pointer is on: the ground of a plot, then a building rising above its plot (the
+  // nearest one wins).
   function hotspotAt(p) {
-    for (const [id, b] of bubbles) {
-      const scale = b.sprite.scale.y / b.baseY;
-      if (Math.hypot(p.x - b.sprite.x, p.y - (b.sprite.y - 24 * scale)) <= 20 * scale) {
-        return hotspots.find((h) => h.id === id) || null;
-      }
-    }
     const g = IsoLayout.toGrid(p.x, p.y);
     const onPlot = hotspots.find((h) => h.hx !== undefined && g.x >= h.hx - 3.5 && g.x <= h.hx + 0.5 &&
                                         g.y >= h.hy - 3.5 && g.y <= h.hy + 0.5);
@@ -743,7 +659,7 @@ const GraphView = (() => {
     return best;
   }
 
-  const fillLine = (row) => row.percentFull.toFixed(0) + '% full · ' + row.status;
+  const fillLine = (row) => row.percentFull.toFixed(0) + '% full';
 
   function kindOf(n) {
     if (n.type === 'home') return n.hazardous ? 'hazardous site' : 'household / business cluster';
@@ -856,8 +772,6 @@ const GraphView = (() => {
     stepTrucks(dt);
     stepClock(dt);
     updateCamera(dt);
-    const now = performance.now() / 1000;
-    bubbles.forEach((b) => { b.sprite.y = b.y + Math.sin(now * 2.4 + b.phase) * 3; });
   }
 
   // ---- public -------------------------------------------------------------------------------
@@ -888,9 +802,7 @@ const GraphView = (() => {
     objectLayer.sortableChildren = true;
     labelLayer = new PIXI.Container();
     signLayer = new PIXI.Container();
-    fillLayer = new PIXI.Container();
-    bubbleLayer = new PIXI.Container();
-    world.addChild(groundSprite, groundNight, trailLayer, roadLabelLayer, objectLayer, warmOverlay, labelLayer, signLayer, fillLayer, bubbleLayer);
+    world.addChild(groundSprite, groundNight, trailLayer, roadLabelLayer, objectLayer, warmOverlay, labelLayer, signLayer);
     app.stage.addChild(world);
 
     rebuildScene();
@@ -942,9 +854,8 @@ const GraphView = (() => {
 
   const stats = () => ({ nodes: city.nodes.length, roads: plan.roads.length, bridges: plan.crossings.length, zoom: cam.zoom, followId, paused, speed, clock, sky: skyAt(clock),
                          trucks: truckRuns.map((t) => ({ id: t.id, x: t.x, y: t.y, done: t.done, dist: t.dist, total: t.route.total })),
-                         camera: { x: cam.x, y: cam.y }, bubbleSpots: Array.from(bubbles.entries()).map(([id, b]) => ({ id, kind: b.kind, x: b.sprite.x, y: b.sprite.y, scale: b.sprite.scale.y / b.baseY })),
-                         bubbles: Array.from(bubbles.keys()), fillBars: Array.from(fillBars.keys()) });
+                         camera: { x: cam.x, y: cam.y } });
 
-  return { init, addElements, rebuild, fitAll, nodePositions, animateDay, nightPass, clearRoute, markDue, resize,
-           setFillBars, setVisible, setPaused, setSpeed, follow, onFollowChange, onClockChange, stats };
+  return { init, addElements, rebuild, fitAll, nodePositions, animateDay, nightPass, clearRoute, resize,
+           setVisible, setPaused, setSpeed, follow, onFollowChange, onClockChange, stats };
 })();

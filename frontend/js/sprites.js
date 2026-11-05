@@ -10,7 +10,6 @@ const Sprites = (() => {
     'disposal-general', 'disposal-recyclable', 'disposal-compost', 'disposal-medical', 'disposal-chemical',
     'truck-normal-se', 'truck-normal-sw', 'truck-normal-ne', 'truck-normal-nw',
     'truck-hazard-se', 'truck-hazard-sw', 'truck-hazard-ne', 'truck-hazard-nw',
-    'bubble-due', 'bubble-overflow',
   ];
   const sheet = new Map();
 

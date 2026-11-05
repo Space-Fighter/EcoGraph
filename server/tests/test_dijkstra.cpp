@@ -32,7 +32,7 @@ int main() {
     g.addNode("DEPOT", NodeType::Depot, ZoneType::Industrial);
     g.addNode("A", NodeType::Junction, ZoneType::Arterial);
     g.addNode("B", NodeType::Home, ZoneType::Residential);
-    g.addNode("BIN", NodeType::Bin, ZoneType::Industrial);
+    g.addNode("BIN", NodeType::DisposalSite, ZoneType::Industrial);
     g.addNode("ISLAND", NodeType::Home, ZoneType::Residential);
     g.addEdge("DEPOT", "A", 4, ZoneType::Arterial);
     g.addEdge("A", "B", 1, ZoneType::Residential);

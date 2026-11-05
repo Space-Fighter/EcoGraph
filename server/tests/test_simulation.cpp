@@ -49,12 +49,12 @@ static Graph makeGraph() {
     }
     // HZ1 became due earlier than HZ2 (collected a day before the others).
     g.getNodeMutable("HZ1").lastCollected = BASE - static_cast<std::time_t>(DAY);
-    Node b = mk("BIN", NodeType::Bin, ZoneType::Industrial);
-    b.binType = "recyclable";
+    Node b = mk("BIN", NodeType::DisposalSite, ZoneType::Industrial);
+    b.disposalType = "recyclable";
     b.lastCollected = BASE;  // fillRate 0 -> interval 14 days, so not due during these tests
     g.addNode(b);
-    Node m = mk("BMED", NodeType::Bin, ZoneType::Industrial);
-    m.binType = "medical";
+    Node m = mk("BMED", NodeType::DisposalSite, ZoneType::Industrial);
+    m.disposalType = "medical";
     m.lastCollected = BASE;
     g.addNode(m);
     g.addEdge("DEPOT", "J", 1, ZoneType::Arterial);
@@ -82,7 +82,7 @@ static void testClockAndDue() {
     DayReport d4 = sim.advanceDay(g, s, false, st, f);
     CHECK(d4.due.size() == 1 && d4.due[0] == "HZ1");
     DayReport d5 = sim.advanceDay(g, s, false, st, f);
-    CHECK(d5.due.size() == 5);          // all five homes, bins have fillRate 0
+    CHECK(d5.due.size() == 5);          // all five homes, disposal sites have fillRate 0
     CHECK(d5.overflowIds.size() == 1);  // only HZ1 is past 100% (120%)
     CHECK(sim.log().empty());           // no autoCollect -> nothing collected
 }
@@ -132,18 +132,18 @@ static void testHazardQueue() {
     Scheduler s;
     Simulation sim;
     sim.start(BASE);
-    FIFORouteBuilder st;
+    PriorityRouteBuilder st;
     Fleet f;
     f.hazardTrucks = 1;
     advanceTo(sim, g, s, 4, st, f);  // day 4: only HZ1 due, HZ2 not yet
 
     DayReport d4 = sim.advanceDay(g, s, true, st, f);  // day 5 here; HZ1 is 120%, HZ2 100%
-    // One hazard truck: HZ1 first (due first), HZ2 has to wait a day.
+    // One hazard truck: HZ1 first (fuller), HZ2 has to wait a day.
     const TruckRun* hz = nullptr;
     for (size_t i = 0; i < d4.trucks.size(); ++i) if (d4.trucks[i].kind == "hazard") hz = &d4.trucks[i];
     CHECK(hz != nullptr);
     CHECK(hz && hz->id == "HT1" && hz->homes.size() == 1 && hz->homes[0] == "HZ1");
-    CHECK(hz && hz->bin == "BMED");
+    CHECK(hz && hz->disposalSite == "BMED");
     CHECK(has(d4.carriedOver, "HZ2"));
     bool logged = false;
     for (size_t i = 0; i < sim.log().size(); ++i) {
@@ -161,9 +161,9 @@ static void testHazardQueue() {
 }
 
 static void testOrderingMatters() {
-    // Two homes, one truck that only fits one: Priority takes the fuller one, FIFO the
-    // one that became due first.
-    for (int variant = 0; variant < 2; ++variant) {
+    // Two homes, one truck that only fits one: the fuller one wins, even though the other
+    // became due first.
+    {
         Graph g;
         g.addNode(mk("DEPOT", NodeType::Depot, ZoneType::Industrial));
         g.addNode(mk("J", NodeType::Junction, ZoneType::Arterial));
@@ -176,8 +176,8 @@ static void testOrderingMatters() {
         old.lastCollected = BASE - static_cast<std::time_t>(12 * DAY);
         old.wasteDescription = "plastic bottle";
         g.addNode(full); g.addNode(old);
-        Node b = mk("BIN", NodeType::Bin, ZoneType::Industrial);
-        b.binType = "recyclable";
+        Node b = mk("BIN", NodeType::DisposalSite, ZoneType::Industrial);
+        b.disposalType = "recyclable";
         g.addNode(b);
         g.addEdge("DEPOT", "J", 1, ZoneType::Arterial);
         g.addEdge("J", "FULL", 1, ZoneType::Arterial);
@@ -191,38 +191,32 @@ static void testOrderingMatters() {
         f.normalTrucks = 1;
         f.normalCapacity = 100;  // FULL carries 175 units, OLD 130: each alone exceeds it, so
                                  // a truck takes exactly one (a truck always takes its first)
-        PriorityRouteBuilder pri;
-        FIFORouteBuilder fifo;
-        const RouteStrategy& st = variant == 0 ? static_cast<const RouteStrategy&>(pri)
-                                               : static_cast<const RouteStrategy&>(fifo);
+        PriorityRouteBuilder st;
         DayReport d = sim.advanceDay(g, s, true, st, f);
         CHECK(d.trucks.size() == 1 && d.trucks[0].homes.size() == 1);
         if (d.trucks.size() == 1 && d.trucks[0].homes.size() == 1) {
-            CHECK(d.trucks[0].homes[0] == (variant == 0 ? "FULL" : "OLD"));
+            CHECK(d.trucks[0].homes[0] == "FULL");
         }
         CHECK(d.carriedOver.size() == 1);
     }
 }
 
-static void testBinsAndManual() {
+static void testDisposalSitesAndManual() {
     Graph g = makeGraph();
-    g.getNodeMutable("BIN").fillRate = 100;  // capacity 100 -> interval clamped to 1 day
+    // A disposal site with fill numbers still has no fill level that matters: never due or overflowing.
+    g.getNodeMutable("BIN").fillRate = 100;
     g.getNodeMutable("BIN").capacity = 100;
-    g.getNodeMutable("BIN").lastCollected = BASE;
+    g.getNodeMutable("BIN").lastCollected = BASE - static_cast<std::time_t>(5 * DAY);
     Scheduler s;
     Simulation sim;
     sim.start(BASE);
     PriorityRouteBuilder st;
     Fleet f;
     DayReport d1 = sim.advanceDay(g, s, true, st, f);
-    CHECK(d1.emptiedBins.size() == 1 && d1.emptiedBins[0] == "BIN");
-    CHECK(g.getNode("BIN").lastCollected == sim.now());
-
-    // A bin past 100% is emptied first thing, so the day does not report it as overflowing.
-    g.getNodeMutable("BIN").lastCollected = sim.now() - static_cast<std::time_t>(DAY);
-    DayReport d2 = sim.advanceDay(g, s, true, st, f);
-    CHECK(has(d2.emptiedBins, "BIN"));
-    CHECK(!has(d2.overflowIds, "BIN"));
+    CHECK(!has(d1.due, "BIN"));
+    CHECK(!has(d1.overflowIds, "BIN"));
+    CHECK(sim.log().empty());
+    CHECK(sim.summary().back().overflowAfterPickups == 0);
 
     sim.collect(g, s, "H1", "manual");
     CHECK(sim.log().back().action == "manual" && sim.log().back().truck.empty());
@@ -247,8 +241,8 @@ static void testCollectedEnRoute() {
         g.addNode(h);
     }
     g.getNodeMutable("FAR").lastCollected = BASE - static_cast<std::time_t>(2 * DAY);
-    Node b = mk("BIN", NodeType::Bin, ZoneType::Industrial);
-    b.binType = "recyclable";
+    Node b = mk("BIN", NodeType::DisposalSite, ZoneType::Industrial);
+    b.disposalType = "recyclable";
     g.addNode(b);
     g.addEdge("DEPOT", "NEAR", 1, ZoneType::Residential);
     g.addEdge("NEAR", "FAR", 1, ZoneType::Residential);
@@ -304,7 +298,7 @@ static void testUnreachableDoesNotUseCapacity() {
     CHECK(d5.carriedOver.size() == 2);  // the other two reachable homes wait for tomorrow
 }
 
-// The day's summary counts overflow at the start, after pickups, and after the day's filling.
+// The day's summary counts overflow when the day starts and after its pickups.
 static void testDaySummaryOverflow() {
     Graph g = makeGraph();
     Scheduler s;
@@ -320,20 +314,82 @@ static void testDaySummaryOverflow() {
     const DaySummary d5 = sim.summary().back();
     CHECK(d5.overflowMorning == 1);       // HZ1
     CHECK(d5.overflowAfterPickups == 0);  // the hazard truck emptied HZ1
-    CHECK(d5.overflowEndOfDay == 3);      // a day of filling takes H1-H3 to 120%
+    CHECK(d5.served == 2);
+}
 
-    // "End of day" and the next morning are the same moment.
-    DayReport d6 = sim.advanceDay(g, s, false, st, f);
-    CHECK(static_cast<int>(d6.overflowIds.size()) == d5.overflowEndOfDay);
+// Trucks go by how full a home is, not by its schedule: 80% is enough, and less is not.
+static void testPickupThreshold() {
+    Graph g = makeGraph();   // every home fills 20% a day, so day 3 is 60% and day 4 is 80%
+    Scheduler s;
+    Simulation sim;
+    sim.start(BASE);
+    PriorityRouteBuilder st;
+    Fleet f;
+    f.normalTrucks = 1;
+    f.normalCapacity = 1000;
+    f.hazardTrucks = 0;
+    advanceTo(sim, g, s, 2, st, f);
+
+    DayReport d3 = sim.advanceDay(g, s, true, st, f);
+    bool anyServed = false;
+    for (size_t i = 0; i < d3.trucks.size(); ++i) anyServed = anyServed || !d3.trucks[i].homes.empty();
+    CHECK(!anyServed);
+
+    DayReport d4 = sim.advanceDay(g, s, true, st, f);
+    CHECK(d4.due.size() == 1 && d4.due[0] == "HZ1");      // H1-H3 are not due yet...
+    CHECK(d4.trucks.size() == 1 && d4.trucks[0].homes.size() == 3);  // ...but are full enough
+}
+
+// In a live day nothing changes until a truck is reported as arriving.
+static void testLivePickups() {
+    Graph g = makeGraph();
+    Scheduler s;
+    Simulation sim;
+    sim.start(BASE);
+    PriorityRouteBuilder st;
+    Fleet f;
+    f.normalTrucks = 0;
+    f.hazardTrucks = 2;
+    advanceTo(sim, g, s, 4, st, f);
+
+    sim.advanceDay(g, s, true, st, f, true);
+    CHECK(s.percentFull(g.getNode("HZ1"), sim.now()) > 100.0);  // the truck has not got there yet
+    CHECK(sim.log().empty());
+    CHECK(sim.summary().back().overflowAfterPickups == 1);
+    CHECK(sim.summary().back().served == 0);
+
+    CHECK(sim.arrive(g, s, "HZ1"));
+    CHECK(s.percentFull(g.getNode("HZ1"), sim.now()) < 1e-6);
+    CHECK(sim.log().size() == 1 && sim.log().back().action == "hazard" && sim.log().back().truck == "HT1");
+    CHECK(sim.summary().back().overflowAfterPickups == 0);
+    CHECK(sim.summary().back().served == 1);
+
+    CHECK(!sim.arrive(g, s, "HZ1"));  // already done
+    CHECK(!sim.arrive(g, s, "H1"));   // no truck was sent there
+
+    sim.settle(g, s);                 // HZ2 was still waiting
+    CHECK(s.percentFull(g.getNode("HZ2"), sim.now()) < 1e-6);
+    CHECK(sim.summary().back().served == 2);
+
+    // A live day left unfinished is completed, on its own date, before the next day starts.
+    f.normalTrucks = 1;
+    f.normalCapacity = 1000;
+    sim.advanceDay(g, s, true, st, f, true);
+    const std::time_t unfinishedDay = sim.now();
+    CHECK(g.getNode("H1").lastCollected != unfinishedDay);
+    sim.advanceDay(g, s, false, st, f);
+    CHECK(g.getNode("H1").lastCollected == unfinishedDay);
 }
 
 int main() {
     testDaySummaryOverflow();
+    testPickupThreshold();
+    testLivePickups();
     testClockAndDue();
     testTruckCapacityAndCarryOver();
     testHazardQueue();
     testOrderingMatters();
-    testBinsAndManual();
+    testDisposalSitesAndManual();
     testCollectedEnRoute();
     testUnreachableDoesNotUseCapacity();
     if (failures == 0) {

@@ -63,7 +63,7 @@ const GraphView = (() => {
     if (/lab|diagnostic|blood/.test(text)) return 'lab';
     if (/clinic|hospital|surgical|syringe|medical/.test(text)) return 'clinic';
     if (/paint|solvent|battery|acid|chemical|workshop/.test(text)) return 'workshop';
-    return n.binType === 'medical' ? 'clinic' : 'workshop';
+    return n.disposalType === 'medical' ? 'clinic' : 'workshop';
   }
 
   // Each collection point stands for a whole cluster, so it is drawn as a small group of buildings.
@@ -71,9 +71,9 @@ const GraphView = (() => {
     const h = hash(n.id);
     const pick = (list) => list[h % list.length];
     if (n.type === 'depot') return [['depot', SPOT.centre]];
-    if (n.type === 'bin') {
-      const name = 'bin-' + n.binType;
-      return [[Sprites.info(name) ? name : 'bin-general', SPOT.centre], ['disposal-sign', [1.15, 1.15]]];
+    if (n.type === 'disposal_site') {
+      const name = 'disposal-' + n.disposalType;
+      return [[Sprites.info(name) ? name : 'disposal-general', SPOT.centre], ['disposal-sign', [1.15, 1.15]]];
     }
     if (n.hazardous) return [[hazardBuilding(n), [-0.12, -0.12]], ['hazard-sign', [1.15, 1.15]]];
     if (n.zone === 'commercial') {
@@ -285,10 +285,6 @@ const GraphView = (() => {
   function nightPass() {
     if (!app) return Promise.resolve();
     const end = lastMorning + 24;
-    if (tabHidden) {
-      clock = end;
-      return Promise.resolve();
-    }
     return new Promise((resolve) => { pass = { end, resolve }; });
   }
 
@@ -549,7 +545,10 @@ const GraphView = (() => {
       while (t.nextStop < t.route.stops.length && t.route.stops[t.nextStop].at <= t.dist + 0.01) {
         const id = t.route.stops[t.nextStop].id;
         t.nextStop++;
-        if (t.homes.has(id)) truckArrived(id);
+        if (t.homes.has(id)) {
+          truckArrived(id);
+          if (day.onArrive) day.onArrive(id);
+        }
       }
       if (t.dist >= t.route.total) t.done = true;
       placeTruck(t);
@@ -581,7 +580,8 @@ const GraphView = (() => {
   }
 
   // Plays every truck of one day at once. Resolves when all have finished (or the day is cut short).
-  function animateDay(runs) {
+  // onArrive(id) fires when a truck reaches a location it collects from.
+  function animateDay(runs, onArrive) {
     if (!app) return Promise.resolve();
     finishDay();
     clearTrucks();
@@ -599,14 +599,7 @@ const GraphView = (() => {
       paintLight(true);
       const moving = trucks.filter((t) => t.route.total > 0);
       lastMorning = nextMorning(clock);
-      if (tabHidden) {
-        trucks.forEach((t) => { t.route.stops.forEach((s) => { if (t.homes.has(s.id)) truckArrived(s.id); }); });
-        setFollow(null);
-        clock = lastMorning + 12;
-        resolve();
-        return;
-      }
-      day = { trucks, elapsed: 0, morning: lastMorning, startClock: Math.max(clock, lastMorning), progress: 0, quiet: 0, holdUntil: null, resolve,
+      day = { trucks, elapsed: 0, morning: lastMorning, startClock: Math.max(clock, lastMorning), progress: 0, quiet: 0, holdUntil: null, resolve, onArrive,
               longest: moving.length ? Math.max(...moving.map((t) => t.route.total)) : 0 };
       if (moving.length) {
         autoFit = false;
@@ -750,19 +743,11 @@ const GraphView = (() => {
     return best;
   }
 
-  // The server finishes a day's pickups before its trucks are drawn. While a bubble waits for its
-  // truck, say so rather than showing the emptied level that the bubble seems to contradict.
-  function fillLine(id, row) {
-    const b = bubbles.get(id);
-    if (b && row.status === 'ok') {
-      return (b.kind === 'overflow' ? 'Overflowing this morning' : 'Due this morning') + ' · truck on the way';
-    }
-    return row.percentFull.toFixed(0) + '% full · ' + row.status;
-  }
+  const fillLine = (row) => row.percentFull.toFixed(0) + '% full · ' + row.status;
 
   function kindOf(n) {
     if (n.type === 'home') return n.hazardous ? 'hazardous site' : 'household / business cluster';
-    if (n.type === 'bin') return 'disposal site (' + (n.binType || 'bin') + ')';
+    if (n.type === 'disposal_site') return 'disposal site (' + (n.disposalType || 'disposal_site') + ')';
     return n.type;
   }
 
@@ -804,10 +789,10 @@ const GraphView = (() => {
       tipFor = 'node:' + spot.id;
       const lines = [(n.name || n.id) + ' (' + n.id + ')', (n.area ? n.area + ' · ' : '') + kindOf(n)];
       showTip(lines, p.px, p.py);
-      if (n.type === 'home' || n.type === 'bin') {
+      if (n.type === 'home') {
         DatabaseView.fillOf(n.id).then((row) => {
           if (row && tipFor === 'node:' + spot.id) {
-            showTip(lines.concat([fillLine(n.id, row)]), p.px, p.py);
+            showTip(lines.concat([fillLine(row)]), p.px, p.py);
           }
         }).catch(() => {});
       }
@@ -935,19 +920,14 @@ const GraphView = (() => {
     await rebuildWithNotice();
   }
 
-  // The map is hidden while the Database tab is open. A day in progress finishes at once so the
-  // simulation keeps moving, and drawing stops.
+  // The map is hidden while the Database tab is open. Trucks keep driving, so the tables can be
+  // watched updating as each one arrives.
   function setVisible(visible) {
     if (!app) return;
     tabHidden = !visible;
     if (visible) {
-      app.ticker.start();
       if (autoFit) fitAll();
       else { app.resize(); applyCamera(); }
-    } else {
-      finishDay();
-      finishPass();
-      app.ticker.stop();
     }
   }
 

@@ -240,6 +240,7 @@ select option { color: #111; background: #fff; }
 :root[data-sky="night"] select option, aside select option { color: #eee; background: #1b2238; }
 input[type=checkbox] { accent-color: var(--primary); }
 
+.rule-note { margin: 0 0 8px; font-size: 12px; color: var(--muted); }
 .fleet { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; font-size: 12px; margin-bottom: 8px; }
 .fleet label { display: flex; flex-direction: column; gap: 2px; color: var(--muted); }
 .fleet select, .fleet input { width: 100%; }
@@ -324,6 +325,7 @@ th, td { padding: 5px 8px; text-align: left; white-space: nowrap; border-bottom:
 th { position: sticky; top: 0; z-index: 1; color: var(--accent); cursor: pointer; user-select: none; font-weight: 700; background: rgba(8, 12, 34, .82); }
 th.sorted::after { content: attr(data-dir); margin-left: 4px; }
 tr:hover td { background: var(--hover); }
+th.num { text-align: right; }
 td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .pill { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; text-shadow: none; }
 .pill.ok { background: var(--pill-ok-bg); color: var(--pill-ok-fg); }

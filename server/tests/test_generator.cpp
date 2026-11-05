@@ -62,9 +62,9 @@ static void checkBatch(const City& city, const Graph& g, const GeneratedBatch& b
             CHECK(classifyWaste(n.wasteDescription).hazardous == hazardous);
             if (hazardous) CHECK(dispatchHazard(g, id).ok);  // a hazard truck can serve it
         }
-        if (type == NodeType::Bin) {
-            bool hazBin = n.binType == "medical" || n.binType == "chemical";
-            CHECK(hazBin == hazardous);
+        if (type == NodeType::DisposalSite) {
+            bool hazSite = n.disposalType == "medical" || n.disposalType == "chemical";
+            CHECK(hazSite == hazardous);
         }
     }
 }
@@ -80,8 +80,8 @@ int main() {
 
         checkBatch(city, g, generateNodes(g, city.areas, GenKind::Home, false, 15, NOW, rng), 15, NodeType::Home, false);
         checkBatch(city, g, generateNodes(g, city.areas, GenKind::Home, true, 6, NOW, rng), 6, NodeType::Home, true);
-        checkBatch(city, g, generateNodes(g, city.areas, GenKind::Bin, false, 5, NOW, rng), 5, NodeType::Bin, false);
-        checkBatch(city, g, generateNodes(g, city.areas, GenKind::Bin, true, 3, NOW, rng), 3, NodeType::Bin, true);
+        checkBatch(city, g, generateNodes(g, city.areas, GenKind::DisposalSite, false, 5, NOW, rng), 5, NodeType::DisposalSite, false);
+        checkBatch(city, g, generateNodes(g, city.areas, GenKind::DisposalSite, true, 3, NOW, rng), 3, NodeType::DisposalSite, true);
         checkBatch(city, g, generateNodes(g, city.areas, GenKind::Junction, false, 4, NOW, rng), 4, NodeType::Junction, false);
 
         CHECK(g.nodeIds().size() == baseNodes + 15 + 6 + 5 + 3 + 4);
@@ -144,12 +144,12 @@ int main() {
         City c = base;
         std::mt19937 rng(21);
         GeneratedBatch homes = generateNodes(c.graph, c.areas, GenKind::Home, false, 5, NOW, rng);
-        generateNodes(c.graph, c.areas, GenKind::Bin, false, 2, NOW, rng);
+        generateNodes(c.graph, c.areas, GenKind::DisposalSite, false, 2, NOW, rng);
         RemovalResult r = removeGeneratedNodes(c.graph, GenKind::Home, false, 2);
         CHECK(r.removed.size() == 2);
         CHECK(r.removed[0] == homes.nodeIds[4] && r.removed[1] == homes.nodeIds[3]);  // newest first
         CHECK(!c.graph.hasNode(homes.nodeIds[4]) && c.graph.hasNode(homes.nodeIds[2]));
-        CHECK(c.graph.nodeIdsByType(NodeType::Bin).size() == base.graph.nodeIdsByType(NodeType::Bin).size() + 2);
+        CHECK(c.graph.nodeIdsByType(NodeType::DisposalSite).size() == base.graph.nodeIdsByType(NodeType::DisposalSite).size() + 2);
 
         // Asking for more than exist removes what there is, never original nodes.
         removeGeneratedNodes(c.graph, GenKind::Home, false, 100);
@@ -168,12 +168,12 @@ int main() {
         generateNodes(c.graph, c.areas, GenKind::Junction, false, 5, NOW, rng);
         generateNodes(c.graph, c.areas, GenKind::Home, false, 12, NOW, rng);
         generateNodes(c.graph, c.areas, GenKind::Home, true, 6, NOW, rng);
-        generateNodes(c.graph, c.areas, GenKind::Bin, true, 3, NOW, rng);
-        generateNodes(c.graph, c.areas, GenKind::Bin, false, 3, NOW, rng);
+        generateNodes(c.graph, c.areas, GenKind::DisposalSite, true, 3, NOW, rng);
+        generateNodes(c.graph, c.areas, GenKind::DisposalSite, false, 3, NOW, rng);
         // Remove junctions first: the nodes attached to them must follow, not be left stranded.
         RemovalResult r = removeGeneratedNodes(c.graph, GenKind::Junction, false, 5);
         CHECK(r.removed.size() == 5);
-        removeGeneratedNodes(c.graph, GenKind::Bin, true, 2);
+        removeGeneratedNodes(c.graph, GenKind::DisposalSite, true, 2);
 
         std::string depot = c.graph.nodeIdsByType(NodeType::Depot)[0];
         std::vector<std::string> ids = c.graph.nodeIds();

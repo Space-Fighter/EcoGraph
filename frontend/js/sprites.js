@@ -7,7 +7,7 @@ const Sprites = (() => {
   const NAMES = [
     'house-a', 'house-b', 'house-c', 'tower-a', 'tower-b', 'office', 'stall', 'coffee', 'factory', 'warehouse',
     'clinic', 'lab', 'workshop', 'hazard-sign', 'disposal-sign', 'depot',
-    'bin-general', 'bin-recyclable', 'bin-compost', 'bin-medical', 'bin-chemical',
+    'disposal-general', 'disposal-recyclable', 'disposal-compost', 'disposal-medical', 'disposal-chemical',
     'truck-normal-se', 'truck-normal-sw', 'truck-normal-ne', 'truck-normal-nw',
     'truck-hazard-se', 'truck-hazard-sw', 'truck-hazard-ne', 'truck-hazard-nw',
     'bubble-due', 'bubble-overflow',

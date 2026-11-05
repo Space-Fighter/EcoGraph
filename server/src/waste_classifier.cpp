@@ -7,7 +7,7 @@
 namespace {
 
 struct Rule {
-    const char* binType;
+    const char* disposalType;
     bool hazardous;
     std::vector<std::string> keywords;
 };
@@ -25,7 +25,7 @@ const std::vector<Rule>& rules() {
 
 }  // namespace
 // Normalizes waste descriptions and matches keywords against predefined rules
-// to determine the appropriate bin category and hazardous status.
+// to determine the appropriate disposal site category and hazardous status.
 ClassificationResult classifyWaste(const std::string& description) {
     std::string text = description;
     std::transform(text.begin(), text.end(), text.begin(),
@@ -35,7 +35,7 @@ ClassificationResult classifyWaste(const std::string& description) {
     for (size_t i = 0; i < table.size(); ++i) {
         for (size_t k = 0; k < table[i].keywords.size(); ++k) {
             if (text.find(table[i].keywords[k]) != std::string::npos) {
-                return ClassificationResult{table[i].binType, table[i].hazardous};
+                return ClassificationResult{table[i].disposalType, table[i].hazardous};
             }
         }
     }

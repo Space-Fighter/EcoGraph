@@ -171,6 +171,8 @@ All are original SVGs in `frontend/assets/sprites/`, rasterised to Pixi textures
 
 ## 6. Simulation playback
 
+The bubble timing fix below was replaced by live pickups, see section 13.
+
 **Today:** `simulation-view.js` awaits `GraphView.animateRoute` once per truck, and each call clears the previous truck's route.
 
 **New:** Add `GraphView.animateDay(trucks)`, which resolves once every truck has finished.
@@ -282,8 +284,9 @@ These replace the matching decisions above.
 - **All glass:** The top bar, side cards and legend are always black glass, at every time of day.
 - **Truck speed:** A constant speed instead of a fixed day length, with a slider from 0.25x to about 5.7x. A long route now takes about a minute at 1x.
 - **City size:** 19 more collection points, H25 to H43, for 70 nodes in total. The default fleet went from 3 to 5 normal trucks to carry the extra waste.
-- **Backend change:** The Database day summary now reports overflow at the morning, after pickups and at the end of the day. This replaces the single `overflowCount` in `GET /database`, so the "no backend changes" constraint no longer holds for this one field.
+- **Live pickups (backend change):** A played day no longer applies its pickups all at once. The server waits for `POST /simulate/arrive` as each truck reaches a location, and `POST /simulate/settle` finishes anything left. The map, Database, Due list and tooltips therefore always show the same state, and the Database updates during a day, with trucks still driving while that tab is open. The day summary table shows overflow at the start of the day and a live "Still overflowing" count.
 - **Zone colours:** Road edges, locality borders and locality signs carry a zone colour: amber arterial, purple industrial, sky blue commercial, pink residential.
-- **Fill bars:** The 10 fullest homes and bins show a fill bar and percentage on the map, in the Database colours.
-- **Bins emptied with no truck:** They get no bubble and are left out of that day's overflow count, because they are emptied first thing.
+- **Fill bars:** The 10 fullest homes show a fill bar and percentage on the map, in the Database colours.
+- **Disposal sites:** They only receive waste, so they have no fill level, status, due date or bubble anywhere.
+- **One collection rule (backend change):** The Priority and FIFO choice is gone. Trucks go to homes at least 80% full, most full first, and a clash goes to the most due.
 - **Build details:** The bake lowers its resolution on very large cities rather than splitting into chunks. Bridges are painted into the ground rather than drawn as separate sprites.

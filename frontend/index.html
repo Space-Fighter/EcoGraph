@@ -39,15 +39,10 @@
           <span class="clock" title="Time of day in the city"><i id="sky-icon" class="sky-icon"></i><b id="sim-time">09:00</b> <small id="sim-phase">Morning</small></span>
         </div>
         <div class="row">
-          <label><input type="checkbox" id="sim-auto" checked> Auto-collect what is due each day</label>
+          <label><input type="checkbox" id="sim-auto" checked> Send trucks out each day</label>
         </div>
+        <p class="rule-note">Trucks go to the fullest homes first. If two are equally full, the most overdue goes first. Homes under 80% wait.</p>
         <div class="fleet">
-          <label>Order
-            <select id="sim-mode">
-              <option value="priority">Priority (fullest first)</option>
-              <option value="fifo">FIFO (first due first)</option>
-            </select>
-          </label>
           <label>Normal trucks <input type="number" id="fleet-normal" value="5" min="0" max="20"></label>
           <label>Capacity / truck (kg) <input type="number" id="fleet-capacity" value="1000" min="1" max="100000"></label>
           <label>Hazard trucks <input type="number" id="fleet-hazard" value="2" min="0" max="10"></label>

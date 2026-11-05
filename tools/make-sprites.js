@@ -318,7 +318,7 @@ make('depot', (a) => {
 
 function trashBag(a, x, y, c = '#3b4048') { a.cyl(x, y, 0.13, 7, c); }
 
-make('bin-general', (a) => {
+make('disposal-general', (a) => {
   const mound = '#7b6e58';
   a.cyl(-0.5, -0.45, 0.68, 11, mound);
   a.cyl(-0.5, -0.45, 0.42, 7, shade(mound, 1.12), 11);
@@ -331,7 +331,7 @@ make('bin-general', (a) => {
   trashBag(a, 0.28, 0.96);
 });
 
-make('bin-recyclable', (a) => {
+make('disposal-recyclable', (a) => {
   const b = { x: -0.95, y: -0.8, w: 1.5, d: 1.25, h: 26 };
   a.box(b.x, b.y, b.w, b.d, b.h, '#2d81c9');
   a.left(b, 0.3, 1.2, 0, 15, '#17476f');
@@ -344,7 +344,7 @@ make('bin-recyclable', (a) => {
   [[0.5, 0.75, '#e8c53e'], [0.95, 0.55, '#d9d9d9'], [0.95, 1.05, '#73c368']].forEach(([x, y, c]) => a.box(x, y, 0.36, 0.36, 12, c));
 });
 
-make('bin-compost', (a) => {
+make('disposal-compost', (a) => {
   const wood = '#94673c';
   a.box(-1.1, -0.95, 2.1, 0.12, 13, wood);
   a.box(-1.1, -0.83, 0.12, 1.75, 13, wood);
@@ -357,7 +357,7 @@ make('bin-compost', (a) => {
 });
 
 // An incinerator: dark brick and fire, so it can't be mistaken for the white clinic pickup sites.
-make('bin-medical', (a) => {
+make('disposal-medical', (a) => {
   a.cyl(-0.82, -0.82, 0.24, 76, '#6d5a52', 8);
   a.cyl(-0.82, -0.82, 0.25, 8, '#d62f35', 72);
   const b = { x: -1.0, y: -0.72, w: 1.9, d: 1.5, h: 26 };
@@ -373,7 +373,7 @@ make('bin-medical', (a) => {
   a.box(-0.4, -0.3, 0.9, 0.9, 6, '#4f3a33', 26);
 });
 
-make('bin-chemical', (a) => {
+make('disposal-chemical', (a) => {
   a.cyl(-0.68, -0.68, 0.42, 30, '#f0c52d');
   a.cyl(0.25, -0.75, 0.38, 26, '#e3e6e9');
   a.cyl(-0.75, 0.22, 0.38, 26, '#e3e6e9');

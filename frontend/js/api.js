@@ -30,16 +30,19 @@ const Api = (() => {
   return {
     getGraph: () => request('GET', 'graph'),
     getSchedule: () => request('GET', 'schedule'),
-    postRoute: (homeIds, mode) => request('POST', 'route', { homeIds, mode }),
+    postRoute: (homeIds) => request('POST', 'route', { homeIds }),
     postClassify: (description) => request('POST', 'classify', { description }),
     postRouteHazard: (locationId) => request('POST', 'route/hazard', { locationId }),
     postCollect: (ids) => request('POST', 'collect', { ids }),
     getSimulation: () => request('GET', 'simulation'),
-    // params: { days, autoCollect, mode, normalTrucks, normalCapacity, hazardTrucks }
+    // params: { days, autoCollect, normalTrucks, normalCapacity, hazardTrucks, live }
     advance: (params) => request('POST', 'simulate/advance', params),
+    // Live days: a truck reached a location / finish whatever is still waiting.
+    arrive: (id) => request('POST', 'simulate/arrive', { id }),
+    settle: () => request('POST', 'simulate/settle', {}),
     resetSimulation: () => request('POST', 'simulate/reset', {}),
     getDatabase: () => request('GET', 'database'),
-    // params: { type: 'home'|'bin'|'junction', count, hazardous, seed? }
+    // params: { type: 'home'|'disposal_site'|'junction', count, hazardous, seed? }
     generateNodes: (params) => request('POST', 'nodes/generate', params),
   };
 })();

@@ -49,7 +49,7 @@ std::vector<DueLocation> Scheduler::getDueLocations(const Graph& g, std::time_t 
     std::vector<std::string> ids = g.nodeIds();
     for (size_t i = 0; i < ids.size(); ++i) {
         const Node& n = g.getNode(ids[i]);
-        if (n.type != NodeType::Home && n.type != NodeType::Bin) continue;
+        if (n.type != NodeType::Home) continue;  // disposal sites are where waste ends up, not a pickup
         if (isDue(n, now)) heap.push(Entry(overdueByDays(n, now), n.id));
     }
 

@@ -13,7 +13,7 @@ struct DueLocation {
     double overdueByDays;
 };
 
-// Fill-rate-adaptive scheduling: a home/bin is visited every capacity/fillRate days
+// Fill-rate-adaptive scheduling: a home/disposal site is visited every capacity/fillRate days
 // (clamped to [1, 14]) instead of on a fixed calendar.
 class Scheduler {
 public:
@@ -26,7 +26,7 @@ public:
     double percentFull(const Node& n, std::time_t now) const;  // >100 means overflowing
     std::time_t nextDue(const Node& n) const;                  // lastCollected + interval
 
-    // Due homes/bins, most overdue first (max-heap order).
+    // Due homes/disposal sites, most overdue first (max-heap order).
     std::vector<DueLocation> getDueLocations(const Graph& g, std::time_t now) const;
 
     void markCollected(Graph& g, const std::string& nodeId, std::time_t now) const;

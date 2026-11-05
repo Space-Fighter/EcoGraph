@@ -6,6 +6,8 @@ const SimulationView = (() => {
   let stopRequested = false;
   let paused = false;
   let resumeWaiters = [];
+  let refreshTimer = null;
+  const REFRESH_MS = 700;
 
   function clampInt(id, min, max, fallback) {
     const v = parseInt($(id).value, 10);
@@ -15,8 +17,8 @@ const SimulationView = (() => {
   function params() {
     return {
       days: 1,
+      live: true,
       autoCollect: $('sim-auto').checked,
-      mode: $('sim-mode').value,
       normalTrucks: clampInt('fleet-normal', 0, 20, 2),
       normalCapacity: clampInt('fleet-capacity', 1, 100000, 200),
       hazardTrucks: clampInt('fleet-hazard', 0, 10, 1),
@@ -30,7 +32,7 @@ const SimulationView = (() => {
 
   function setBusy(busy) {
     running = busy;
-    ['sim-step', 'sim-play', 'sim-reset', 'sim-days', 'sim-auto', 'sim-mode',
+    ['sim-step', 'sim-play', 'sim-reset', 'sim-days', 'sim-auto',
      'fleet-normal', 'fleet-capacity', 'fleet-hazard'].forEach((id) => { $(id).disabled = busy; });
     $('sim-stop').disabled = !busy;
     $('sim-pause').disabled = !busy;
@@ -66,14 +68,13 @@ const SimulationView = (() => {
     li.appendChild(head);
 
     const summary = [d.due.length + ' due'];
-    if (d.emptiedBins.length) summary.push('bins emptied: ' + d.emptiedBins.join(', '));
     if (d.totalCost) summary.push('total distance ' + d.totalCost.toFixed(1) + ' km');
     li.appendChild(line(summary.join(' · ')));
 
     d.trucks.forEach((t) => {
       const load = t.kind === 'normal' ? ' (' + t.load.toFixed(0) + '/' + t.capacity.toFixed(0) + ' kg)' : ' (' + t.load.toFixed(0) + ' kg)';
       const dest = t.kind === 'hazard'
-        ? ' -> ' + t.bin + (t.exposureKm > 0 ? ' (' + t.exposureKm.toFixed(1) + ' km through populated roads)' : '')
+        ? ' -> ' + t.disposalSite + (t.exposureKm > 0 ? ' (' + t.exposureKm.toFixed(1) + ' km through populated roads)' : '')
         : '';
       li.appendChild(line(t.id + ': ' + t.homes.join(', ') + load + dest + ', ' + t.cost.toFixed(1) + ' km', 'truck'));
     });
@@ -111,7 +112,7 @@ const SimulationView = (() => {
       const load = t.kind === 'normal' ? t.load.toFixed(0) + '/' + t.capacity.toFixed(0) + ' kg' : t.load.toFixed(0) + ' kg';
       name.textContent = t.id + ' · ' + load;
       const stops = document.createElement('small');
-      stops.textContent = (t.homes.length ? t.homes.join(', ') : 'no stops') + (t.bin ? ' → ' + t.bin : '');
+      stops.textContent = (t.homes.length ? t.homes.join(', ') : 'no stops') + (t.disposalSite ? ' → ' + t.disposalSite : '');
       text.append(name, stops);
       const km = document.createElement('span');
       km.className = 'km';
@@ -165,8 +166,21 @@ const SimulationView = (() => {
     });
   }
 
-  // One day at a time. The server has finished the day's collections before its reply arrives, so
-  // the map holds the morning's bubbles and clears each one as its truck gets there.
+  // Refreshing on every arrival would be wasteful when several trucks arrive together.
+  function refreshSoon() {
+    if (refreshTimer) return;
+    refreshTimer = setTimeout(() => {
+      refreshTimer = null;
+      refreshViews().catch(() => { /* the next arrival or poll will try again */ });
+    }, REFRESH_MS);
+  }
+
+  function truckArrived(id) {
+    Api.arrive(id).then(refreshSoon).catch(() => { /* settled at the end of the day anyway */ });
+  }
+
+  // One day at a time, live: the server applies each pickup when its truck arrives on the map, so
+  // the map and every table always show the same state.
   async function run(days) {
     stopRequested = false;
     setBusy(true);
@@ -174,22 +188,16 @@ const SimulationView = (() => {
       for (let i = 0; i < days && !stopRequested; i++) {
         await untilResumed();
         if (stopRequested) break;
-        ScheduleView.holdMap(true);
-        const before = await Api.getDatabase();
         const res = await Api.advance(params());
         const d = res.days[0];
         showStatus(res.simulation);
         addHistory(d);
         await refreshViews();
-        // Bins are emptied at the start of the day with no truck, so they get no bubble to wait on.
-        const emptied = new Set(d.emptiedBins);
-        const waiting = (ids) => ids.filter((id) => !emptied.has(id));
-        GraphView.markDue(waiting(d.due), waiting(d.overflowIds));
-        ScheduleView.showMorningBars(before.nodes, d);
-        const playing = GraphView.animateDay(d.trucks);
+        const playing = GraphView.animateDay(d.trucks, truckArrived);
         renderTrucks(d.trucks, null);
         await playing;
-        ScheduleView.holdMap(false);
+        await Api.settle();
+        await refreshViews();
         if (!stopRequested) await GraphView.nightPass();
       }
     } catch (e) {
@@ -197,7 +205,6 @@ const SimulationView = (() => {
       li.appendChild(line(e.message, 'alert'));
       $('sim-history').insertBefore(li, $('sim-history').firstChild);
     } finally {
-      ScheduleView.holdMap(false);
       setBusy(false);
     }
   }
@@ -237,6 +244,7 @@ const SimulationView = (() => {
     GraphView.onFollowChange(markFollowing);
     GraphView.onClockChange(showClock);
     setupSpeed();
+    await Api.settle();  // a page closed mid-day can leave pickups waiting
     showStatus(await Api.getSimulation());
   }
 

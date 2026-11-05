@@ -26,7 +26,7 @@ std::string nodeTypeToString(NodeType t) {
         case NodeType::Depot: return "depot";
         case NodeType::Home: return "home";
         case NodeType::Junction: return "junction";
-        case NodeType::Bin: return "bin";
+        case NodeType::DisposalSite: return "disposal_site";
     }
     return "junction";
 }
@@ -35,7 +35,7 @@ NodeType nodeTypeFromString(const std::string& s) {
     if (s == "depot") return NodeType::Depot;
     if (s == "home") return NodeType::Home;
     if (s == "junction") return NodeType::Junction;
-    if (s == "bin") return NodeType::Bin;
+    if (s == "disposal_site") return NodeType::DisposalSite;
     throw std::invalid_argument("unknown node type: " + s);
 }
 

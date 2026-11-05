@@ -9,7 +9,7 @@
 
 namespace {
 
-bool isHazardousBinType(const std::string& t) { return t == "medical" || t == "chemical"; }
+bool isHazardousDisposalType(const std::string& t) { return t == "medical" || t == "chemical"; }
 
 void appendSegment(std::vector<RouteSegment>& segs, double& total, const std::string& label,
                    const PathResult& p) {
@@ -46,23 +46,23 @@ bool RouteStrategy::addLeg(const Graph& g, RouteResult& r, const std::string& fr
     return true;
 }
 
-std::string RouteStrategy::nearestBin(const Graph& g, const std::string& from,
-                                      const std::string& binType) {
-    std::vector<std::string> bins = g.nodeIdsByType(NodeType::Bin);
-    ShortestPathTree tree = shortestPathTree(g, from);  // one Dijkstra covers every bin
-    // pass 0: bins of the wanted type, pass 1: general bins, pass 2: any non-hazardous bin
+std::string RouteStrategy::nearestDisposalSite(const Graph& g, const std::string& from,
+                                      const std::string& disposalType) {
+    std::vector<std::string> disposalSites = g.nodeIdsByType(NodeType::DisposalSite);
+    ShortestPathTree tree = shortestPathTree(g, from);  // one Dijkstra covers every disposal site
+    // pass 0: disposal sites of the wanted type, pass 1: general disposal sites, pass 2: any non-hazardous disposal site
     for (int pass = 0; pass < 3; ++pass) {
         std::string best;
         double bestCost = -1;
-        for (size_t i = 0; i < bins.size(); ++i) {
-            const std::string& bt = g.getNode(bins[i]).binType;
-            if (isHazardousBinType(bt)) continue;
-            if (pass == 0 && bt != binType) continue;
+        for (size_t i = 0; i < disposalSites.size(); ++i) {
+            const std::string& bt = g.getNode(disposalSites[i]).disposalType;
+            if (isHazardousDisposalType(bt)) continue;
+            if (pass == 0 && bt != disposalType) continue;
             if (pass == 1 && bt != "general") continue;
-            double cost = tree.costTo(bins[i]);
+            double cost = tree.costTo(disposalSites[i]);
             if (cost >= 0 && (bestCost < 0 || cost < bestCost)) {
                 bestCost = cost;
-                best = bins[i];
+                best = disposalSites[i];
             }
         }
         if (!best.empty()) return best;
@@ -79,11 +79,11 @@ RouteResult RouteStrategy::buildRoute(const Graph& g, const std::vector<std::str
     std::vector<std::string> ordered = order(g, safe, now);
 
     std::string current = depotId(g);
-    std::vector<std::string> binTypes;  // distinct bin types needed, in pickup order
+    std::vector<std::string> disposalTypes;  // distinct disposal site types needed, in pickup order
     std::set<std::string> done;  // homes already emptied (including en route)
-    auto noteBinType = [&](const std::string& home) {
-        std::string bt = classifyWaste(g.getNode(home).wasteDescription).binType;
-        if (std::find(binTypes.begin(), binTypes.end(), bt) == binTypes.end()) binTypes.push_back(bt);
+    auto noteDisposalType = [&](const std::string& home) {
+        std::string bt = classifyWaste(g.getNode(home).wasteDescription).disposalType;
+        if (std::find(disposalTypes.begin(), disposalTypes.end(), bt) == disposalTypes.end()) disposalTypes.push_back(bt);
     };
     for (size_t i = 0; i < ordered.size(); ++i) {
         const std::string& home = ordered[i];
@@ -101,29 +101,29 @@ RouteResult RouteStrategy::buildRoute(const Graph& g, const std::vector<std::str
             if (std::find(ordered.begin() + i + 1, ordered.end(), mid) == ordered.end()) continue;
             done.insert(mid);
             r.collectedEnRoute.push_back(mid);
-            noteBinType(mid);
+            noteDisposalType(mid);
         }
         done.insert(home);
         current = home;
-        noteBinType(home);
+        noteDisposalType(home);
     }
 
-    // After the last pickup, unload at one bin per collected waste type.
+    // After the last pickup, unload at one disposal site per collected waste type.
     std::set<std::string> visited;
-    for (size_t i = 0; i < binTypes.size(); ++i) {
-        std::string bin = nearestBin(g, current, binTypes[i]);
-        if (bin.empty() || visited.count(bin)) continue;
-        if (addLeg(g, r, current, bin, current + "->" + bin)) {
-            visited.insert(bin);
-            current = bin;
+    for (size_t i = 0; i < disposalTypes.size(); ++i) {
+        std::string disposalSite = nearestDisposalSite(g, current, disposalTypes[i]);
+        if (disposalSite.empty() || visited.count(disposalSite)) continue;
+        if (addLeg(g, r, current, disposalSite, current + "->" + disposalSite)) {
+            visited.insert(disposalSite);
+            current = disposalSite;
         } else {
-            r.unreachable.push_back(bin);
+            r.unreachable.push_back(disposalSite);
         }
     }
     return r;
 }
 
-// ---------------------------------------------------------------- Priority / FIFO
+// ---------------------------------------------------------------- Collection order
 
 std::vector<std::string> PriorityRouteBuilder::order(const Graph& g,
                                                      const std::vector<std::string>& homeIds,
@@ -136,20 +136,7 @@ std::vector<std::string> PriorityRouteBuilder::order(const Graph& g,
         double pa = sched.percentFull(na, now), pb = sched.percentFull(nb, now);
         if (pa != pb) return pa > pb;                                   // fullest first
         std::time_t da = sched.nextDue(na), db = sched.nextDue(nb);
-        if (da != db) return da < db;                                   // tie: due first (FIFO)
-        return a < b;
-    });
-    return out;
-}
-
-std::vector<std::string> FIFORouteBuilder::order(const Graph& g,
-                                                 const std::vector<std::string>& homeIds,
-                                                 std::time_t) const {
-    Scheduler sched;
-    std::vector<std::string> out = homeIds;
-    std::sort(out.begin(), out.end(), [&](const std::string& a, const std::string& b) {
-        std::time_t da = sched.nextDue(g.getNode(a)), db = sched.nextDue(g.getNode(b));
-        if (da != db) return da < db;  // became due earlier -> served earlier
+        if (da != db) return da < db;                                   // clash: most due first
         return a < b;
     });
     return out;
@@ -157,7 +144,6 @@ std::vector<std::string> FIFORouteBuilder::order(const Graph& g,
 
 std::unique_ptr<RouteStrategy> makeRouteStrategy(const std::string& mode) {
     if (mode == "priority") return std::unique_ptr<RouteStrategy>(new PriorityRouteBuilder());
-    if (mode == "fifo") return std::unique_ptr<RouteStrategy>(new FIFORouteBuilder());
     return nullptr;
 }
 
@@ -208,9 +194,9 @@ HazardResult dispatchHazard(const Graph& g, const std::string& locationId) {
         return out;
     }
 
-    // Prefer a bin whose type matches this location's waste (medical / chemical).
-    std::string wanted = classifyWaste(g.getNode(locationId).wasteDescription).binType;
-    std::vector<std::string> bins = g.nodeIdsByType(NodeType::Bin);
+    // Prefer a disposal site whose type matches this location's waste (medical / chemical).
+    std::string wanted = classifyWaste(g.getNode(locationId).wasteDescription).disposalType;
+    std::vector<std::string> disposalSites = g.nodeIdsByType(NodeType::DisposalSite);
 
     PathResult toLocation = weightedShortestPath(g, depots[0], locationId, risk);
     if (toLocation.cost < 0) {
@@ -220,33 +206,33 @@ HazardResult dispatchHazard(const Graph& g, const std::string& locationId) {
     }
 
     ShortestPathTree fromLocation = weightedShortestPathTree(g, locationId, risk);
-    std::string bestBin;
+    std::string bestSite;
     double bestCost = -1;
-    for (int pass = 0; pass < 2 && bestBin.empty(); ++pass) {
-        for (size_t i = 0; i < bins.size(); ++i) {
-            const std::string& bt = g.getNode(bins[i]).binType;
-            if (!isHazardousBinType(bt)) continue;
+    for (int pass = 0; pass < 2 && bestSite.empty(); ++pass) {
+        for (size_t i = 0; i < disposalSites.size(); ++i) {
+            const std::string& bt = g.getNode(disposalSites[i]).disposalType;
+            if (!isHazardousDisposalType(bt)) continue;
             if (pass == 0 && bt != wanted) continue;
-            double cost = fromLocation.costTo(bins[i]);
+            double cost = fromLocation.costTo(disposalSites[i]);
             if (cost >= 0 && (bestCost < 0 || cost < bestCost)) {
                 bestCost = cost;
-                bestBin = bins[i];
+                bestSite = disposalSites[i];
             }
         }
     }
-    if (bestBin.empty()) {
+    if (bestSite.empty()) {
         out.error = "no_hazard_route";
-        out.message = "No road connects " + locationId + " to a hazardous-waste bin";
+        out.message = "No road connects " + locationId + " to a hazardous-waste disposalSite";
         return out;
     }
 
-    PathResult toBin = fromLocation.pathTo(bestBin);
-    out.riskCost = toLocation.cost + toBin.cost;
+    PathResult toSite = fromLocation.pathTo(bestSite);
+    out.riskCost = toLocation.cost + toSite.cost;
     toLocation.cost = measureHazardPath(g, toLocation.path, risk, out);
-    toBin.cost = measureHazardPath(g, toBin.path, risk, out);
+    toSite.cost = measureHazardPath(g, toSite.path, risk, out);
     appendSegment(out.segments, out.totalCost, depots[0] + "->" + locationId, toLocation);
-    appendSegment(out.segments, out.totalCost, locationId + "->" + bestBin, toBin);
-    out.binId = bestBin;
+    appendSegment(out.segments, out.totalCost, locationId + "->" + bestSite, toSite);
+    out.disposalSiteId = bestSite;
     out.ok = true;
     return out;
 }

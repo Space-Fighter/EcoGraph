@@ -105,7 +105,7 @@ const IsoLayout = (() => {
       }
       const cx = box.x + box.w / 2, cy = box.y + box.h / 2;
       slots.sort((a, b) => Math.hypot(a.x - cx, a.y - cy) - Math.hypot(b.x - cx, b.y - cy) || a.x - b.x || a.y - b.y);
-      const rank = { junction: 0, depot: 1, bin: 2, home: 3 };
+      const rank = { junction: 0, depot: 1, disposal_site: 2, home: 3 };
       const ordered = box.members.slice().sort((a, b) => (rank[a.type] - rank[b.type]) || compareIds(a.id, b.id));
       ordered.forEach((n, i) => hub.set(n.id, { x: slots[i].x, y: slots[i].y }));
       box.free = slots.slice(ordered.length);

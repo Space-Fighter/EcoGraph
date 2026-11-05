@@ -50,7 +50,7 @@ const Area& pickArea(const std::vector<Area>& areas, GenKind kind, bool hazardou
         bool ok = false;
         if (kind == GenKind::Home) ok = hazardous ? z != ZoneType::Arterial
                                                   : (z == ZoneType::Residential || z == ZoneType::Commercial);
-        else if (kind == GenKind::Bin) ok = z == ZoneType::Industrial;
+        else if (kind == GenKind::DisposalSite) ok = z == ZoneType::Industrial;
         else ok = true;
         if (ok) fit.push_back(&areas[i]);
     }
@@ -114,7 +114,7 @@ GeneratedBatch generateNodes(Graph& g, const std::vector<Area>& areas, GenKind k
         n.lng = area.lng + dLng;
 
         std::string prefix = kind == GenKind::Home ? (hazardous ? "HZ" : "H")
-                             : kind == GenKind::Bin ? "B" : "J";
+                             : kind == GenKind::DisposalSite ? "B" : "J";
         n.id = nextId(g, prefix);
 
         if (kind == GenKind::Home) {
@@ -127,20 +127,20 @@ GeneratedBatch generateNodes(Graph& g, const std::vector<Area>& areas, GenKind k
                                                  : std::uniform_int_distribution<int>(3, 8)(rng));
             n.wasteDescription = hazardous ? pick(rng, HAZARD_WASTE) : pick(rng, NORMAL_WASTE);
             n.name = (hazardous ? "New hazardous site " : "New cluster ") + n.id + ", " + area.name;
-        } else if (kind == GenKind::Bin) {
-            n.type = NodeType::Bin;
+        } else if (kind == GenKind::DisposalSite) {
+            n.type = NodeType::DisposalSite;
             n.zone = ZoneType::Industrial;
             if (hazardous) {
-                n.binType = uniform(rng, 0, 1) < 0.5 ? "medical" : "chemical";
+                n.disposalType = uniform(rng, 0, 1) < 0.5 ? "medical" : "chemical";
                 n.fillRate = roundTo(uniform(rng, 15, 35), 5);
                 n.capacity = n.fillRate * std::uniform_int_distribution<int>(10, 14)(rng);
             } else {
                 const char* types[] = {"general", "recyclable", "compost"};
-                n.binType = types[std::uniform_int_distribution<int>(0, 2)(rng)];
+                n.disposalType = types[std::uniform_int_distribution<int>(0, 2)(rng)];
                 n.fillRate = roundTo(uniform(rng, 100, 250), 10);
                 n.capacity = n.fillRate * std::uniform_int_distribution<int>(8, 12)(rng);
             }
-            n.name = "New " + n.binType + " bin " + n.id + ", " + area.name;
+            n.name = "New " + n.disposalType + " disposalSite " + n.id + ", " + area.name;
         } else {
             n.type = NodeType::Junction;
             n.zone = ZoneType::Arterial;
@@ -151,11 +151,11 @@ GeneratedBatch generateNodes(Graph& g, const std::vector<Area>& areas, GenKind k
         // Wire it into the network before adding it (nearest is measured to the old nodes).
         std::vector<std::string> byDist = nearest(g, n.lat, n.lng, n.id);
         std::vector<std::string> junctions;
-        std::vector<std::string> bins;
+        std::vector<std::string> disposalSites;
         for (size_t k = 0; k < byDist.size(); ++k) {
             NodeType t = g.getNode(byDist[k]).type;
             if (t == NodeType::Junction) junctions.push_back(byDist[k]);
-            if (t == NodeType::Bin) bins.push_back(byDist[k]);
+            if (t == NodeType::DisposalSite) disposalSites.push_back(byDist[k]);
         }
 
         g.addNode(n);
@@ -164,10 +164,10 @@ GeneratedBatch generateNodes(Graph& g, const std::vector<Area>& areas, GenKind k
         if (kind == GenKind::Junction) {
             for (size_t k = 0; k < junctions.size() && k < 3; ++k) connect(g, n.id, junctions[k], ZoneType::Arterial);
             if (junctions.empty() && !byDist.empty()) connect(g, n.id, byDist[0], ZoneType::Arterial);
-        } else if (kind == GenKind::Bin) {
+        } else if (kind == GenKind::DisposalSite) {
             std::string first = !junctions.empty() ? junctions[0] : (!byDist.empty() ? byDist[0] : "");
             if (!first.empty()) connect(g, n.id, first, ZoneType::Industrial);
-            if (!bins.empty() && bins[0] != first) connect(g, n.id, bins[0], ZoneType::Industrial);
+            if (!disposalSites.empty() && disposalSites[0] != first) connect(g, n.id, disposalSites[0], ZoneType::Industrial);
         } else {  // home
             std::string first = !junctions.empty() ? junctions[0] : (!byDist.empty() ? byDist[0] : "");
             if (!first.empty()) connect(g, n.id, first, area.zone);
@@ -187,14 +187,14 @@ GeneratedBatch generateNodes(Graph& g, const std::vector<Area>& areas, GenKind k
 
 namespace {
 
-bool isHazardBin(const std::string& binType) { return binType == "medical" || binType == "chemical"; }
+bool isHazardDisposal(const std::string& disposalType) { return disposalType == "medical" || disposalType == "chemical"; }
 
 bool matches(const Node& n, GenKind kind, bool hazardous) {
     if (!n.generated) return false;
     if (kind == GenKind::Home) {
         return n.type == NodeType::Home && classifyWaste(n.wasteDescription).hazardous == hazardous;
     }
-    if (kind == GenKind::Bin) return n.type == NodeType::Bin && isHazardBin(n.binType) == hazardous;
+    if (kind == GenKind::DisposalSite) return n.type == NodeType::DisposalSite && isHazardDisposal(n.disposalType) == hazardous;
     return n.type == NodeType::Junction;
 }
 

@@ -9,7 +9,7 @@ const DatabaseView = (() => {
 
   const NODE_COLS = [
     ['id', 'ID'], ['name', 'Name'], ['area', 'Locality'], ['type', 'Type'], ['zone', 'Zone'],
-    ['lat', 'Lat'], ['lng', 'Lng'], ['origin', 'Origin'], ['binType', 'Bin type'], ['waste', 'Waste'],
+    ['lat', 'Lat'], ['lng', 'Lng'], ['origin', 'Origin'], ['disposalType', 'DisposalSite type'], ['waste', 'Waste'],
     ['fillRate', 'Fill rate (kg/day)'], ['capacity', 'Capacity (kg)'], ['fillLevel', 'Fill level (kg)'],
     ['percentFull', '% full'], ['lastCollected', 'Last collected'], ['daysSinceCollected', 'Days since'],
     ['intervalDays', 'Interval (d)'], ['nextDue', 'Next due'], ['overdueByDays', 'Overdue (d)'],
@@ -51,6 +51,16 @@ const DatabaseView = (() => {
     table.appendChild(thead);
   }
 
+  // A heading sits over its numbers: columns of numbers are right-aligned, so their headings are too.
+  function alignHeadings(table) {
+    const firstRow = table.querySelector('tbody tr');
+    if (!firstRow) return;
+    table.querySelectorAll('th').forEach((th, i) => {
+      const cell = firstRow.cells[i];
+      th.classList.toggle('num', !!cell && cell.classList.contains('num'));
+    });
+  }
+
   function filteredNodes() {
     const q = $('db-search').value.trim().toLowerCase();
     const type = $('db-type').value, zone = $('db-zone').value, status = $('db-status').value;
@@ -58,7 +68,7 @@ const DatabaseView = (() => {
       if (type && n.type !== type) return false;
       if (zone && n.zone !== zone) return false;
       if (status && n.status !== status) return false;
-      const haystack = [n.id, n.name, n.area, n.waste, n.zone, n.binType].join(' ').toLowerCase();
+      const haystack = [n.id, n.name, n.area, n.waste, n.zone, n.disposalType].join(' ').toLowerCase();
       if (q && !haystack.includes(q)) return false;
       return true;
     });
@@ -82,7 +92,7 @@ const DatabaseView = (() => {
     const tbody = document.createElement('tbody');
     filteredNodes().forEach((n) => {
       const tr = document.createElement('tr');
-      const collectable = n.type === 'home' || n.type === 'bin';
+      const collectable = n.type === 'home';
       tr.appendChild(cell(n.id));
       tr.appendChild(cell(n.name || ''));
       tr.appendChild(cell(n.area || ''));
@@ -91,7 +101,7 @@ const DatabaseView = (() => {
       tr.appendChild(cell(num(n.lat, 4), 'num'));
       tr.appendChild(cell(num(n.lng, 4), 'num'));
       tr.appendChild(cell(n.origin || ''));
-      tr.appendChild(cell(n.binType || ''));
+      tr.appendChild(cell(n.disposalType || ''));
       const waste = cell((n.waste || '') + (n.hazardous ? '  [HAZARDOUS]' : ''));
       tr.appendChild(waste);
       tr.appendChild(cell(num(n.fillRate), 'num'));
@@ -122,13 +132,14 @@ const DatabaseView = (() => {
       tbody.appendChild(tr);
     });
     table.appendChild(tbody);
+    alignHeadings(table);
   }
 
   // Summary table for a grouping of nodes: zones (key "zone") or localities (key "area").
   function renderGroups(tableId, rows, key, label) {
     const table = $(tableId);
     table.replaceChildren();
-    header(table, [[key, label], ['nodes', 'Nodes'], ['collectable', 'Homes + bins'], ['due', 'Due'],
+    header(table, [[key, label], ['nodes', 'Nodes'], ['collectable', 'Homes'], ['due', 'Due'],
                    ['overflow', 'Overflowing'], ['avgPercentFull', 'Avg % full'], ['totalFillRate', 'Total fill rate (kg/day)']], false);
     const tbody = document.createElement('tbody');
     rows.forEach((z) => {
@@ -143,6 +154,7 @@ const DatabaseView = (() => {
       tbody.appendChild(tr);
     });
     table.appendChild(tbody);
+    alignHeadings(table);
   }
 
   function renderLog() {
@@ -171,21 +183,21 @@ const DatabaseView = (() => {
       tbody.appendChild(tr);
     });
     table.appendChild(tbody);
+    alignHeadings(table);
   }
 
-  // One row per simulated day: what was overflowing at the start, after pickups and at the end.
+  // One row per simulated day. "Still overflowing" updates live as trucks arrive.
   function renderDays() {
     const table = $('db-days');
     table.replaceChildren();
-    header(table, [['day', 'Day'], ['date', 'Date'], ['overflowMorning', 'Overflowing: morning'], ['served', 'Homes served'],
-                   ['overflowAfterPickups', 'Overflowing: after pickups'], ['overflowEndOfDay', 'Overflowing: end of day'],
-                   ['totalCost', 'Distance (km)']], false);
+    header(table, [['day', 'Day'], ['date', 'Date'], ['overflowMorning', 'Overflowing before trucks'], ['served', 'Homes served'],
+                   ['overflowAfterPickups', 'Overflowing after trucks'], ['totalCost', 'Distance (km)']], false);
     const tbody = document.createElement('tbody');
     const days = data.days || [];
     if (!days.length) {
       const tr = document.createElement('tr');
       const td = cell('No days simulated yet. Use +1 day or Play days.');
-      td.colSpan = 7;
+      td.colSpan = 6;
       tr.appendChild(td);
       tbody.appendChild(tr);
     }
@@ -196,21 +208,25 @@ const DatabaseView = (() => {
       tr.appendChild(cell(d.overflowMorning, 'num'));
       tr.appendChild(cell(d.served, 'num'));
       tr.appendChild(cell(d.overflowAfterPickups, 'num'));
-      tr.appendChild(cell(d.overflowEndOfDay, 'num'));
       tr.appendChild(cell(num(d.totalCost), 'num'));
       tbody.appendChild(tr);
     });
     table.appendChild(tbody);
+    alignHeadings(table);
   }
 
   async function refresh() {
     data = await Api.getDatabase();
+    // The tables are rebuilt on every refresh, so keep each one scrolled where the reader left it.
+    const scrollers = [$('db-panel'), ...document.querySelectorAll('#db-panel .table-wrap')];
+    const scrolled = scrollers.map((el) => [el.scrollTop, el.scrollLeft]);
     $('db-asof').textContent = 'As of day ' + data.simulation.day + ' (' + data.simulation.date + ')';
     renderDays();
     renderNodes();
     renderGroups('db-localities', data.localities, 'area', 'Locality');
     renderGroups('db-zones', data.zones, 'zone', 'Zone');
     renderLog();
+    scrollers.forEach((el, i) => { [el.scrollTop, el.scrollLeft] = scrolled[i]; });
   }
 
   function showTab(name) {

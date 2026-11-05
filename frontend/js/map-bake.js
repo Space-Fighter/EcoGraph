@@ -13,7 +13,7 @@ const MapBake = (() => {
     day: {
       grass: '#63b043', tuftDark: '#569d39', tuftLight: '#79c455', flower: '#fff2a8',
       locality: { residential: '#7cc45a', commercial: '#b5c98a', industrial: '#a9a78a', arterial: '#7cc45a' },
-      plot: { residential: '#d9c690', commercial: '#c6c0ad', industrial: '#a29d8b', depot: '#9b9587', bin: '#a89c80', hazard: '#d9cda5' },
+      plot: { residential: '#d9c690', commercial: '#c6c0ad', industrial: '#a29d8b', depot: '#9b9587', disposal_site: '#a89c80', hazard: '#d9cda5' },
       plotEdge: '#6f6749',
       road: '#d2c9b2', roadDark: '#b2a78e', kerb: '#655c49', centre: '#f2ead2',
       bridge: '#e6dcc2', rail: '#7a4f2a', shadow: 'rgba(25, 40, 15, .4)',
@@ -22,7 +22,7 @@ const MapBake = (() => {
     night: {
       grass: '#18333a', tuftDark: '#142c33', tuftLight: '#1f3e45', flower: '#46686a',
       locality: { residential: '#1e4144', commercial: '#2f4150', industrial: '#333b47', arterial: '#1e4144' },
-      plot: { residential: '#3b4655', commercial: '#3e4656', industrial: '#3a404d', depot: '#3a404c', bin: '#3e4250', hazard: '#49505d' },
+      plot: { residential: '#3b4655', commercial: '#3e4656', industrial: '#3a404d', depot: '#3a404c', disposal_site: '#3e4250', hazard: '#49505d' },
       plotEdge: '#171d28',
       road: '#5a6484', roadDark: '#4b5473', kerb: '#1a2031', centre: '#ffe9a8',
       bridge: '#6f799a', rail: '#2e2433', shadow: 'rgba(0, 5, 15, .55)',
@@ -183,7 +183,7 @@ const MapBake = (() => {
 
   function plotKind(node) {
     if (node.type === 'depot') return 'depot';
-    if (node.type === 'bin') return 'bin';
+    if (node.type === 'disposal_site') return 'disposal_site';
     if (node.hazardous) return 'hazard';
     return node.zone === 'commercial' || node.zone === 'industrial' ? node.zone : 'residential';
   }

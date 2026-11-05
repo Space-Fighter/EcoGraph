@@ -46,8 +46,8 @@ static Graph makeTrapGraph() {
     Node h = mk("H1", NodeType::Home, ZoneType::Residential);
     h.wasteDescription = "used syringe";
     g.addNode(h);
-    Node b = mk("BMED", NodeType::Bin, ZoneType::Industrial);
-    b.binType = "medical";
+    Node b = mk("BMED", NodeType::DisposalSite, ZoneType::Industrial);
+    b.disposalType = "medical";
     g.addNode(b);
     g.addEdge("DEPOT", "J1", 1, ZoneType::Arterial);
     g.addEdge("J1", "H1", 2, ZoneType::Residential);
@@ -75,13 +75,13 @@ static void testConstrained() {
 }
 
 static void testClassifier() {
-    CHECK(classifyWaste("Used plastic SYRINGE").binType == "medical");
+    CHECK(classifyWaste("Used plastic SYRINGE").disposalType == "medical");
     CHECK(classifyWaste("Used plastic syringe").hazardous);
-    CHECK(classifyWaste("old paint tin").binType == "chemical");
-    CHECK(classifyWaste("empty plastic bottle").binType == "recyclable");
+    CHECK(classifyWaste("old paint tin").disposalType == "chemical");
+    CHECK(classifyWaste("empty plastic bottle").disposalType == "recyclable");
     CHECK(!classifyWaste("empty plastic bottle").hazardous);
-    CHECK(classifyWaste("vegetable peels").binType == "compost");
-    CHECK(classifyWaste("broken chair").binType == "general");
+    CHECK(classifyWaste("vegetable peels").disposalType == "compost");
+    CHECK(classifyWaste("broken chair").disposalType == "general");
 }
 
 static void testScheduler() {
@@ -122,7 +122,7 @@ static void testScheduler() {
 //   H1: fast filler, 125% full now, but only became due half a day ago
 //   H2: slow filler, 120% full now, became due two days ago
 //   H3: hazardous (never part of a normal route)
-// Priority (fullest first) must pick H1 first; FIFO (due first) must pick H2 first.
+// H1 is fuller, while H2 became due first: most full wins, so H1 goes first.
 static Graph makeRouteGraph() {
     Graph g;
     g.addNode(mk("DEPOT", NodeType::Depot, ZoneType::Industrial));
@@ -142,8 +142,8 @@ static Graph makeRouteGraph() {
     g.addNode(h1);
     g.addNode(h2);
     g.addNode(h3);
-    Node b = mk("BIN", NodeType::Bin, ZoneType::Industrial);
-    b.binType = "recyclable";
+    Node b = mk("BIN", NodeType::DisposalSite, ZoneType::Industrial);
+    b.disposalType = "recyclable";
     g.addNode(b);
     g.addEdge("DEPOT", "J", 1, ZoneType::Arterial);
     g.addEdge("J", "H1", 1, ZoneType::Arterial);
@@ -161,17 +161,15 @@ static void testRouters() {
     std::vector<std::string> safe;
     safe.push_back("H1"); safe.push_back("H2");
 
-    // Ordering: Priority = fullest first, FIFO = became due first.
+    // Ordering: most full first.
     std::vector<std::string> p = makeRouteStrategy("priority")->order(g, safe, NOW);
     CHECK(join(p) == "H1>H2");
-    std::vector<std::string> f = makeRouteStrategy("fifo")->order(g, safe, NOW);
-    CHECK(join(f) == "H2>H1");
     // Input order must not matter.
     std::vector<std::string> rev;
     rev.push_back("H2"); rev.push_back("H1");
     CHECK(join(makeRouteStrategy("priority")->order(g, rev, NOW)) == "H1>H2");
 
-    // Routes follow that order, then unload at the bin; hazardous H3 is pulled out.
+    // Routes follow that order, then unload at the disposal site; hazardous H3 is pulled out.
     RouteResult pri = makeRouteStrategy("priority")->buildRoute(g, homes, NOW);
     CHECK(pri.skippedHazardous.size() == 1 && pri.skippedHazardous[0] == "H3");
     CHECK(pri.segments.size() == 3);
@@ -180,12 +178,7 @@ static void testRouters() {
     CHECK(pri.segments[2].label == "H2->BIN");
     CHECK(near(pri.totalCost, 2 + 3 + 5));
 
-    RouteResult fifo = makeRouteStrategy("fifo")->buildRoute(g, homes, NOW);
-    CHECK(fifo.segments.size() == 3);
-    CHECK(fifo.segments[0].label == "DEPOT->H2");
-    CHECK(fifo.segments[1].label == "H2->H1");
-    CHECK(fifo.segments[2].label == "H1->BIN");
-
+    CHECK(makeRouteStrategy("fifo") == nullptr);  // there is only one mode
     CHECK(makeRouteStrategy("bogus") == nullptr);
 }
 
@@ -212,7 +205,7 @@ static void testHazard() {
     Graph g = makeTrapGraph();
     HazardResult h = dispatchHazard(g, "J1");  // J1 has no waste: still dispatchable
     CHECK(h.ok);
-    CHECK(h.binId == "BMED");
+    CHECK(h.disposalSiteId == "BMED");
     CHECK(near(h.totalCost, 1 + 6));  // takes the arterial J1-J2, not the residential shortcut
     CHECK(h.segments.size() == 2);
     CHECK(join(h.segments[1].path) == "J1>J2>BMED");
@@ -245,8 +238,8 @@ static void testHazardMinimalExposure() {
     Node c = mk("CLINIC", NodeType::Home, ZoneType::Residential);
     c.wasteDescription = "used syringe";
     g.addNode(c);
-    Node b = mk("BMED", NodeType::Bin, ZoneType::Industrial);
-    b.binType = "medical";
+    Node b = mk("BMED", NodeType::DisposalSite, ZoneType::Industrial);
+    b.disposalType = "medical";
     g.addNode(b);
     g.addEdge("DEPOT", "CLINIC", 3, ZoneType::Residential);
     g.addEdge("DEPOT", "RING", 10, ZoneType::Arterial);

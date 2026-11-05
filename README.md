@@ -28,9 +28,9 @@ Municipal waste collection routes are traditionally static: trucks follow fixed 
   - City map represented as an adjacency list with node types (`Depot`, `Home`, `Junction`, `Bin`).
   - Edges contain physical distances/costs and are categorized into **Zone Types** (`residential`, `commercial`, `industrial`).
 
-- **Dual-Strategy Shortest Path Routing**
-  - **Priority Mode**: Route truck from depot → home → nearest matching bin → next home → bin. Disposes waste immediately after every pickup.
-  - **FIFO Mode**: Route truck from depot → home1 → home2 → ... → homeN, then to disposal bins. Collects from all queued homes before visiting bins.
+- **Most-Full-First Shortest Path Routing**
+  - Trucks go to the fullest homes first. If two are equally full, the most overdue goes first. Homes under 80% full wait.
+  - After the last pickup, a truck unloads at the nearest disposal site for each waste type it carries.
   - Powered by **Dijkstra's Algorithm** with min-heap priority queues.
 
 - **Risk-Weighted Hazardous Waste Dispatch**
@@ -120,15 +120,14 @@ The architecture maps core theoretical concepts from **Data Structures & Algorit
 | **Hash Map (`std::unordered_map`)** | Key-value store mapping node identifiers to node metadata, coordinates, fill levels, and adjacency vectors. | Average Lookup: $O(1)$ | $O(V)$ |
 | **Priority Queue (Min-Heap)** | `std::priority_queue` with `std::greater` comparator. Powers Dijkstra's frontier exploration to greedily extract the minimum tentative distance node. | Extraction: $O(\log V)$<br>Insertion: $O(\log V)$ | $O(V)$ |
 | **Priority Queue (Max-Heap)** | Evaluates dynamic scheduling urgency. Ranks due nodes by their calculated degree of "overdue-ness" ($\Delta t - \text{Interval}$). | Extract-Max: $O(\log V)$ | $O(V)$ |
-| **FIFO Queue (`std::queue`)** | First-In, First-Out sequence structure used in FIFO Collection Mode to sequence batched household pickups before disposal. | Enqueue/Dequeue: $O(1)$ | $O(V)$ |
 | **Predecessor Backtracking (Vector)** | Traces parent pointers $\pi[v]$ from target node back to origin source to reconstruct the complete ordered path sequence. | Path Recovery: $O(V)$ | $O(V)$ |
 
 #### B. Object-Oriented Design (OOP Pillars in C++)
 
 - **Encapsulation**: The `Graph` class strictly encapsulates internal adjacency lists and node data structures. External controllers cannot arbitrarily mutate topology; all access and mutation proceed through safe, well-defined public member functions (`neighbors()`, `getNode()`, `loadFromJson()`).
 - **Abstraction**: Internal algorithmic complexity is abstracted behind high-level interfaces. The `Scheduler` exposes a concise `getDueLocations()` interface hiding internal heap operations and time calculations. Similarly, the `WasteClassifier` exposes `classifyWaste()` hiding keyword parsing logic.
-- **Inheritance**: Route generation adheres to an extensible strategy pattern where specialized builders (`PriorityRouteBuilder`, `FIFORouteBuilder`) inherit from a unified `RouteStrategy` base class.
-- **Polymorphism**: The system utilizes runtime polymorphism via virtual method overrides (`virtual RouteResult buildRoute(...) = 0`), enabling dynamic switching between routing heuristics based on user parameters or operational conditions.
+- **Inheritance**: Route generation adheres to an extensible strategy pattern where a specialized builder (`PriorityRouteBuilder`) inherits from a unified `RouteStrategy` base class.
+- **Polymorphism**: The system utilizes runtime polymorphism via virtual method overrides (`virtual RouteResult buildRoute(...) = 0`), so a new collection order can be added without changing the shared route building.
 
 ---
 
@@ -267,21 +266,13 @@ $$\mathbf{B2 \ (+6d)} \ \longrightarrow \ \mathbf{B1 \ (+3d)} \ \longrightarrow 
 
 ### 7. Multi-Stop Routing Strategies & Hazard Preemption
 
-Once due locations are identified, the routing engine constructs an optimal multi-stop tour using one of two selectable collection strategies:
+Each day, homes at least 80% full are sorted most full first, and a clash goes to the most overdue. They are loaded onto trucks in that order until capacity runs out, and the rest wait for a later day.
 
-#### A. Priority Mode (Immediate Disposal Loop)
-- **Concept**: After collecting waste from a home, the truck immediately traverses to the nearest compatible disposal bin before proceeding to the next stop.
-- **Traversal Sequence**:
-  $$\text{Depot} \longrightarrow \text{Home}_1 \longrightarrow \text{Bin}_{\text{nearest}} \longrightarrow \text{Home}_2 \longrightarrow \text{Bin}_{\text{nearest}} \longrightarrow \dots \longrightarrow \text{Depot}$$
-- **Optimal Use Case**: Suitable for perishable, odorous organic waste or systems with limited onboard truck capacity where cross-contamination must be eliminated.
+#### A. Traversal Sequence
+A truck visits its homes in that order, emptying any later stop that lies on its way, and then unloads at the nearest disposal site for each waste type it carries:
+$$\text{Depot} \longrightarrow \text{Home}_1 \longrightarrow \dots \longrightarrow \text{Home}_k \longrightarrow \text{Bin}_1 \longrightarrow \dots \longrightarrow \text{Bin}_m$$
 
-#### B. FIFO Mode (Batched Route Optimization)
-- **Concept**: The truck visits all scheduled pickup locations in batch sequence, consolidating waste in its cargo hold, and subsequently traverses to designated disposal facilities.
-- **Traversal Sequence**:
-  $$\text{Depot} \longrightarrow \text{Home}_1 \longrightarrow \text{Home}_2 \longrightarrow \dots \longrightarrow \text{Home}_k \longrightarrow \text{Bin}_1 \longrightarrow \text{Bin}_2 \longrightarrow \dots \longrightarrow \text{Depot}$$
-- **Optimal Use Case**: General household recyclables and inert dry waste, minimizing total transit kilometers and fuel consumption.
-
-#### C. Hazard Preemption Mechanism
+#### B. Hazard Preemption Mechanism
 When the waste classification engine identifies a waste description as hazardous (`medical` or `chemical`):
 1. **Bypasses Schedule Queue**: The pickup skips the standard scheduler queue and due-date wait intervals.
 2. **Immediate Emergency Dispatch**: Triggers an instant `POST /route/hazard` calculation.
@@ -342,7 +333,7 @@ EcoGraph/
     │   ├── dijkstra.hpp     # Dijkstra & Constrained Dijkstra algorithms
     │   ├── geo.hpp          # Geodesic & Haversine distance computations
     │   ├── graph.hpp        # Graph, Node, Edge, ZoneType definitions
-    │   ├── router.hpp       # Priority & FIFO route builders
+    │   ├── router.hpp       # Route builder: most full first
     │   ├── scheduler.hpp    # Dynamic fill-rate collection scheduler
     │   ├── simulation.hpp   # Time-step day simulation engine & logger
     │   └── waste_classifier.hpp # Keyword-based waste classification rules
@@ -380,7 +371,7 @@ EcoGraph/
 
 ### 2. Route Optimization
 - **`POST /route`**
-  - Request: `{"homes": ["home1", "home2"], "mode": "priority" | "fifo"}`
+  - Request: `{"homeIds": ["home1", "home2"]}`
   - Response: `{"ok": true, "path": [...], "cost": 42.5, "segments": [...]}`
 - **`POST /route/hazard`**
   - Request: `{"locationId": "HZ1"}`
@@ -500,7 +491,7 @@ cd server/build
 
 - A* pathfinding with coordinate heuristics
 - Multi-truck routing with capacity constraints
-- Route optimization (2-opt) for FIFO mode
+- Route optimization (2-opt)
 - CSV export of the collection log
 ## Run with Docker
 

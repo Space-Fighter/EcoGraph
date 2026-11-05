@@ -63,25 +63,25 @@ json nodeToJson(const Node& n, const Scheduler& sched, std::time_t now) {
               {"lat", n.lat},
               {"lng", n.lng},
               {"generated", n.generated}};
-    if (n.type == NodeType::Home || n.type == NodeType::Bin) {
+    if (n.type == NodeType::Home) {
         j["fillRate"] = n.fillRate;
         j["capacity"] = n.capacity;
         j["lastCollected"] = static_cast<long long>(n.lastCollected);
         j["intervalDays"] = sched.computeInterval(n);
         j["overdueByDays"] = sched.overdueByDays(n, now);
     }
-    if (n.type == NodeType::Bin) j["binType"] = n.binType;
+    if (n.type == NodeType::DisposalSite) j["disposalType"] = n.disposalType;
     if (n.type == NodeType::Home) {
         j["wasteDescription"] = n.wasteDescription;
         ClassificationResult c = classifyWaste(n.wasteDescription);
-        j["binType"] = c.binType;
+        j["disposalType"] = c.disposalType;
         j["hazardous"] = c.hazardous;
     }
     return j;
 }
 
 const char* statusOf(const Node& n, const Scheduler& sched, std::time_t now) {
-    if (n.type != NodeType::Home && n.type != NodeType::Bin) return "n/a";
+    if (n.type != NodeType::Home) return "n/a";
     if (sched.percentFull(n, now) > 100.0) return "overflow";
     return sched.isDue(n, now) ? "due" : "ok";
 }
@@ -102,7 +102,7 @@ json nodeRow(const Graph& g, const Node& n, const Scheduler& sched, std::time_t 
     for (size_t i = 0; i < es.size(); ++i) neighbours.push_back(es[i].to);
     row["connections"] = neighbours;
 
-    if (n.type == NodeType::Home || n.type == NodeType::Bin) {
+    if (n.type == NodeType::Home) {
         row["fillRate"] = n.fillRate;
         row["capacity"] = n.capacity;
         row["fillLevel"] = sched.fillLevel(n, now);
@@ -113,11 +113,11 @@ json nodeRow(const Graph& g, const Node& n, const Scheduler& sched, std::time_t 
         row["nextDue"] = formatDate(sched.nextDue(n));
         row["overdueByDays"] = sched.overdueByDays(n, now);
     }
-    if (n.type == NodeType::Bin) row["binType"] = n.binType;
+    if (n.type == NodeType::DisposalSite) row["disposalType"] = n.disposalType;
     if (n.type == NodeType::Home) {
         ClassificationResult c = classifyWaste(n.wasteDescription);
         row["waste"] = n.wasteDescription;
-        row["binType"] = c.binType;
+        row["disposalType"] = c.disposalType;
         row["hazardous"] = c.hazardous;
     }
     return row;
@@ -148,7 +148,7 @@ void accumulateGroup(std::map<std::string, json>& groups, const std::string& key
              {"overflow", 0}, {"avgPercentFull", 0.0}, {"totalFillRate", 0.0}};
     }
     g["nodes"] = g["nodes"].get<int>() + 1;
-    if (n.type == NodeType::Home || n.type == NodeType::Bin) {
+    if (n.type == NodeType::Home) {
         g["collectable"] = g["collectable"].get<int>() + 1;
         g["avgPercentFull"] = g["avgPercentFull"].get<double>() + sched.percentFull(n, now);
         g["totalFillRate"] = g["totalFillRate"].get<double>() + n.fillRate;
@@ -178,7 +178,7 @@ json dayReportToJson(const DayReport& r) {
                           {"load", t.load},
                           {"capacity", t.capacity},
                           {"cost", t.cost},
-                          {"bin", t.bin},
+                          {"disposalSite", t.disposalSite},
                           {"exposureKm", t.exposureKm},
                           {"segments", segmentsToJson(t.segments)}});
     }
@@ -189,7 +189,6 @@ json dayReportToJson(const DayReport& r) {
             {"overflowCount", r.overflowIds.size()},
             {"trucks", trucks},
             {"carriedOver", r.carriedOver},
-            {"emptiedBins", r.emptiedBins},
             {"failed", r.failed},
             {"totalCost", r.totalCost}};
 }
@@ -228,7 +227,7 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
         sendJson(res, 200, {{"ok", true}, {"nodes", nodes}, {"edges", edges}, {"areas", areasToJson(state.areas)}});
     });
 
-    // POST /nodes/generate   {"type": "home"|"bin"|"junction", "count": 1..100, "hazardous": bool, "seed": int?}
+    // POST /nodes/generate   {"type": "home"|"disposal_site"|"junction", "count": 1..100, "hazardous": bool, "seed": int?}
     // Adds random nodes (placed inside the city's localities and wired into the road network).
     svr.Post("/nodes/generate", [&state](const httplib::Request& req, httplib::Response& res) {
         json body;
@@ -240,10 +239,10 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
 
             GenKind kind;
             if (type == "home") kind = GenKind::Home;
-            else if (type == "bin") kind = GenKind::Bin;
+            else if (type == "disposal_site") kind = GenKind::DisposalSite;
             else if (type == "junction") kind = GenKind::Junction;
             else {
-                sendError(res, 400, "bad_type", "type must be \"home\", \"bin\" or \"junction\"");
+                sendError(res, 400, "bad_type", "type must be \"home\", \"disposalSite\" or \"junction\"");
                 return;
             }
             if (hazardous && kind == GenKind::Junction) {
@@ -280,7 +279,7 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
         }
     });
 
-    // POST /nodes/remove   {"type": "home"|"bin"|"junction", "count": 1..100, "hazardous": bool}
+    // POST /nodes/remove   {"type": "home"|"disposal_site"|"junction", "count": 1..100, "hazardous": bool}
     // Removes the newest nodes of that kind that were ADDED via /nodes/generate. Nodes from the
     // city file are never removed. Added nodes left without a route go too ("cascaded").
     svr.Post("/nodes/remove", [&state](const httplib::Request& req, httplib::Response& res) {
@@ -293,10 +292,10 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
 
             GenKind kind;
             if (type == "home") kind = GenKind::Home;
-            else if (type == "bin") kind = GenKind::Bin;
+            else if (type == "disposal_site") kind = GenKind::DisposalSite;
             else if (type == "junction") kind = GenKind::Junction;
             else {
-                sendError(res, 400, "bad_type", "type must be \"home\", \"bin\" or \"junction\"");
+                sendError(res, 400, "bad_type", "type must be \"home\", \"disposalSite\" or \"junction\"");
                 return;
             }
             if (count < 1 || count > 100) {
@@ -317,15 +316,15 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
         }
     });
 
-    // POST /route   {"homeIds": [...], "mode": "priority" | "fifo"}
+    // POST /route   {"homeIds": [...]}
     svr.Post("/route", [&state](const httplib::Request& req, httplib::Response& res) {
         json body;
         if (!parseBody(req, res, body)) return;
 
-        std::string mode = body.value("mode", std::string());
+        std::string mode = body.value("mode", std::string("priority"));
         std::unique_ptr<RouteStrategy> strategy = makeRouteStrategy(mode);
         if (!strategy) {
-            sendError(res, 400, "bad_mode", "mode must be \"priority\" or \"fifo\"");
+            sendError(res, 400, "bad_mode", "there is only one mode: \"priority\"");
             return;
         }
         if (!body.contains("homeIds") || !body["homeIds"].is_array() || body["homeIds"].empty()) {
@@ -374,7 +373,7 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
             return;
         }
         ClassificationResult c = classifyWaste(body["description"].get<std::string>());
-        sendJson(res, 200, {{"ok", true}, {"binType", c.binType}, {"hazardous", c.hazardous}});
+        sendJson(res, 200, {{"ok", true}, {"disposalType", c.disposalType}, {"hazardous", c.hazardous}});
     });
 
     // POST /route/hazard   {"locationId": "H5"}
@@ -400,7 +399,7 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
         sendJson(res, 200,
                  {{"ok", true},
                   {"locationId", id},
-                  {"binId", h.binId},
+                  {"disposalSiteId", h.disposalSiteId},
                   {"totalCost", h.totalCost},
                   {"segments", segmentsToJson(h.segments)},
                   {"riskCost", h.riskCost},
@@ -423,8 +422,7 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
         std::vector<std::string> ids = state.graph.nodeIds();
         for (size_t i = 0; i < ids.size(); ++i) {
             const Node& n = state.graph.getNode(ids[i]);
-            if ((n.type == NodeType::Home || n.type == NodeType::Bin) &&
-                state.scheduler.percentFull(n, now) > 100.0) {
+            if (n.type == NodeType::Home && state.scheduler.percentFull(n, now) > 100.0) {
                 overflow.push_back(n.id);
             }
         }
@@ -464,14 +462,16 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
     });
 
     // POST /simulate/advance
-    //   {"days": 1..60, "autoCollect": bool, "mode": "priority"|"fifo",
-    //    "normalTrucks": 0..20, "normalCapacity": >0, "hazardTrucks": 0..10}
+    //   {"days": 1..60, "autoCollect": bool,
+    //    "normalTrucks": 0..20, "normalCapacity": >0, "hazardTrucks": 0..10, "live": bool}
+    // With "live", truck pickups wait for /simulate/arrive or /simulate/settle.
     svr.Post("/simulate/advance", [&state](const httplib::Request& req, httplib::Response& res) {
         json body = json::object();
         if (!req.body.empty() && !parseBody(req, res, body)) return;
         try {
             int days = body.value("days", 1);
             bool autoCollect = body.value("autoCollect", false);
+            bool live = body.value("live", false);
             std::string mode = body.value("mode", std::string("priority"));
             Fleet fleet;
             fleet.normalTrucks = body.value("normalTrucks", fleet.normalTrucks);
@@ -484,7 +484,7 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
             }
             std::unique_ptr<RouteStrategy> strategy = makeRouteStrategy(mode);
             if (!strategy) {
-                sendError(res, 400, "bad_mode", "mode must be \"priority\" or \"fifo\"");
+                sendError(res, 400, "bad_mode", "there is only one mode: \"priority\"");
                 return;
             }
             if (fleet.normalTrucks < 0 || fleet.normalTrucks > 20 || fleet.hazardTrucks < 0 ||
@@ -498,12 +498,33 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
             json reports = json::array();
             for (int i = 0; i < days; ++i) {
                 reports.push_back(dayReportToJson(
-                    state.sim.advanceDay(state.graph, state.scheduler, autoCollect, *strategy, fleet)));
+                    state.sim.advanceDay(state.graph, state.scheduler, autoCollect, *strategy, fleet, live)));
             }
             sendJson(res, 200, {{"ok", true}, {"simulation", simStatus(state.sim)}, {"days", reports}});
         } catch (const json::exception&) {
             sendError(res, 400, "bad_params", "Simulation parameters have the wrong type");
         }
+    });
+
+    // POST /simulate/arrive  {"id": "H1"}  -- a truck reached this location in a live day
+    svr.Post("/simulate/arrive", [&state](const httplib::Request& req, httplib::Response& res) {
+        json body = json::object();
+        if (!parseBody(req, res, body)) return;
+        try {
+            std::string id = body.at("id").get<std::string>();
+            std::lock_guard<std::mutex> lock(state.mutex);
+            bool collected = state.sim.arrive(state.graph, state.scheduler, id);
+            sendJson(res, 200, {{"ok", true}, {"collected", collected}});
+        } catch (const json::exception&) {
+            sendError(res, 400, "bad_params", "arrive needs a location id");
+        }
+    });
+
+    // POST /simulate/settle  -- finish every pickup still waiting from a live day
+    svr.Post("/simulate/settle", [&state](const httplib::Request&, httplib::Response& res) {
+        std::lock_guard<std::mutex> lock(state.mutex);
+        state.sim.settle(state.graph, state.scheduler);
+        sendJson(res, 200, {{"ok", true}});
     });
 
     // POST /simulate/reset  -- reload the original city data and go back to day 0
@@ -559,7 +580,6 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
                             {"date", formatDate(d.time)},
                             {"overflowMorning", d.overflowMorning},
                             {"overflowAfterPickups", d.overflowAfterPickups},
-                            {"overflowEndOfDay", d.overflowEndOfDay},
                             {"served", d.served},
                             {"totalCost", d.totalCost}});
         }

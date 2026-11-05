@@ -68,11 +68,11 @@ int main() {
         // Nothing is cut off from the depot.
         CHECK(shortestPath(g, depot, n.id).cost >= 0);
 
-        if (n.type == NodeType::Home || n.type == NodeType::Bin) {
+        if (n.type == NodeType::Home || n.type == NodeType::DisposalSite) {
             CHECK(n.fillRate > 0 && n.capacity > 0);
             CHECK(n.lastCollected > 0 && n.lastCollected <= NOW);
         }
-        if (n.type == NodeType::Bin) CHECK(!n.binType.empty());
+        if (n.type == NodeType::DisposalSite) CHECK(!n.disposalType.empty());
         if (n.type == NodeType::Home) {
             CHECK(!n.wasteDescription.empty());
             if (n.area == "Clement Town") ++clementHomes;
@@ -92,12 +92,12 @@ int main() {
     CHECK(hazardHomes >= 4);
     CHECK(trapHazardHomes >= 1);
 
-    // At least one bin of every kind a home can produce.
-    std::set<std::string> binTypes;
-    std::vector<std::string> bins = g.nodeIdsByType(NodeType::Bin);
-    for (size_t i = 0; i < bins.size(); ++i) binTypes.insert(g.getNode(bins[i]).binType);
-    CHECK(binTypes.count("general") && binTypes.count("recyclable") && binTypes.count("compost"));
-    CHECK(binTypes.count("medical") && binTypes.count("chemical"));
+    // At least one disposal site of every kind a home can produce.
+    std::set<std::string> disposalTypes;
+    std::vector<std::string> disposalSites = g.nodeIdsByType(NodeType::DisposalSite);
+    for (size_t i = 0; i < disposalSites.size(); ++i) disposalTypes.insert(g.getNode(disposalSites[i]).disposalType);
+    CHECK(disposalTypes.count("general") && disposalTypes.count("recyclable") && disposalTypes.count("compost"));
+    CHECK(disposalTypes.count("medical") && disposalTypes.count("chemical"));
 
     if (failures == 0) {
         std::cout << "All city data tests passed" << std::endl;

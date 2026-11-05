@@ -9,7 +9,7 @@
 #include "city_loader.hpp"
 #include "graph.hpp"
 
-enum class GenKind { Home, Bin, Junction };
+enum class GenKind { Home, DisposalSite, Junction };
 
 // Everything one generation call added, so callers (the API, tests) can report it.
 struct GeneratedBatch {
@@ -20,9 +20,9 @@ struct GeneratedBatch {
 // Adds `count` random nodes to the graph, placed inside suitable localities and wired into
 // the road network so they are always reachable:
 //   - homes   : a spur to the nearest junction plus one street to the next nearest node
-//   - bins    : an industrial road to the nearest junction (+ the nearest other bin)
+//   - disposal sites    : an industrial road to the nearest junction (+ the nearest other disposal site)
 //   - junctions: arterial roads to the 3 nearest junctions
-// `hazardous` makes a hazardous home (medical/chemical waste) or a hazardous bin
+// `hazardous` makes a hazardous home (medical/chemical waste) or a hazardous disposal site
 // (medical/chemical). A hazardous home is wired like any other home in its locality (a clinic
 // in a market street gets a commercial road); the hazard router keeps the truck's time on
 // such roads as short as it can. Ids are the next free H#, HZ#, B#, J#.

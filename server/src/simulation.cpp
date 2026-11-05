@@ -25,6 +25,7 @@ void Simulation::start(std::time_t base) {
     day_ = 0;
     log_.clear();
     summary_.clear();
+    pending_.clear();
 }
 
 void Simulation::collect(Graph& g, const Scheduler& sched, const std::string& id,
@@ -45,7 +46,7 @@ void Simulation::collect(Graph& g, const Scheduler& sched, const std::string& id
 }
 
 DayReport Simulation::playDay(Graph& g, const Scheduler& sched, bool autoCollect,
-                              const RouteStrategy& strategy, const Fleet& fleet) {
+                              const RouteStrategy& strategy, const Fleet& fleet, bool live) {
     ++day_;
     DayReport rep;
     rep.day = day_;
@@ -57,22 +58,24 @@ DayReport Simulation::playDay(Graph& g, const Scheduler& sched, bool autoCollect
     std::vector<std::string> ids = g.nodeIds();
     for (size_t i = 0; i < ids.size(); ++i) {
         const Node& n = g.getNode(ids[i]);
-        if ((n.type == NodeType::Home || n.type == NodeType::Bin) && sched.percentFull(n, now()) > 100.0) {
+        if (n.type == NodeType::Home && sched.percentFull(n, now()) > 100.0) {
             rep.overflowIds.push_back(n.id);
         }
     }
     if (!autoCollect) return rep;
 
-    std::vector<std::string> normalHomes, hazardHomes, dueBins;
-    for (size_t i = 0; i < due.size(); ++i) {
-        const DueLocation& d = due[i];
-        if (d.type == NodeType::Bin) {
-            dueBins.push_back(d.id);
-        } else if (classifyWaste(g.getNode(d.id).wasteDescription).hazardous) {
-            hazardHomes.push_back(d.id);
-        } else {
-            normalHomes.push_back(d.id);
-        }
+    auto pickUp = [&](const std::string& id, const std::string& action, const std::string& truck) {
+        if (live) pending_.push_back(PendingPickup{id, action, truck});
+        else collect(g, sched, id, action, truck);
+    };
+
+    // Trucks go by how full a home is.
+    std::vector<std::string> normalHomes, hazardHomes;
+    for (size_t i = 0; i < ids.size(); ++i) {
+        const Node& n = g.getNode(ids[i]);
+        if (n.type != NodeType::Home || sched.percentFull(n, now()) < MIN_PICKUP_PERCENT) continue;
+        if (classifyWaste(n.wasteDescription).hazardous) hazardHomes.push_back(n.id);
+        else normalHomes.push_back(n.id);
     }
 
     // Homes no road reaches from the depot fail now, before they take up truck capacity.
@@ -119,7 +122,7 @@ DayReport Simulation::playDay(Graph& g, const Scheduler& sched, bool autoCollect
                 rep.failed.push_back(id);
             } else {
                 served.push_back(id);
-                collect(g, sched, id, "route", trucks[t].id);
+                pickUp(id, "route", trucks[t].id);
             }
         }
         trucks[t].homes = served;
@@ -127,8 +130,8 @@ DayReport Simulation::playDay(Graph& g, const Scheduler& sched, bool autoCollect
         rep.trucks.push_back(trucks[t]);
     }
 
-    // ---- Hazard trucks: first due, first served; one trip per truck per day.
-    std::vector<std::string> hazardOrder = FIFORouteBuilder().order(g, hazardHomes, now());
+    // ---- Hazard trucks: the same order; one trip per truck per day.
+    std::vector<std::string> hazardOrder = strategy.order(g, hazardHomes, now());
     int usedHazard = 0;
     for (size_t i = 0; i < hazardOrder.size(); ++i) {
         const std::string& id = hazardOrder[i];
@@ -147,46 +150,65 @@ DayReport Simulation::playDay(Graph& g, const Scheduler& sched, bool autoCollect
         run.homes.push_back(id);
         run.load = sched.fillLevel(g.getNode(id), now());
         run.cost = h.totalCost;
-        run.bin = h.binId;
+        run.disposalSite = h.disposalSiteId;
         run.exposureKm = h.residentialKm + h.commercialKm;
         run.segments = h.segments;
-        collect(g, sched, id, "hazard", run.id);
+        pickUp(id, "hazard", run.id);
         rep.totalCost += run.cost;
         rep.trucks.push_back(run);
     }
 
-    // ---- Bins are emptied when due (no truck needed).
-    for (size_t i = 0; i < dueBins.size(); ++i) {
-        rep.emptiedBins.push_back(dueBins[i]);
-        collect(g, sched, dueBins[i], "emptied");
-        // Emptied first thing with no truck needed, so it never spends the day overflowing.
-        rep.overflowIds.erase(std::remove(rep.overflowIds.begin(), rep.overflowIds.end(), dueBins[i]),
-                              rep.overflowIds.end());
-    }
     return rep;
 }
 
 DayReport Simulation::advanceDay(Graph& g, const Scheduler& sched, bool autoCollect,
-                                 const RouteStrategy& strategy, const Fleet& fleet) {
-    DayReport rep = playDay(g, sched, autoCollect, strategy, fleet);
+                                 const RouteStrategy& strategy, const Fleet& fleet, bool live) {
+    settle(g, sched);  // anything left from an unfinished live day happened on that day
+    DayReport rep = playDay(g, sched, autoCollect, strategy, fleet, live);
 
     DaySummary s;
     s.day = rep.day;
     s.time = rep.time;
     s.overflowMorning = static_cast<int>(rep.overflowIds.size());
     s.overflowAfterPickups = 0;
-    s.overflowEndOfDay = 0;
-    const std::time_t endOfDay = rep.time + 86400;
+    s.served = 0;
+    if (!live) {
+        for (size_t t = 0; t < rep.trucks.size(); ++t) s.served += static_cast<int>(rep.trucks[t].homes.size());
+    }
+    s.totalCost = rep.totalCost;
+    summary_.push_back(s);
+    updateAfterPickups(g, sched);
+    return rep;
+}
+
+bool Simulation::arrive(Graph& g, const Scheduler& sched, const std::string& id) {
+    for (size_t i = 0; i < pending_.size(); ++i) {
+        if (pending_[i].id != id) continue;
+        PendingPickup p = pending_[i];
+        pending_.erase(pending_.begin() + static_cast<std::ptrdiff_t>(i));
+        if (!g.hasNode(id)) return false;  // removed from the city since the day started
+        collect(g, sched, id, p.action, p.truck);
+        if (!summary_.empty()) ++summary_.back().served;
+        updateAfterPickups(g, sched);
+        return true;
+    }
+    return false;
+}
+
+void Simulation::settle(Graph& g, const Scheduler& sched) {
+    while (!pending_.empty()) {
+        const std::string id = pending_.front().id;
+        arrive(g, sched, id);
+    }
+}
+
+void Simulation::updateAfterPickups(const Graph& g, const Scheduler& sched) {
+    if (summary_.empty()) return;
+    int count = 0;
     std::vector<std::string> ids = g.nodeIds();
     for (size_t i = 0; i < ids.size(); ++i) {
         const Node& n = g.getNode(ids[i]);
-        if (n.type != NodeType::Home && n.type != NodeType::Bin) continue;
-        if (sched.percentFull(n, rep.time) > 100.0) ++s.overflowAfterPickups;
-        if (sched.percentFull(n, endOfDay) > 100.0) ++s.overflowEndOfDay;
+        if (n.type == NodeType::Home && sched.percentFull(n, now()) > 100.0) ++count;
     }
-    s.served = 0;
-    for (size_t t = 0; t < rep.trucks.size(); ++t) s.served += static_cast<int>(rep.trucks[t].homes.size());
-    s.totalCost = rep.totalCost;
-    summary_.push_back(s);
-    return rep;
+    summary_.back().overflowAfterPickups = count;
 }

@@ -4,7 +4,7 @@
 #include <string>
 
 struct ClassificationResult {
-    std::string binType;  // recyclable | compost | general | medical | chemical
+    std::string disposalType;  // recyclable | compost | general | medical | chemical
     bool hazardous;
 };
 

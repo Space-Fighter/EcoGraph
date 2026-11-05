@@ -33,7 +33,7 @@ City loadCity(const std::string& path, std::time_t now) {
             n.lng = jn.at("lng").get<double>();
             n.fillRate = jn.value("fillRate", 0.0);
             n.capacity = jn.value("capacity", 100.0);
-            n.binType = jn.value("binType", std::string());
+            n.disposalType = jn.value("disposalType", std::string());
             n.wasteDescription = jn.value("wasteDescription", std::string());
             if (jn.contains("lastCollectedDaysAgo")) {
                 n.lastCollected = now - static_cast<std::time_t>(

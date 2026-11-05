@@ -7,7 +7,7 @@
 #include <vector>
 
 enum class ZoneType { Residential, Commercial, Industrial, Arterial };
-enum class NodeType { Depot, Home, Junction, Bin };
+enum class NodeType { Depot, Home, Junction, DisposalSite };
 
 std::string zoneToString(ZoneType z);
 ZoneType zoneFromString(const std::string& s);  // throws std::invalid_argument
@@ -22,11 +22,11 @@ struct Node {
     ZoneType zone = ZoneType::Arterial;
     double lat = 0, lng = 0;  // degrees
 
-    // Home / Bin only
+    // Home / Disposal site only
     double fillRate = 0.0;          // kg per day
     double capacity = 100.0;        // kg at which the location is "full"
     std::time_t lastCollected = 0;  // epoch seconds
-    std::string binType;            // Bin: recyclable | compost | general | medical | chemical
+    std::string disposalType;            // Disposal site: recyclable | compost | general | medical | chemical
     std::string wasteDescription;   // Home: what this home currently has out for pickup
     bool generated = false;         // added by the city builder, not part of the city file
 };

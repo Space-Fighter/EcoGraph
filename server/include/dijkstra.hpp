@@ -22,7 +22,7 @@ PathResult constrainedShortestPath(const Graph& g, const std::string& source,
                                    const std::set<ZoneType>& forbiddenZones);
 
 // Every node reachable from source, with its distance and the node before it on its shortest
-// path. One run answers "how far is each candidate?" (e.g. the nearest bin) without a separate
+// path. One run answers "how far is each candidate?" (e.g. the nearest disposal site) without a separate
 // Dijkstra per candidate.
 struct ShortestPathTree {
     std::string source;

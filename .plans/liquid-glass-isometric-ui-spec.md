@@ -288,5 +288,5 @@ These replace the matching decisions above.
 - **Zone colours:** Road edges, locality borders and locality signs carry a zone colour: amber arterial, purple industrial, sky blue commercial, pink residential.
 - **Fill bars:** The 10 fullest homes show a fill bar and percentage on the map, in the Database colours.
 - **Disposal sites:** They only receive waste, so they have no fill level, status, due date or bubble anywhere.
-- **One collection rule (backend change):** The Priority and FIFO choice is gone. Trucks go to homes at least 80% full, most full first, and a clash goes to the most due.
+- **One collection rule (backend change):** The Priority and FIFO choice is gone. All trucks go to the most full homes first until capacity runs out, and a clash goes to the most due. Hazard trucks take one home per truck per day. Due homes that get no truck are listed as waiting, most due first.
 - **Build details:** The bake lowers its resolution on very large cities rather than splitting into chunks. Bridges are painted into the ground rather than drawn as separate sprites.

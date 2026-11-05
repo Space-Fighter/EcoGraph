@@ -69,11 +69,12 @@ DayReport Simulation::playDay(Graph& g, const Scheduler& sched, bool autoCollect
         else collect(g, sched, id, action, truck);
     };
 
-    // Trucks go by how full a home is.
+    // Both kinds of truck go by how full a home is.
     std::vector<std::string> normalHomes, hazardHomes;
     for (size_t i = 0; i < ids.size(); ++i) {
         const Node& n = g.getNode(ids[i]);
-        if (n.type != NodeType::Home || sched.percentFull(n, now()) < MIN_PICKUP_PERCENT) continue;
+        if (n.type != NodeType::Home) continue;
+        if (sched.fillLevel(n, now()) <= 0) continue;
         if (classifyWaste(n.wasteDescription).hazardous) hazardHomes.push_back(n.id);
         else normalHomes.push_back(n.id);
     }
@@ -108,7 +109,8 @@ DayReport Simulation::playDay(Graph& g, const Scheduler& sched, bool autoCollect
                 placed = true;
             }
         }
-        if (!placed) rep.carriedOver.push_back(ordered[i]);
+        // Only a home that is due counts as waiting. The rest simply were not needed today.
+        if (!placed && sched.isDue(g.getNode(ordered[i]), now())) rep.carriedOver.push_back(ordered[i]);
     }
     for (size_t t = 0; t < trucks.size(); ++t) {
         if (trucks[t].homes.empty()) continue;
@@ -136,7 +138,7 @@ DayReport Simulation::playDay(Graph& g, const Scheduler& sched, bool autoCollect
     for (size_t i = 0; i < hazardOrder.size(); ++i) {
         const std::string& id = hazardOrder[i];
         if (usedHazard >= fleet.hazardTrucks) {
-            rep.carriedOver.push_back(id);
+            if (sched.isDue(g.getNode(id), now())) rep.carriedOver.push_back(id);
             continue;
         }
         HazardResult h = dispatchHazard(g, id);
@@ -158,6 +160,12 @@ DayReport Simulation::playDay(Graph& g, const Scheduler& sched, bool autoCollect
         rep.trucks.push_back(run);
     }
 
+    // The most due home heads the waiting list.
+    std::sort(rep.carriedOver.begin(), rep.carriedOver.end(), [&](const std::string& a, const std::string& b) {
+        double da = sched.overdueByDays(g.getNode(a), now()), db = sched.overdueByDays(g.getNode(b), now());
+        if (da != db) return da > db;
+        return a < b;
+    });
     return rep;
 }
 

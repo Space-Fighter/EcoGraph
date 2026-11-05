@@ -8,16 +8,16 @@
 
 Municipal waste collection routes are traditionally static: trucks follow fixed schedules regardless of actual trash fill levels or the presence of biohazardous waste. This results in excessive fuel consumption, labor inefficiency, and potential environmental hazards.
 
-**EcoGraph** models a city’s transportation network as a weighted, zone-tagged graph (comprising depots, residential homes, road junctions, and specialized disposal bins). It computes optimal, dynamically adapted collection paths while ensuring hazardous waste avoids sensitive populated areas.
+**EcoGraph** models a city’s transportation network as a weighted, zone-tagged graph (comprising depots, residential homes, road junctions, and specialized disposal disposal sites). It computes optimal, dynamically adapted collection paths while ensuring hazardous waste avoids sensitive populated areas.
 
 ```
        [ Depot ]
           │
-          ├──► ( Home 1: Organic )  ──────► [ Compost Bin ]
+          ├──► ( Home 1: Organic )  ──────► [ Compost Disposal site ]
           │
-          ├──► ( Home 2: Plastic )  ──────► [ Recyclable Bin ]
+          ├──► ( Home 2: Plastic )  ──────► [ Recyclable Disposal site ]
           │
-          └──► ( Home 3: Biohazard ) ──(Industrial/Arterial first)► [ Chemical Disposal Bin ]
+          └──► ( Home 3: Biohazard ) ──(Industrial/Arterial first)► [ Chemical Disposal Disposal site ]
 ```
 
 ---
@@ -25,11 +25,11 @@ Municipal waste collection routes are traditionally static: trucks follow fixed 
 ## Key Features
 
 - **Weighted Graph City Network Model**
-  - City map represented as an adjacency list with node types (`Depot`, `Home`, `Junction`, `Bin`).
+  - City map represented as an adjacency list with node types (`Depot`, `Home`, `Junction`, `Disposal site`).
   - Edges contain physical distances/costs and are categorized into **Zone Types** (`residential`, `commercial`, `industrial`).
 
 - **Most-Full-First Shortest Path Routing**
-  - Trucks go to the fullest homes first. If two are equally full, the most overdue goes first. Homes under 80% full wait.
+  - Trucks go to the fullest homes first. If two are equally full, the most overdue goes first.
   - After the last pickup, a truck unloads at the nearest disposal site for each waste type it carries.
   - Powered by **Dijkstra's Algorithm** with min-heap priority queues.
 
@@ -102,7 +102,7 @@ EcoGraph grounds municipal waste logistics in formal graph theory, constrained o
 Municipal solid waste collection has historically relied on static, empirical scheduling. This leads to three fundamental operational failures:
 1. **Inflexible Static Routing**: Collection vehicles follow static, pre-planned routes regardless of daily city traffic conditions or actual waste accumulation. This produces excessive Vehicle Kilometers Traveled (VKT), elevated fuel consumption, and unnecessary greenhouse gas emissions.
 2. **Indiscriminate Hazardous Waste Handling**: High-risk waste streams (such as biohazardous **medical waste** and toxic **chemical waste**) cannot be treated as ordinary municipal solid waste. Mixing them into regular collection loops or routing them through densely populated residential neighborhoods creates severe contamination and public health risks.
-3. **Decoupled Capacity Dynamics**: Calendar-based collections (e.g., visiting every street each Monday) ignore variable waste generation rates ($r_i$). Low-generation locations are serviced when nearly empty (wasting labor and transit overhead), while high-generation bins overflow before the next scheduled visit, causing sanitary hazards.
+3. **Decoupled Capacity Dynamics**: Calendar-based collections (e.g., visiting every street each Monday) ignore variable waste generation rates ($r_i$). Low-generation locations are serviced when nearly empty (wasting labor and transit overhead), while high-generation disposal sites overflow before the next scheduled visit, causing sanitary hazards.
 
 **EcoGraph** resolves these challenges by formulating urban waste logistics as a **dynamically weighted, zone-constrained graph optimization problem** integrated with a **predictive fill-rate adaptive scheduler**.
 
@@ -116,7 +116,7 @@ The architecture maps core theoretical concepts from **Data Structures & Algorit
 
 | Data Structure / Algorithm | Formal Role in EcoGraph | Time Complexity | Space Complexity |
 |---|---|---|---|
-| **Graph (Adjacency List)** | $G = (V, E)$ stored via `std::unordered_map<std::string, std::vector<Edge>>`. Nodes represent spatial entities (Depot, Homes, Junctions, Bins); edges represent weighted road segments tagged with zone types. | Traversal: $O(V + E)$ | $O(V + E)$ |
+| **Graph (Adjacency List)** | $G = (V, E)$ stored via `std::unordered_map<std::string, std::vector<Edge>>`. Nodes represent spatial entities (Depot, Homes, Junctions, Disposal sites); edges represent weighted road segments tagged with zone types. | Traversal: $O(V + E)$ | $O(V + E)$ |
 | **Hash Map (`std::unordered_map`)** | Key-value store mapping node identifiers to node metadata, coordinates, fill levels, and adjacency vectors. | Average Lookup: $O(1)$ | $O(V)$ |
 | **Priority Queue (Min-Heap)** | `std::priority_queue` with `std::greater` comparator. Powers Dijkstra's frontier exploration to greedily extract the minimum tentative distance node. | Extraction: $O(\log V)$<br>Insertion: $O(\log V)$ | $O(V)$ |
 | **Priority Queue (Max-Heap)** | Evaluates dynamic scheduling urgency. Ranks due nodes by their calculated degree of "overdue-ness" ($\Delta t - \text{Interval}$). | Extract-Max: $O(\log V)$ | $O(V)$ |
@@ -140,7 +140,7 @@ $$G = (V, E)$$
 #### Vertex Set ($V$)
 Each vertex $v \in V$ represents a distinct spatial facility characterized by:
 - **Identifier**: Unique string key $v_{\text{id}} \in \Sigma^*$
-- **Node Classification**: $\tau(v) \in \{\text{Depot}, \text{Home}, \text{Junction}, \text{Bin}\}$
+- **Node Classification**: $\tau(v) \in \{\text{Depot}, \text{Home}, \text{Junction}, \text{Disposal site}\}$
 - **Zone Tagging**: $z(v) \in \{\text{Residential}, \text{Commercial}, \text{Industrial}, \text{Arterial}\}$
 - **Volumetric Parameters**: Capacity $C(v) \in \mathbb{R}^+$, fill generation rate $r(v) \in \mathbb{R}^+$, and last collection timestamp $t_{\text{last}}(v)$.
 
@@ -200,7 +200,7 @@ Each road zone has a risk factor $\alpha$:
 | Commercial | 10 | Markets and shops: crowds on foot |
 | Residential | 15 | Homes and schools: highest public exposure |
 
-Given source $s$ and destination bin $t$, the hazard route $P^*$ is
+Given source $s$ and destination disposal site $t$, the hazard route $P^*$ is
 
 $$P^* = \arg\min_{P \in \mathcal{P}_{s \to t}} \sum_{e \in P} \alpha(z(e)) \cdot w(e)$$
 
@@ -214,9 +214,9 @@ So 1 km of residential street "costs" as much as 10 km of arterial road, and the
 
 #### Algorithmic Mechanism
 - During relaxation, edge $(u, v)$ costs $\alpha(z(u,v)) \cdot w(u,v)$ instead of $w(u,v)$.
-- The nearest matching hazardous bin (medical/chemical) is chosen by risk cost, not raw distance.
+- The nearest matching hazardous disposal site (medical/chemical) is chosen by risk cost, not raw distance.
 - Each hazard trip reports its real distance (`totalCost`, km), its `riskCost`, and its **exposure**: km driven on residential and commercial roads.
-- **Unreachability Handling**: only a site with no road at all to the depot or to any hazardous bin is rejected (`HTTP 422`, `no_hazard_route`).
+- **Unreachability Handling**: only a site with no road at all to the depot or to any hazardous disposal site is rejected (`HTTP 422`, `no_hazard_route`).
 
 ---
 
@@ -255,8 +255,8 @@ Consider four sample locations evaluated on a simulation day:
 |---|---|---|---|---|---|---|---|
 | **H1** (Home 1) | 50 units | 5 units/day | $50 / 5 = 10\text{d}$ | **10 days** | 9 days | $-1$ day | Not Due (1 day remaining) |
 | **H2** (Home 2) | 100 units | 20 units/day | $100 / 20 = 5\text{d}$ | **5 days** | 6 days | $+1$ day | **Due** (1 day overdue) |
-| **B1** (Bin 1) | 300 units | 40 units/day | $300 / 40 = 7.5\text{d}$ | **7 days** | 10 days | $+3$ days | **Due** (3 days overdue) |
-| **B2** (Bin 2) | 100 units | 2 units/day | $100 / 2 = 50\text{d}$ | **14 days** *(clamped)* | 20 days | $+6$ days | **Due** (6 days overdue) |
+| **B1** (Disposal site 1) | 300 units | 40 units/day | $300 / 40 = 7.5\text{d}$ | **7 days** | 10 days | $+3$ days | **Due** (3 days overdue) |
+| **B2** (Disposal site 2) | 100 units | 2 units/day | $100 / 2 = 50\text{d}$ | **14 days** *(clamped)* | 20 days | $+6$ days | **Due** (6 days overdue) |
 
 **Max-Heap Dispatch Order**:
 $$\mathbf{B2 \ (+6d)} \ \longrightarrow \ \mathbf{B1 \ (+3d)} \ \longrightarrow \ \mathbf{H2 \ (+1d)}$$
@@ -266,11 +266,11 @@ $$\mathbf{B2 \ (+6d)} \ \longrightarrow \ \mathbf{B1 \ (+3d)} \ \longrightarrow 
 
 ### 7. Multi-Stop Routing Strategies & Hazard Preemption
 
-Each day, homes at least 80% full are sorted most full first, and a clash goes to the most overdue. They are loaded onto trucks in that order until capacity runs out, and the rest wait for a later day.
+Each day, homes are sorted most full first, and a clash goes to the most overdue. They are loaded onto trucks in that order until capacity runs out, and the rest wait for a later day.
 
 #### A. Traversal Sequence
 A truck visits its homes in that order, emptying any later stop that lies on its way, and then unloads at the nearest disposal site for each waste type it carries:
-$$\text{Depot} \longrightarrow \text{Home}_1 \longrightarrow \dots \longrightarrow \text{Home}_k \longrightarrow \text{Bin}_1 \longrightarrow \dots \longrightarrow \text{Bin}_m$$
+$$\text{Depot} \longrightarrow \text{Home}_1 \longrightarrow \dots \longrightarrow \text{Home}_k \longrightarrow \text{Disposal site}_1 \longrightarrow \dots \longrightarrow \text{Disposal site}_m$$
 
 #### B. Hazard Preemption Mechanism
 When the waste classification engine identifies a waste description as hazardous (`medical` or `chemical`):
@@ -282,9 +282,9 @@ When the waste classification engine identifies a waste description as hazardous
 
 ### 8. Rule-Based Waste Classification Engine
 
-The system integrates an in-process keyword classification engine that maps plain-text waste descriptions into standardized disposal categories and assigned bin types:
+The system integrates an in-process keyword classification engine that maps plain-text waste descriptions into standardized disposal categories and assigned disposal site types:
 
-$$\text{Description} \xrightarrow{\quad \text{Keyword Matching} \quad} (\text{Category}, \ \text{Bin Type}, \ \text{Hazard Flag})$$
+$$\text{Description} \xrightarrow{\quad \text{Keyword Matching} \quad} (\text{Category}, \ \text{Disposal site Type}, \ \text{Hazard Flag})$$
 
 - **Organic Waste** (e.g., `food scraps`, `vegetables`, `leaves`) $\longrightarrow$ Target: `compost_bin` (Non-hazardous)
 - **Recyclable Waste** (e.g., `plastic bottles`, `cardboard`, `paper`) $\longrightarrow$ Target: `recyclable_bin` (Non-hazardous)
@@ -375,14 +375,14 @@ EcoGraph/
   - Response: `{"ok": true, "path": [...], "cost": 42.5, "segments": [...]}`
 - **`POST /route/hazard`**
   - Request: `{"locationId": "HZ1"}`
-  - Response: `{"ok": true, "locationId": "HZ1", "binId": "B_MED", "totalCost": 24.3, "riskCost": 33.1, "segments": [...], "exposureKm": {"residential": 0, "commercial": 0.58}, "zoneFactors": {"industrial": 1, "arterial": 1.5, "commercial": 10, "residential": 15}}`
+  - Response: `{"ok": true, "locationId": "HZ1", "disposalSiteId": "B_MED", "totalCost": 24.3, "riskCost": 33.1, "segments": [...], "exposureKm": {"residential": 0, "commercial": 0.58}, "zoneFactors": {"industrial": 1, "arterial": 1.5, "commercial": 10, "residential": 15}}`
 
 ### 3. Classification & Scheduling
 - **`POST /classify`**
   - Request: `{"description": "used chemical syringe"}`
-  - Response: `{"ok": true, "category": "medical", "binType": "medical_bin", "hazardous": true}`
+  - Response: `{"ok": true, "category": "medical", "disposalType": "medical_bin", "hazardous": true}`
 - **`GET /schedule`**
-  - Returns array of homes and bins due or overdue for collection today.
+  - Returns array of homes and disposal sites due or overdue for collection today.
 - **`POST /collect`**
   - Request: `{"nodes": ["home1", "home2"]}`
   - Resets `lastCollected` timestamps for specified nodes to current simulation time.
@@ -417,7 +417,7 @@ cd server
 .\build.bat
 .\build\ecorouting.exe 8080 data\city.json ..\frontend
 ```
-`build.bat` needs a g++ with C++17 support (e.g. Strawberry Perl's GCC in `C:\Strawberry\c\bin`, which it uses automatically if present). Older MinGW g++ will not work.
+`build.bat` needs a g++ with C++17 support (e.g. Strawberry Perl's GCC in `C:\Strawberry\c\disposal site`, which it uses automatically if present). Older MinGW g++ will not work.
 
 > Note: `sh build.sh` and `&&` do not work in Windows PowerShell — use `build.bat` there. The commands below are for Linux/macOS or Git Bash.
 

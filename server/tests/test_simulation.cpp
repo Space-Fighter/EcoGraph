@@ -212,6 +212,8 @@ static void testDisposalSitesAndManual() {
     sim.start(BASE);
     PriorityRouteBuilder st;
     Fleet f;
+    f.normalTrucks = 0;
+    f.hazardTrucks = 0;
     DayReport d1 = sim.advanceDay(g, s, true, st, f);
     CHECK(!has(d1.due, "BIN"));
     CHECK(!has(d1.overflowIds, "BIN"));
@@ -317,9 +319,9 @@ static void testDaySummaryOverflow() {
     CHECK(d5.served == 2);
 }
 
-// Trucks go by how full a home is, not by its schedule: 80% is enough, and less is not.
-static void testPickupThreshold() {
-    Graph g = makeGraph();   // every home fills 20% a day, so day 3 is 60% and day 4 is 80%
+// Trucks of both kinds go by how full a home is, not by its schedule.
+static void testFullestFirstNotDue() {
+    Graph g = makeGraph();   // every home fills 20% a day, so nothing is due on day 1
     Scheduler s;
     Simulation sim;
     sim.start(BASE);
@@ -327,17 +329,37 @@ static void testPickupThreshold() {
     Fleet f;
     f.normalTrucks = 1;
     f.normalCapacity = 1000;
+    f.hazardTrucks = 1;
+
+    DayReport d1 = sim.advanceDay(g, s, true, st, f);
+    CHECK(d1.due.empty());
+    CHECK(d1.trucks.size() == 2);
+    CHECK(d1.trucks[0].kind == "normal" && d1.trucks[0].homes.size() == 3);
+    CHECK(d1.trucks[1].kind == "hazard" && d1.trucks[1].homes[0] == "HZ1");  // fuller than HZ2
+    CHECK(d1.carriedOver.empty());  // HZ2 had no truck, but it is not due, so it is not waiting
+}
+
+// With no trucks at all, the waiting list runs from most due to least due.
+static void testWaitingListMostDueFirst() {
+    Graph g = makeGraph();
+    g.getNodeMutable("H2").lastCollected = BASE - static_cast<std::time_t>(3 * DAY);
+    g.getNodeMutable("H3").lastCollected = BASE - static_cast<std::time_t>(1 * DAY);
+    Scheduler s;
+    Simulation sim;
+    sim.start(BASE);
+    PriorityRouteBuilder st;
+    Fleet f;
+    f.normalTrucks = 0;
     f.hazardTrucks = 0;
-    advanceTo(sim, g, s, 2, st, f);
+    advanceTo(sim, g, s, 4, st, f);
 
-    DayReport d3 = sim.advanceDay(g, s, true, st, f);
-    bool anyServed = false;
-    for (size_t i = 0; i < d3.trucks.size(); ++i) anyServed = anyServed || !d3.trucks[i].homes.empty();
-    CHECK(!anyServed);
-
-    DayReport d4 = sim.advanceDay(g, s, true, st, f);
-    CHECK(d4.due.size() == 1 && d4.due[0] == "HZ1");      // H1-H3 are not due yet...
-    CHECK(d4.trucks.size() == 1 && d4.trucks[0].homes.size() == 3);  // ...but are full enough
+    DayReport d5 = sim.advanceDay(g, s, true, st, f);
+    CHECK(d5.carriedOver.size() == 5);
+    CHECK(d5.carriedOver.size() == 5 && d5.carriedOver[0] == "H2");
+    for (size_t i = 1; i < d5.carriedOver.size(); ++i) {
+        CHECK(s.overdueByDays(g.getNode(d5.carriedOver[i - 1]), sim.now()) >=
+              s.overdueByDays(g.getNode(d5.carriedOver[i]), sim.now()));
+    }
 }
 
 // In a live day nothing changes until a truck is reported as arriving.
@@ -383,7 +405,8 @@ static void testLivePickups() {
 
 int main() {
     testDaySummaryOverflow();
-    testPickupThreshold();
+    testFullestFirstNotDue();
+    testWaitingListMostDueFirst();
     testLivePickups();
     testClockAndDue();
     testTruckCapacityAndCarryOver();

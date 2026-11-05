@@ -68,16 +68,15 @@ struct DayReport {
 // A simulated calendar on top of the graph. Day 0 is "now" at startup; each advanced day
 // moves the clock by 24h, so fill levels grow and locations become due. With autoCollect
 // the day also plays out under the fleet limits:
-//   - homes at least MIN_PICKUP_PERCENT full are ordered most full first (a clash goes to the
-//     most due) and loaded onto normal trucks until capacity runs out; the rest carry over;
-//   - hazardous homes get hazard trucks automatically in the same order, extras wait.
+//   - homes holding any waste are ordered most full first (a clash goes to the most due) and
+//     loaded onto normal trucks until capacity runs out; due homes left over carry over;
+//   - hazardous homes get hazard trucks in the same order, one home per truck per day;
+//   - homes that are due and got no truck are reported as waiting, most due first.
 // Disposal sites only receive waste: they have no fill level and are never due.
 // In a live day the trucks' pickups wait until each truck is reported as arriving, so every view
 // of the city shows what has really happened so far. Otherwise they all happen at once.
 class Simulation {
 public:
-    // A home this full can be collected. Anything emptier is not worth a truck yet.
-    static constexpr double MIN_PICKUP_PERCENT = 80.0;
 
     void start(std::time_t base);
     int day() const { return day_; }

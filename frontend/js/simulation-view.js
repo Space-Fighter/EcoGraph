@@ -1,5 +1,5 @@
 // Simulation panel: step or play through days under the chosen fleet limits. All of a day's trucks
-// drive at once on the map, the camera follows one of them, and playback can be paused.
+// drive at once on the map, and playback can be paused.
 const SimulationView = (() => {
   const $ = (id) => document.getElementById(id);
   let running = false;
@@ -93,7 +93,7 @@ const SimulationView = (() => {
     while (list.children.length > 60) list.removeChild(list.lastChild);
   }
 
-  function renderTrucks(trucks, following) {
+  function renderTrucks(trucks) {
     const list = $('truck-list');
     list.replaceChildren();
     if (!trucks.length) {
@@ -105,11 +105,8 @@ const SimulationView = (() => {
     }
     trucks.forEach((t) => {
       const li = document.createElement('li');
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'truck-row' + (t.id === following ? ' following' : '');
-      btn.dataset.truck = t.id;
-      btn.title = 'Follow ' + t.id + ' on the map';
+      const row = document.createElement('div');
+      row.className = 'truck-row';
       const img = document.createElement('img');
       img.src = 'assets/sprites/truck-' + (t.kind === 'hazard' ? 'hazard' : 'normal') + '-se.svg';
       img.alt = '';
@@ -123,16 +120,10 @@ const SimulationView = (() => {
       const km = document.createElement('span');
       km.className = 'km';
       km.textContent = t.cost.toFixed(1) + ' km';
-      btn.append(img, text, km);
-      btn.addEventListener('click', () => GraphView.follow(t.id));
-      li.appendChild(btn);
+      row.append(img, text, km);
+      li.appendChild(row);
       list.appendChild(li);
     });
-  }
-
-  function markFollowing(id) {
-    document.querySelectorAll('.truck-row').forEach((b) => b.classList.toggle('following', b.dataset.truck === id));
-    $('truck-follow-note').textContent = id ? '(following ' + id + ')' : '';
   }
 
   async function refreshViews() {
@@ -162,13 +153,13 @@ const SimulationView = (() => {
   function setupSpeed() {
     const slider = $('sim-speed');
     try {
-      const saved = localStorage.getItem('eco-speed');
+      const saved = localStorage.getItem('eco-playback-speed');
       if (saved !== null && Number.isFinite(+saved)) slider.value = saved;
     } catch (e) { /* storage blocked: use the default */ }
     applySpeed(+slider.value);
     slider.addEventListener('input', () => {
       applySpeed(+slider.value);
-      try { localStorage.setItem('eco-speed', slider.value); } catch (e) { /* keep it for this visit only */ }
+      try { localStorage.setItem('eco-playback-speed', slider.value); } catch (e) { /* keep it for this visit only */ }
     });
   }
 
@@ -200,7 +191,7 @@ const SimulationView = (() => {
         addHistory(d);
         await refreshViews();
         const playing = GraphView.animateDay(d.trucks, truckArrived);
-        renderTrucks(d.trucks, null);
+        renderTrucks(d.trucks);
         await playing;
         await Api.settle();
         await refreshViews();
@@ -247,7 +238,6 @@ const SimulationView = (() => {
     });
     $('sim-reset').addEventListener('click', reset);
     $('sim-stop').disabled = true;
-    GraphView.onFollowChange(markFollowing);
     GraphView.onClockChange(showClock);
     setupSpeed();
     await Api.settle();  // a page closed mid-day can leave pickups waiting

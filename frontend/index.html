@@ -48,10 +48,6 @@
           <label>Km limit / truck <input type="number" id="fleet-km" value="150" min="1" max="5000"></label>
           <label>Hazard trucks <input type="number" id="fleet-hazard" value="2" min="0" max="10"></label>
         </div>
-        <label class="speed">Speed
-          <input type="range" id="sim-speed" min="-2" max="2.5" step="0.25" value="0">
-          <output id="sim-speed-label" for="sim-speed">1x</output>
-        </label>
         <div class="row buttons">
           <button id="sim-step">+1 day</button>
           <input type="number" id="sim-days" value="10" min="1" max="60" title="Days to play">
@@ -63,10 +59,17 @@
           <button id="sim-reset">Reset</button>
         </div>
         <ul id="sim-history" class="due-list history"></ul>
+        <details class="more-settings">
+          <summary>More settings</summary>
+          <label class="speed">Speed
+            <input type="range" id="sim-speed" min="-2" max="2.5" step="0.25" value="2.5">
+            <output id="sim-speed-label" for="sim-speed">5.7x</output>
+          </label>
+        </details>
       </details>
 
       <details class="panel glass" open>
-        <summary><h2>Trucks <small id="truck-follow-note"></small></h2></summary>
+        <summary><h2>Trucks</h2></summary>
         <ul id="truck-list" class="truck-list"><li class="empty">Trucks appear here once a day is played.</li></ul>
       </details>
 

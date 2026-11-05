@@ -197,6 +197,8 @@ aside {
 .clock small { color: var(--muted); }
 .sky-icon { width: 15px; height: 15px; border-radius: 50%; background: #ffb31a; box-shadow: 0 0 7px #ffb31a; transition: background .4s, box-shadow .4s; }
 .sky-icon.night { background: transparent; box-shadow: inset -5px -2px 0 0 #dfe6ff; }
+.more-settings { margin-top: 8px; font-size: 12px; color: var(--muted); }
+.more-settings > summary { cursor: pointer; margin-bottom: 6px; }
 .speed { display: grid; grid-template-columns: auto 1fr 40px; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 12px; color: var(--muted); }
 .speed input { width: 100%; accent-color: var(--primary); margin: 0; }
 .speed output { font-weight: 700; color: var(--text); text-align: right; font-variant-numeric: tabular-nums; }
@@ -270,8 +272,6 @@ input[type=checkbox] { accent-color: var(--primary); }
 .truck-row b { display: block; font-size: 12px; }
 .truck-row small { color: var(--muted); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 190px; }
 .truck-row .km { color: var(--muted); font-variant-numeric: tabular-nums; }
-.truck-row.following { background: var(--primary); border-color: transparent; color: #fff; }
-.truck-row.following small, .truck-row.following .km { color: #e6f0ff; }
 
 .builder-msg { font-size: 12px; color: var(--muted); }
 .builder-msg.error { color: var(--red); font-weight: 600; }

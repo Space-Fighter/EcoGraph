@@ -2,7 +2,6 @@
 // the ground once, and this file adds what changes: buildings, labels and trucks.
 const GraphView = (() => {
   const MAX_ZOOM = 2.4;
-  const FOLLOW_ZOOM = 1.15;
   const LABEL_ZOOM = 0.62;        // node IDs appear once zoomed in this far
   const ROAD_LABEL_ZOOM = 1.0;    // road lengths appear once zoomed in this far
   const TRUCK_SPEED = 220;        // world pixels per second at 1x, easy to follow by eye
@@ -26,7 +25,6 @@ const GraphView = (() => {
   let nodeLabels = [], roadLabels = [], signs = [];
 
   const cam = { x: 0, y: 0, zoom: 1, minZoom: 0.2 };
-  let followId = null;
   let autoFit = true;             // keep the whole city framed until the camera is moved
   let tabHidden = false;
   let paused = false;
@@ -41,7 +39,6 @@ const GraphView = (() => {
   // The day being played.
   let day = null;                 // { trucks: [...], elapsed, duration, resolve, onArrive }
   let truckRuns = [];             // kept after the day ends, until the next day clears them
-  let followListeners = [];
 
   const key = (a, b) => (a < b ? a + '|' + b : b + '|' + a);
 
@@ -350,22 +347,9 @@ const GraphView = (() => {
     cam.zoom = Math.min(MAX_ZOOM, zoom);
     cam.x = (r.x0 + r.x1) / 2;
     cam.y = (r.y0 + r.y1) / 2;
-    setFollow(null);
     autoFit = true;
     applyCamera();
     syncZoomDetail();
-  }
-
-  function updateCamera(dt) {
-    const truck = followId && truckRuns.find((t) => t.id === followId);
-    if (!truck) return;
-    const k = 1 - Math.exp(-dt * 3.2);
-    cam.x += (truck.x - cam.x) * k;
-    cam.y += (truck.y - cam.y) * k;
-    const before = cam.zoom;
-    cam.zoom += (Math.max(cam.minZoom, FOLLOW_ZOOM) - cam.zoom) * k;
-    applyCamera();
-    if (Math.abs(cam.zoom - before) > 1e-4) syncZoomDetail();
   }
 
   // ---- truck routes -------------------------------------------------------------------------
@@ -436,24 +420,20 @@ const GraphView = (() => {
     if (route.points.length < 1) return null;
     const kind = run.kind === 'hazard' ? 'hazard' : 'normal';
     const holder = new PIXI.Container();
-    const ring = new PIXI.Graphics();
-    ring.ellipse(0, 0, 25, 13).stroke({ width: 3, color: 0xffffff, alpha: 0.95 });
-    ring.ellipse(0, 0, 21, 10.5).fill({ color: kind === 'hazard' ? 0xffd21f : 0x7dd3ff, alpha: 0.4 });
-    ring.visible = false;
     const glow = new PIXI.Graphics();
     glow.ellipse(0, 0, 34, 17).fill(0xffe9a8);
     glow.alpha = 0;
     const sprite = Sprites.make('truck-' + kind + '-se');
     const tag = label(run.id, { size: 9.5, fill: '#ffffff', stroke: kind === 'hazard' ? '#7a1010' : '#0d3b6e' });
     tag.position.set(0, -32);
-    holder.addChild(glow, ring, sprite, tag);
+    holder.addChild(glow, sprite, tag);
     objectLayer.addChild(holder);
     const trail = new PIXI.Graphics();
     trailLayer.addChild(trail);
     const first = route.points[0];
     holder.position.set(first.x, first.y);
     return {
-      id: run.id, kind, run, route, holder, glow, ring, sprite, tag, trail,
+      id: run.id, kind, run, route, holder, glow, sprite, tag, trail,
       x: first.x, y: first.y, dir: 'se', seg: 0, dist: 0, nextStop: 0, done: route.total <= 0,
       scale: 1, dirty: true,
     };
@@ -473,9 +453,8 @@ const GraphView = (() => {
     const pts = t.route.points;
     if (t.seg === 0 && t.dist <= 0) return;
     const color = t.kind === 'hazard' ? HAZARD_COLOR : ROUTE_COLOR[skyAt(clock).night > 0.5 ? 'night' : 'day'];
-    const focused = followId === t.id;
-    const width = focused ? 7 : 4.5;
-    const alpha = focused ? 0.95 : 0.65;
+    const width = 5;
+    const alpha = 0.8;
     if (t.kind === 'hazard') {
       const DASH = 16, GAP = 11;
       for (let i = 0; i <= t.seg && i < pts.length - 1; i++) {
@@ -520,7 +499,6 @@ const GraphView = (() => {
     t.holder.position.set(t.x, t.y);
     t.holder.zIndex = t.y + 1;
     t.holder.scale.set(t.scale);
-    t.ring.visible = followId === t.id;
     t.dirty = false;
     drawTrail(t);
   }
@@ -586,31 +564,8 @@ const GraphView = (() => {
       lastMorning = nextMorning(clock);
       day = { trucks, elapsed: 0, morning: lastMorning, startClock: Math.max(clock, lastMorning), progress: 0, quiet: 0, holdUntil: null, resolve, onArrive,
               longest: moving.length ? Math.max(...moving.map((t) => t.route.total)) : 0 };
-      if (moving.length) {
-        autoFit = false;
-        setFollow(moving[Math.floor(Math.random() * moving.length)].id);
-      } else {
-        setFollow(null);
-      }
     });
   }
-
-  function setFollow(id) {
-    if (followId === id) return;
-    const prev = truckRuns.find((t) => t.id === followId);
-    followId = id;
-    if (prev) placeTruck(prev);
-    const next = truckRuns.find((t) => t.id === id);
-    if (next) placeTruck(next);
-    followListeners.forEach((fn) => fn(id));
-  }
-
-  // Follow a truck on request. Lasts until the current day ends.
-  function follow(id) {
-    if (truckRuns.some((t) => t.id === id)) setFollow(id);
-  }
-
-  function onFollowChange(fn) { followListeners.push(fn); }
 
   function setPaused(value) { paused = !!value; }
 
@@ -623,7 +578,6 @@ const GraphView = (() => {
     finishDay();
     finishPass();
     clearTrucks();
-    setFollow(null);
   }
 
   // ---- pointer: pan, zoom, hover, click ------------------------------------------------------
@@ -695,8 +649,8 @@ const GraphView = (() => {
       const kg = truck.run.load.toFixed(0) + ' kg';
       const load = truck.run.kind === 'normal' ? truck.run.trips + (truck.run.trips === 1 ? ' trip, ' : ' trips, ') + kg : kg;
       showTip([truck.id + ' (' + truck.kind + ')', load + ' · ' + truck.run.cost.toFixed(1) + ' km',
-               'Stops: ' + (truck.run.homes.join(', ') || 'none'), 'Click to follow'], p.px, p.py);
-      return true;
+               'Stops: ' + (truck.run.homes.join(', ') || 'none')], p.px, p.py);
+      return false;
     }
     const spot = hotspotAt(p);
     if (!spot) { hideTip(); return false; }
@@ -739,16 +693,9 @@ const GraphView = (() => {
       cam.x -= dx / cam.zoom;
       cam.y -= dy / cam.zoom;
       autoFit = false;
-      setFollow(null);
       applyCamera();
     });
-    canvas.addEventListener('pointerup', (ev) => {
-      const clicked = drag && !drag.moved;
-      drag = null;
-      if (!clicked) return;
-      const truck = truckAt(toWorldPoint(ev));
-      if (truck) setFollow(truck.id);
-    });
+    canvas.addEventListener('pointerup', () => { drag = null; });
     canvas.addEventListener('pointerleave', hideTip);
     canvas.addEventListener('wheel', (ev) => {
       ev.preventDefault();
@@ -758,7 +705,6 @@ const GraphView = (() => {
       cam.x = before.x - (before.px - w / 2) / cam.zoom;
       cam.y = before.y - (before.py - h / 2) / cam.zoom;
       autoFit = false;
-      setFollow(null);
       hideTip();
       applyCamera();
       syncZoomDetail();
@@ -771,7 +717,6 @@ const GraphView = (() => {
     const dt = Math.min(0.1, ticker.deltaMS / 1000);
     stepTrucks(dt);
     stepClock(dt);
-    updateCamera(dt);
   }
 
   // ---- public -------------------------------------------------------------------------------
@@ -852,10 +797,10 @@ const GraphView = (() => {
     return Array.from(plan.hubs.entries()).map(([id, h]) => ({ id, ...IsoLayout.toWorld(h.x, h.y) }));
   }
 
-  const stats = () => ({ nodes: city.nodes.length, roads: plan.roads.length, bridges: plan.crossings.length, zoom: cam.zoom, followId, paused, speed, clock, sky: skyAt(clock),
+  const stats = () => ({ nodes: city.nodes.length, roads: plan.roads.length, bridges: plan.crossings.length, zoom: cam.zoom, paused, speed, clock, sky: skyAt(clock),
                          trucks: truckRuns.map((t) => ({ id: t.id, x: t.x, y: t.y, done: t.done, dist: t.dist, total: t.route.total })),
                          camera: { x: cam.x, y: cam.y } });
 
   return { init, addElements, rebuild, fitAll, nodePositions, animateDay, nightPass, clearRoute, resize,
-           setVisible, setPaused, setSpeed, follow, onFollowChange, onClockChange, stats };
+           setVisible, setPaused, setSpeed, onClockChange, stats };
 })();

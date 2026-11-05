@@ -17,7 +17,8 @@ std::string formatDate(std::time_t t);  // YYYY-MM-DD
 // makes one hazard trip per day.
 struct Fleet {
     int normalTrucks = 3;
-    double normalCapacity = 1000;  // kg per truck per day
+    double normalCapacity = 1000;  // kg per truck per trip
+    double normalKmLimit = 150;    // km per truck per day, including the drive back to the depot
     int hazardTrucks = 2;
 };
 
@@ -46,8 +47,10 @@ struct TruckRun {
     std::string id;     // N1.. for normal, HT1.. for hazard trucks
     std::string kind;   // "normal" | "hazard"
     std::vector<std::string> homes;
-    double load = 0;
-    double capacity = 0;  // 0 for hazard trucks (one trip, no load limit)
+    double load = 0;      // kg collected across all of the day's trips
+    double capacity = 0;  // per trip; 0 for hazard trucks (one trip, no load limit)
+    int trips = 0;
+    std::vector<double> tripLoads;  // kg on each trip
     double cost = 0;
     std::string disposalSite;      // hazard trips: the disposal site they delivered to
     double exposureKm = 0;  // hazard trips: km driven on residential/commercial roads
@@ -69,7 +72,9 @@ struct DayReport {
 // moves the clock by 24h, so fill levels grow and locations become due. With autoCollect
 // the day also plays out under the fleet limits:
 //   - homes holding any waste are ordered most full first (a clash goes to the most due) and
-//     loaded onto normal trucks until capacity runs out; due homes left over carry over;
+//     loaded onto normal trucks trip by trip. A truck dumps, goes back out while it can still
+//     finish the next trip and reach the depot within its km limit, and ends the day at the
+//     depot; due homes left over carry over;
 //   - hazardous homes get hazard trucks in the same order, one home per truck per day;
 //   - homes that are due and got no truck are reported as waiting, most due first.
 // Disposal sites only receive waste: they have no fill level and are never due.

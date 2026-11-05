@@ -21,6 +21,7 @@ const SimulationView = (() => {
       autoCollect: $('sim-auto').checked,
       normalTrucks: clampInt('fleet-normal', 0, 20, 2),
       normalCapacity: clampInt('fleet-capacity', 1, 100000, 200),
+      normalKmLimit: clampInt('fleet-km', 1, 5000, 150),
       hazardTrucks: clampInt('fleet-hazard', 0, 10, 1),
     };
   }
@@ -33,7 +34,7 @@ const SimulationView = (() => {
   function setBusy(busy) {
     running = busy;
     ['sim-step', 'sim-play', 'sim-reset', 'sim-days', 'sim-auto',
-     'fleet-normal', 'fleet-capacity', 'fleet-hazard'].forEach((id) => { $(id).disabled = busy; });
+     'fleet-normal', 'fleet-capacity', 'fleet-km', 'fleet-hazard'].forEach((id) => { $(id).disabled = busy; });
     $('sim-stop').disabled = !busy;
     $('sim-pause').disabled = !busy;
     if (!busy) setPaused(false);
@@ -61,6 +62,11 @@ const SimulationView = (() => {
     return span;
   }
 
+  function loadText(t) {
+    const kg = t.load.toFixed(0) + ' kg';
+    return t.kind === 'normal' ? t.trips + (t.trips === 1 ? ' trip, ' : ' trips, ') + kg : kg;
+  }
+
   function addHistory(d) {
     const li = document.createElement('li');
     const head = document.createElement('b');
@@ -72,7 +78,7 @@ const SimulationView = (() => {
     li.appendChild(line(summary.join(' · ')));
 
     d.trucks.forEach((t) => {
-      const load = t.kind === 'normal' ? ' (' + t.load.toFixed(0) + '/' + t.capacity.toFixed(0) + ' kg)' : ' (' + t.load.toFixed(0) + ' kg)';
+      const load = ' (' + loadText(t) + ')';
       const dest = t.kind === 'hazard'
         ? ' -> ' + t.disposalSite + (t.exposureKm > 0 ? ' (' + t.exposureKm.toFixed(1) + ' km through populated roads)' : '')
         : '';
@@ -109,7 +115,7 @@ const SimulationView = (() => {
       img.alt = '';
       const text = document.createElement('span');
       const name = document.createElement('b');
-      const load = t.kind === 'normal' ? t.load.toFixed(0) + '/' + t.capacity.toFixed(0) + ' kg' : t.load.toFixed(0) + ' kg';
+      const load = loadText(t);
       name.textContent = t.id + ' · ' + load;
       const stops = document.createElement('small');
       stops.textContent = (t.homes.length ? t.homes.join(', ') : 'no stops') + (t.disposalSite ? ' → ' + t.disposalSite : '');

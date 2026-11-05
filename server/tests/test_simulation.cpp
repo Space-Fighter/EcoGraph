@@ -96,6 +96,7 @@ static void testTruckCapacityAndCarryOver() {
     Fleet f;
     f.normalTrucks = 1;
     f.normalCapacity = 150;  // one 100-unit home fits, two do not
+    f.normalKmLimit = 10;    // DEPOT>home 2, home>BIN 4, BIN>DEPOT 4: time for exactly one trip
     f.hazardTrucks = 5;      // not the constraint in this test
     advanceTo(sim, g, s, 4, st, f);
 
@@ -189,6 +190,7 @@ static void testOrderingMatters() {
         sim.start(BASE);
         Fleet f;
         f.normalTrucks = 1;
+        f.normalKmLimit = 6;     // DEPOT>home 2, home>BIN 2, BIN>DEPOT 2: exactly one trip
         f.normalCapacity = 100;  // FULL carries 175 units, OLD 130: each alone exceeds it, so
                                  // a truck takes exactly one (a truck always takes its first)
         PriorityRouteBuilder st;
@@ -288,6 +290,7 @@ static void testUnreachableDoesNotUseCapacity() {
     Fleet f;
     f.normalTrucks = 1;
     f.normalCapacity = 150;  // room for exactly one 100-unit home
+    f.normalKmLimit = 10;    // and time for one trip
     f.hazardTrucks = 5;
     advanceTo(sim, g, s, 4, st, f);
 
@@ -317,6 +320,63 @@ static void testDaySummaryOverflow() {
     CHECK(d5.overflowMorning == 1);       // HZ1
     CHECK(d5.overflowAfterPickups == 0);  // the hazard truck emptied HZ1
     CHECK(d5.served == 2);
+}
+
+// A full truck dumps and goes back out, then ends the day at the depot.
+static void testMultipleTripsAndReturn() {
+    Graph g = makeGraph();
+    Scheduler s;
+    Simulation sim;
+    sim.start(BASE);
+    PriorityRouteBuilder st;
+    Fleet f;
+    f.normalTrucks = 1;
+    f.normalCapacity = 150;  // one 100-unit home per trip
+    f.normalKmLimit = 1000;
+    f.hazardTrucks = 0;
+    advanceTo(sim, g, s, 4, st, f);
+
+    DayReport d5 = sim.advanceDay(g, s, true, st, f);
+    CHECK(d5.trucks.size() == 1);
+    if (d5.trucks.empty()) return;
+    const TruckRun& n1 = d5.trucks[0];
+    CHECK(n1.trips == 3);
+    CHECK(n1.homes.size() == 3);
+    CHECK(d5.carriedOver.size() == 2);  // only the hazard homes, which have no truck in this test
+    CHECK(n1.tripLoads.size() == 3);
+    for (size_t i = 0; i < n1.tripLoads.size(); ++i) CHECK(n1.tripLoads[i] <= f.normalCapacity);
+    // DEPOT>H 2, H>BIN 4, then twice BIN>H 4, H>BIN 4, then BIN>DEPOT 4.
+    CHECK(n1.cost == 2 + 4 + 8 + 8 + 4);
+    CHECK(d5.totalCost == n1.cost);
+    CHECK(n1.segments.front().path.front() == "DEPOT");
+    CHECK(n1.segments.back().path.back() == "DEPOT");
+    // A later trip starts where the last one ended.
+    for (size_t i = 1; i < n1.segments.size(); ++i) {
+        CHECK(n1.segments[i].path.front() == n1.segments[i - 1].path.back());
+    }
+
+    // The km limit is never broken, and a home that does not fit waits.
+    Graph g2 = makeGraph();
+    Simulation sim2;
+    sim2.start(BASE);
+    Fleet tight = f;
+    tight.normalKmLimit = 18;  // one trip costs 10, and a second costs 8 more: no third
+    advanceTo(sim2, g2, s, 4, st, tight);
+    DayReport t5 = sim2.advanceDay(g2, s, true, st, tight);
+    CHECK(t5.trucks.size() == 1 && t5.trucks[0].trips == 2);
+    CHECK(t5.trucks.size() == 1 && t5.trucks[0].cost <= tight.normalKmLimit);
+    CHECK(t5.carriedOver.size() == 3);  // one normal home and the two hazard homes
+
+    // A truck that cannot finish even one trip stays at the depot.
+    Graph g3 = makeGraph();
+    Simulation sim3;
+    sim3.start(BASE);
+    Fleet none = f;
+    none.normalKmLimit = 5;
+    advanceTo(sim3, g3, s, 4, st, none);
+    DayReport n5 = sim3.advanceDay(g3, s, true, st, none);
+    CHECK(n5.trucks.empty());
+    CHECK(n5.carriedOver.size() == 5);
 }
 
 // Trucks of both kinds go by how full a home is, not by its schedule.
@@ -405,6 +465,7 @@ static void testLivePickups() {
 
 int main() {
     testDaySummaryOverflow();
+    testMultipleTripsAndReturn();
     testFullestFirstNotDue();
     testWaitingListMostDueFirst();
     testLivePickups();

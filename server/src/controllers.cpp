@@ -177,6 +177,8 @@ json dayReportToJson(const DayReport& r) {
                           {"homes", t.homes},
                           {"load", t.load},
                           {"capacity", t.capacity},
+                          {"trips", t.trips},
+                          {"tripLoads", t.tripLoads},
                           {"cost", t.cost},
                           {"disposalSite", t.disposalSite},
                           {"exposureKm", t.exposureKm},
@@ -463,7 +465,7 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
 
     // POST /simulate/advance
     //   {"days": 1..60, "autoCollect": bool,
-    //    "normalTrucks": 0..20, "normalCapacity": >0, "hazardTrucks": 0..10, "live": bool}
+    //    "normalTrucks": 0..20, "normalCapacity": >0, "normalKmLimit": >0, "hazardTrucks": 0..10, "live": bool}
     // With "live", truck pickups wait for /simulate/arrive or /simulate/settle.
     svr.Post("/simulate/advance", [&state](const httplib::Request& req, httplib::Response& res) {
         json body = json::object();
@@ -476,6 +478,7 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
             Fleet fleet;
             fleet.normalTrucks = body.value("normalTrucks", fleet.normalTrucks);
             fleet.normalCapacity = body.value("normalCapacity", fleet.normalCapacity);
+            fleet.normalKmLimit = body.value("normalKmLimit", fleet.normalKmLimit);
             fleet.hazardTrucks = body.value("hazardTrucks", fleet.hazardTrucks);
 
             if (days < 1 || days > 60) {
@@ -488,9 +491,10 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
                 return;
             }
             if (fleet.normalTrucks < 0 || fleet.normalTrucks > 20 || fleet.hazardTrucks < 0 ||
-                fleet.hazardTrucks > 10 || !(fleet.normalCapacity > 0) || fleet.normalCapacity > 100000) {
+                fleet.hazardTrucks > 10 || !(fleet.normalCapacity > 0) || fleet.normalCapacity > 100000 ||
+                !(fleet.normalKmLimit > 0) || fleet.normalKmLimit > 5000) {
                 sendError(res, 400, "bad_fleet",
-                          "normalTrucks 0-20, hazardTrucks 0-10, normalCapacity 1-100000");
+                          "normalTrucks 0-20, hazardTrucks 0-10, normalCapacity 1-100000, normalKmLimit 1-5000");
                 return;
             }
 

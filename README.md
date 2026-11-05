@@ -272,6 +272,8 @@ Each day, homes are sorted most full first, and a clash goes to the most overdue
 A truck visits its homes in that order, emptying any later stop that lies on its way, and then unloads at the nearest disposal site for each waste type it carries:
 $$\text{Depot} \longrightarrow \text{Home}_1 \longrightarrow \dots \longrightarrow \text{Home}_k \longrightarrow \text{Disposal site}_1 \longrightarrow \dots \longrightarrow \text{Disposal site}_m$$
 
+After dumping, the truck goes back out for another trip if it can finish that trip and still reach the depot within its daily km limit. It ends the day at the depot, and that drive counts in its km.
+
 #### B. Hazard Preemption Mechanism
 When the waste classification engine identifies a waste description as hazardous (`medical` or `chemical`):
 1. **Bypasses Schedule Queue**: The pickup skips the standard scheduler queue and due-date wait intervals.

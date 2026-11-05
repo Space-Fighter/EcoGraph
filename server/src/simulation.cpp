@@ -88,46 +88,85 @@ DayReport Simulation::playDay(Graph& g, const Scheduler& sched, bool autoCollect
         else reachable.push_back(normalHomes[i]);
     }
 
-    // ---- Normal trucks: first-fit in strategy order. A truck always takes at least one
-    // home (even an overflowing one bigger than its capacity); otherwise load must fit.
-    std::vector<std::string> ordered = strategy.order(g, reachable, now());
+    // ---- Normal trucks: each takes turns running a trip, filled in strategy order. A trip's first
+    // home always fits (even one bigger than the truck); otherwise load must fit. A trip only
+    // goes ahead if the truck can finish it and still reach the depot within its km limit.
+    std::vector<std::string> pool = strategy.order(g, reachable, now());
     std::vector<TruckRun> trucks;
+    std::vector<std::string> truckAt;
+    std::vector<bool> finished;
     for (int t = 0; t < fleet.normalTrucks; ++t) {
         TruckRun run;
         run.id = "N" + std::to_string(t + 1);
         run.kind = "normal";
         run.capacity = fleet.normalCapacity;
         trucks.push_back(run);
+        truckAt.push_back(depots.empty() ? std::string() : depots[0]);
+        finished.push_back(false);
     }
-    for (size_t i = 0; i < ordered.size(); ++i) {
-        double load = sched.fillLevel(g.getNode(ordered[i]), now());
-        bool placed = false;
-        for (size_t t = 0; t < trucks.size() && !placed; ++t) {
-            if (trucks[t].homes.empty() || trucks[t].load + load <= trucks[t].capacity) {
-                trucks[t].homes.push_back(ordered[i]);
-                trucks[t].load += load;
-                placed = true;
+    const std::string depot = depots.empty() ? std::string() : depots[0];
+    bool anyTrip = true;
+    while (anyTrip && !pool.empty()) {
+        anyTrip = false;
+        for (size_t t = 0; t < trucks.size() && !pool.empty(); ++t) {
+            if (finished[t]) continue;
+            std::vector<std::string> trip;
+            double tripLoad = 0;
+            for (size_t i = 0; i < pool.size(); ++i) {
+                double load = sched.fillLevel(g.getNode(pool[i]), now());
+                if (trip.empty() || tripLoad + load <= fleet.normalCapacity) {
+                    trip.push_back(pool[i]);
+                    tripLoad += load;
+                }
             }
+            // Drop the emptiest homes until the trip fits in what is left of the truck's km.
+            RouteResult route;
+            while (!trip.empty()) {
+                route = strategy.buildRoute(g, trip, now(), truckAt[t]);
+                const std::string end = route.segments.empty() || route.segments.back().path.empty()
+                                            ? truckAt[t]
+                                            : route.segments.back().path.back();
+                double back = shortestPath(g, end, depot).cost;
+                if (back >= 0 && trucks[t].cost + route.totalCost + back <= fleet.normalKmLimit) break;
+                tripLoad -= sched.fillLevel(g.getNode(trip.back()), now());
+                trip.pop_back();
+            }
+            if (trip.empty()) {
+                finished[t] = true;
+                continue;
+            }
+            anyTrip = true;
+            double served = 0;
+            for (size_t i = 0; i < trip.size(); ++i) {
+                const std::string& id = trip[i];
+                pool.erase(std::remove(pool.begin(), pool.end(), id), pool.end());
+                if (contains(route.unreachable, id)) {
+                    rep.failed.push_back(id);
+                } else {
+                    served += sched.fillLevel(g.getNode(id), now());
+                    trucks[t].homes.push_back(id);
+                    pickUp(id, "route", trucks[t].id);
+                }
+            }
+            trucks[t].segments.insert(trucks[t].segments.end(), route.segments.begin(), route.segments.end());
+            trucks[t].cost += route.totalCost;
+            trucks[t].load += served;
+            trucks[t].tripLoads.push_back(served);
+            ++trucks[t].trips;
+            if (!route.segments.empty() && !route.segments.back().path.empty()) truckAt[t] = route.segments.back().path.back();
         }
-        // Only a home that is due counts as waiting. The rest simply were not needed today.
-        if (!placed && sched.isDue(g.getNode(ordered[i]), now())) rep.carriedOver.push_back(ordered[i]);
+    }
+    // Only a home that is due counts as waiting. The rest simply were not needed today.
+    for (size_t i = 0; i < pool.size(); ++i) {
+        if (sched.isDue(g.getNode(pool[i]), now())) rep.carriedOver.push_back(pool[i]);
     }
     for (size_t t = 0; t < trucks.size(); ++t) {
-        if (trucks[t].homes.empty()) continue;
-        RouteResult r = strategy.buildRoute(g, trucks[t].homes, now());
-        trucks[t].segments = r.segments;
-        trucks[t].cost = r.totalCost;
-        std::vector<std::string> served;
-        for (size_t i = 0; i < trucks[t].homes.size(); ++i) {
-            const std::string& id = trucks[t].homes[i];
-            if (contains(r.unreachable, id)) {
-                rep.failed.push_back(id);
-            } else {
-                served.push_back(id);
-                pickUp(id, "route", trucks[t].id);
-            }
-        }
-        trucks[t].homes = served;
+        if (trucks[t].trips == 0) continue;
+        RouteResult home;
+        home.segments = trucks[t].segments;
+        RouteStrategy::returnToDepot(g, home);
+        trucks[t].segments = home.segments;
+        trucks[t].cost += home.totalCost;
         rep.totalCost += trucks[t].cost;
         rep.trucks.push_back(trucks[t]);
     }

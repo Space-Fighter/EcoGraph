@@ -35,8 +35,11 @@ public:
     virtual std::vector<std::string> order(const Graph& g, const std::vector<std::string>& homeIds,
                                            std::time_t now) const = 0;
 
+    // Starts from the depot unless a start location is given (a truck on a later trip).
     RouteResult buildRoute(const Graph& g, const std::vector<std::string>& homeIds,
-                           std::time_t now) const;
+                           std::time_t now, const std::string& start = std::string()) const;
+    // Adds the drive from a route's last stop back to the depot.
+    static void returnToDepot(const Graph& g, RouteResult& r);
 
 protected:
     // Splits homeIds into safe homes and hazardous ones using classifyWaste().

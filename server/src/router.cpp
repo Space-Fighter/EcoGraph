@@ -70,15 +70,22 @@ std::string RouteStrategy::nearestDisposalSite(const Graph& g, const std::string
     return std::string();
 }
 
+void RouteStrategy::returnToDepot(const Graph& g, RouteResult& r) {
+    if (r.segments.empty() || r.segments.back().path.empty()) return;
+    const std::string from = r.segments.back().path.back();
+    const std::string depot = depotId(g);
+    if (from != depot) addLeg(g, r, from, depot, from + "->" + depot);
+}
+
 RouteResult RouteStrategy::buildRoute(const Graph& g, const std::vector<std::string>& homeIds,
-                                      std::time_t now) const {
+                                      std::time_t now, const std::string& start) const {
     RouteResult r;
     r.mode = mode();
     std::vector<std::string> safe;
     splitHazardous(g, homeIds, safe, r.skippedHazardous);
     std::vector<std::string> ordered = order(g, safe, now);
 
-    std::string current = depotId(g);
+    std::string current = start.empty() ? depotId(g) : start;
     std::vector<std::string> disposalTypes;  // distinct disposal site types needed, in pickup order
     std::set<std::string> done;  // homes already emptied (including en route)
     auto noteDisposalType = [&](const std::string& home) {

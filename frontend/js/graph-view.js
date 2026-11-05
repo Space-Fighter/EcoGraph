@@ -776,8 +776,8 @@ const GraphView = (() => {
     const truck = truckAt(p);
     if (truck) {
       tipFor = 'truck:' + truck.id;
-      const load = truck.run.kind === 'normal' ? truck.run.load.toFixed(0) + ' / ' + truck.run.capacity.toFixed(0) + ' kg'
-                                              : truck.run.load.toFixed(0) + ' kg';
+      const kg = truck.run.load.toFixed(0) + ' kg';
+      const load = truck.run.kind === 'normal' ? truck.run.trips + (truck.run.trips === 1 ? ' trip, ' : ' trips, ') + kg : kg;
       showTip([truck.id + ' (' + truck.kind + ')', load + ' · ' + truck.run.cost.toFixed(1) + ' km',
                'Stops: ' + (truck.run.homes.join(', ') || 'none'), 'Click to follow'], p.px, p.py);
       return true;

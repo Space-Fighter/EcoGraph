@@ -41,7 +41,7 @@
         <div class="row">
           <label><input type="checkbox" id="sim-auto" checked> Send trucks out each day</label>
         </div>
-        <p class="rule-note">Trucks go to the fullest homes first. If two are equally full, the most overdue goes first. Homes under 80% wait.</p>
+        <p class="rule-note">Trucks go to the fullest homes first. If two are equally full, the most overdue goes first.</p>
         <div class="fleet">
           <label>Normal trucks <input type="number" id="fleet-normal" value="5" min="0" max="20"></label>
           <label>Capacity / truck (kg) <input type="number" id="fleet-capacity" value="1000" min="1" max="100000"></label>
@@ -75,8 +75,8 @@
           <select id="builder-type">
             <option value="home">Household cluster</option>
             <option value="home-haz">Hazardous site (clinic, lab, workshop)</option>
-            <option value="bin">Waste bin / facility</option>
-            <option value="bin-haz">Hazardous waste facility</option>
+            <option value="disposal_site">Disposal site</option>
+            <option value="disposal_site-haz">Hazardous disposal site</option>
             <option value="junction">Road junction</option>
           </select>
           <input type="number" id="builder-count-input" value="10" min="1" max="100" title="How many to add">
@@ -108,7 +108,7 @@
           <select id="db-type">
             <option value="">All types</option>
             <option value="home">Homes</option>
-            <option value="bin">Bins</option>
+            <option value="disposal_site">Disposal sites</option>
             <option value="junction">Junctions</option>
             <option value="depot">Depot</option>
           </select>
@@ -147,7 +147,7 @@
           <span><img src="assets/sprites/house-a.svg" alt="">Homes</span>
           <span><img src="assets/sprites/tower-a.svg" alt="">Shops and offices</span>
           <span><img src="assets/sprites/factory.svg" alt="">Factories</span>
-          <span><img src="assets/sprites/clinic.svg" alt="">Hazardous site</span>
+          <span><img src="assets/sprites/hazard-sign.svg" alt="">Hazardous site</span>
           <span><img src="assets/sprites/disposal-sign.svg" alt="">Disposal site (routes end here)</span>
         </div>
         <div class="legend-row">

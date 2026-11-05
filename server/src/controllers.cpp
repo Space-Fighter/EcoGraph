@@ -242,7 +242,7 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
             else if (type == "disposal_site") kind = GenKind::DisposalSite;
             else if (type == "junction") kind = GenKind::Junction;
             else {
-                sendError(res, 400, "bad_type", "type must be \"home\", \"disposalSite\" or \"junction\"");
+                sendError(res, 400, "bad_type", "type must be \"home\", \"disposal_site\" or \"junction\"");
                 return;
             }
             if (hazardous && kind == GenKind::Junction) {
@@ -295,7 +295,7 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
             else if (type == "disposal_site") kind = GenKind::DisposalSite;
             else if (type == "junction") kind = GenKind::Junction;
             else {
-                sendError(res, 400, "bad_type", "type must be \"home\", \"disposalSite\" or \"junction\"");
+                sendError(res, 400, "bad_type", "type must be \"home\", \"disposal_site\" or \"junction\"");
                 return;
             }
             if (count < 1 || count > 100) {

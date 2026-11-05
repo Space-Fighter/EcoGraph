@@ -9,7 +9,7 @@ const DatabaseView = (() => {
 
   const NODE_COLS = [
     ['id', 'ID'], ['name', 'Name'], ['area', 'Locality'], ['type', 'Type'], ['zone', 'Zone'],
-    ['lat', 'Lat'], ['lng', 'Lng'], ['origin', 'Origin'], ['disposalType', 'DisposalSite type'], ['waste', 'Waste'],
+    ['lat', 'Lat'], ['lng', 'Lng'], ['origin', 'Origin'], ['disposalType', 'Disposal type'], ['waste', 'Waste'],
     ['fillRate', 'Fill rate (kg/day)'], ['capacity', 'Capacity (kg)'], ['fillLevel', 'Fill level (kg)'],
     ['percentFull', '% full'], ['lastCollected', 'Last collected'], ['daysSinceCollected', 'Days since'],
     ['intervalDays', 'Interval (d)'], ['nextDue', 'Next due'], ['overdueByDays', 'Overdue (d)'],
@@ -96,7 +96,7 @@ const DatabaseView = (() => {
       tr.appendChild(cell(n.id));
       tr.appendChild(cell(n.name || ''));
       tr.appendChild(cell(n.area || ''));
-      tr.appendChild(cell(n.type));
+      tr.appendChild(cell(n.type.replace('_', ' ')));
       tr.appendChild(cell(n.zone));
       tr.appendChild(cell(num(n.lat, 4), 'num'));
       tr.appendChild(cell(num(n.lng, 4), 'num'));

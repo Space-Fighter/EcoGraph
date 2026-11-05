@@ -140,7 +140,7 @@ GeneratedBatch generateNodes(Graph& g, const std::vector<Area>& areas, GenKind k
                 n.fillRate = roundTo(uniform(rng, 100, 250), 10);
                 n.capacity = n.fillRate * std::uniform_int_distribution<int>(8, 12)(rng);
             }
-            n.name = "New " + n.disposalType + " disposalSite " + n.id + ", " + area.name;
+            n.name = "New " + n.disposalType + " disposal site " + n.id + ", " + area.name;
         } else {
             n.type = NodeType::Junction;
             n.zone = ZoneType::Arterial;

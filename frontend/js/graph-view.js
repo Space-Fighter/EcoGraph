@@ -747,7 +747,7 @@ const GraphView = (() => {
 
   function kindOf(n) {
     if (n.type === 'home') return n.hazardous ? 'hazardous site' : 'household / business cluster';
-    if (n.type === 'disposal_site') return 'disposal site (' + (n.disposalType || 'disposal_site') + ')';
+    if (n.type === 'disposal_site') return 'disposal site (' + (n.disposalType || 'general') + ')';
     return n.type;
   }
 

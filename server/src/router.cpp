@@ -222,7 +222,7 @@ HazardResult dispatchHazard(const Graph& g, const std::string& locationId) {
     }
     if (bestSite.empty()) {
         out.error = "no_hazard_route";
-        out.message = "No road connects " + locationId + " to a hazardous-waste disposalSite";
+        out.message = "No road connects " + locationId + " to a hazardous-waste disposal site";
         return out;
     }
 

@@ -1,1 +1,0 @@
-{"version":"0.0.1","configurations":[{"name":"ecograph","runtimeExecutable":"C:/Users/TEJASJ~1/AppData/Local/Temp/claude/c569ab9a8c8ce919/b54d2142-fadd-4d6e-88bf-21f0faca5968/scratchpad/bin/ecorouting.exe","runtimeArgs":["8080","server/data/city.json","frontend"],"port":8080}]}

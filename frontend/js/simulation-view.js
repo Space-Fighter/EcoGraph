@@ -93,39 +93,6 @@ const SimulationView = (() => {
     while (list.children.length > 60) list.removeChild(list.lastChild);
   }
 
-  function renderTrucks(trucks) {
-    const list = $('truck-list');
-    list.replaceChildren();
-    if (!trucks.length) {
-      const li = document.createElement('li');
-      li.className = 'empty';
-      li.textContent = 'No trucks went out on this day.';
-      list.appendChild(li);
-      return;
-    }
-    trucks.forEach((t) => {
-      const li = document.createElement('li');
-      const row = document.createElement('div');
-      row.className = 'truck-row';
-      const img = document.createElement('img');
-      img.src = 'assets/sprites/truck-' + (t.kind === 'hazard' ? 'hazard' : 'normal') + '-se.svg';
-      img.alt = '';
-      const text = document.createElement('span');
-      const name = document.createElement('b');
-      const load = loadText(t);
-      name.textContent = t.id + ' · ' + load;
-      const stops = document.createElement('small');
-      stops.textContent = (t.homes.length ? t.homes.join(', ') : 'no stops') + (t.disposalSite ? ' → ' + t.disposalSite : '');
-      text.append(name, stops);
-      const km = document.createElement('span');
-      km.className = 'km';
-      km.textContent = t.cost.toFixed(1) + ' km';
-      row.append(img, text, km);
-      li.appendChild(row);
-      list.appendChild(li);
-    });
-  }
-
   async function refreshViews() {
     await ScheduleView.refresh();
     await DatabaseView.refreshIfVisible();
@@ -191,7 +158,6 @@ const SimulationView = (() => {
         addHistory(d);
         await refreshViews();
         const playing = GraphView.animateDay(d.trucks, truckArrived);
-        renderTrucks(d.trucks);
         await playing;
         await Api.settle();
         await refreshViews();
@@ -214,12 +180,6 @@ const SimulationView = (() => {
       await GraphView.rebuild(graph);
       CityBuilder.reset(graph);
       $('sim-history').replaceChildren();
-      const list = $('truck-list');
-      list.replaceChildren();
-      const li = document.createElement('li');
-      li.className = 'empty';
-      li.textContent = 'Trucks appear here once a day is played.';
-      list.appendChild(li);
       showStatus(res.simulation);
       await refreshViews();
     } catch (e) {

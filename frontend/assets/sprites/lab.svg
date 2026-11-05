@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="60" height="62" viewBox="-30 -46 60 62" data-ax="30" data-ay="46">
+<path d="M-9.2216 -37.5 V-9.5 A6.2216000000000005 3.1108000000000002 0 0 0 3.2216 -9.5 V-37.5 Z" fill="#a3adaf" stroke="#20242e" stroke-width="0.9"/>
+<ellipse cx="-3.0000000000000004" cy="-37.5" rx="6.2216000000000005" ry="3.1108000000000002" fill="#dfe9eb" stroke="#20242e" stroke-width="0.9"/>
+<polygon points="-27.2,-24.0 4.0,-8.4 4.0,13.6 -27.2,-2.0" fill="#68a39d" stroke="#20242e" stroke-width="0.9" stroke-linejoin="round"/>
+<polygon points="27.2,-20.0 4.0,-8.4 4.0,13.6 27.2,2.0" fill="#4f7b77" stroke="#20242e" stroke-width="0.9" stroke-linejoin="round"/>
+<polygon points="-4.0,-35.6 27.2,-20.0 4.0,-8.4 -27.2,-24.0" fill="#96d1cb" stroke="#20242e" stroke-width="0.9" stroke-linejoin="round"/>
+<polygon points="-25.6,-17.4 -21.0,-15.1 -21.0,-8.9 -25.6,-11.2" fill="#2e6f6c"/>
+<polygon points="-17.8,-13.5 -13.2,-11.2 -13.2,-5.0 -17.8,-7.3" fill="#2e6f6c"/>
+<polygon points="-10.0,-9.6 -5.4,-7.3 -5.4,-1.1 -10.0,-3.4" fill="#2e6f6c"/>
+<polygon points="-2.2,-5.7 2.4,-3.4 2.4,2.8 -2.2,0.5" fill="#2e6f6c"/>
+<polygon points="25.7,-13.4 21.0,-11.1 21.0,-4.9 25.7,-7.2" fill="#2e6f6c"/>
+<polygon points="17.9,-9.6 13.3,-7.2 13.3,-1.0 17.9,-3.4" fill="#2e6f6c"/>
+<polygon points="10.2,-5.7 5.5,-3.4 5.5,2.8 10.2,0.5" fill="#2e6f6c"/>
+<polygon points="-14.8,-6.8 -8.0,-3.4 -8.0,7.6 -14.8,4.2" fill="#25504e" stroke="#20242e" stroke-width="0.9" stroke-linejoin="round"/>
+<polygon points="0.0,-44.0 2.0,-43.0 2.0,-35.0 7.2,-20.4 -5.2,-26.6 0.0,-36.0" fill="#e9fbff" stroke="#20242e" stroke-width="0.9" stroke-linejoin="round"/>
+<polygon points="5.4,-24.3 7.2,-20.4 -5.2,-26.6 -3.4,-28.7" fill="#6ad36e"/>
+<g class="lights"><polygon points="-25.6,-17.4 -21.0,-15.1 -21.0,-8.9 -25.6,-11.2" fill="#ffd76a"/><polygon points="-17.8,-13.5 -13.2,-11.2 -13.2,-5.0 -17.8,-7.3" fill="#ffd76a"/><polygon points="-10.0,-9.6 -5.4,-7.3 -5.4,-1.1 -10.0,-3.4" fill="#ffd76a"/><polygon points="-2.2,-5.7 2.4,-3.4 2.4,2.8 -2.2,0.5" fill="#ffd76a"/><polygon points="25.7,-13.4 21.0,-11.1 21.0,-4.9 25.7,-7.2" fill="#ffd76a"/><polygon points="17.9,-9.6 13.3,-7.2 13.3,-1.0 17.9,-3.4" fill="#ffd76a"/><polygon points="10.2,-5.7 5.5,-3.4 5.5,2.8 10.2,0.5" fill="#ffd76a"/></g>
+</svg>

@@ -3,36 +3,41 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>EcoRouting Engine</title>
-  <script>
-    // Pick the theme before first paint (saved choice, else OS preference).
-    (function () {
-      var theme = 'light';
-      try {
-        var saved = localStorage.getItem('eco-theme');
-        if (saved === 'dark' || saved === 'light') theme = saved;
-        else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) theme = 'dark';
-      } catch (e) {}
-      document.documentElement.dataset.theme = theme;
-    })();
-  </script>
+  <title>EcoGraph</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <header>
-    <h1>EcoRouting Engine</h1>
-    <span class="sub">Hazard-aware path optimisation &amp; fill-rate-adaptive waste scheduling</span>
+  <div id="splash" class="splash">
+    <div class="splash-card glass">
+      <div class="brand-mark" aria-hidden="true"></div>
+      <h1>EcoGraph</h1>
+      <p id="splash-msg" role="status">Loading the city…</p>
+      <div class="splash-bar" aria-hidden="true"><i></i></div>
+    </div>
+  </div>
+
+  <header class="titlebar glass">
+    <div class="brand-mark" aria-hidden="true"></div>
+    <h1>EcoGraph</h1>
+    <span class="sub">Hazard-aware waste routing and fill-rate scheduling</span>
+    <div class="segmented" role="tablist" aria-label="View">
+      <button class="tab active" data-tab="map" role="tab">Map</button>
+      <button class="tab" data-tab="db" role="tab">Database</button>
+    </div>
     <div class="header-right">
-      <button id="theme-toggle" type="button" aria-pressed="false">Dark mode</button>
+      <button id="fit-all" type="button" title="Zoom and centre so every node is visible">Fit all nodes</button>
       <span id="status" class="status">connecting…</span>
     </div>
   </header>
 
   <main>
     <aside>
-      <section>
-        <h2>Simulation <small id="sim-date"></small></h2>
-        <div class="row"><strong id="sim-day">Day 0</strong></div>
+      <details class="panel glass" open>
+        <summary><h2>Simulation <small id="sim-date"></small></h2></summary>
+        <div class="row day-row">
+          <strong id="sim-day" class="day-count">Day 0</strong>
+          <span class="clock" title="Time of day in the city"><i id="sky-icon" class="sky-icon"></i><b id="sim-time">09:00</b> <small id="sim-phase">Morning</small></span>
+        </div>
         <div class="row">
           <label><input type="checkbox" id="sim-auto" checked> Auto-collect what is due each day</label>
         </div>
@@ -43,22 +48,34 @@
               <option value="fifo">FIFO (first due first)</option>
             </select>
           </label>
-          <label>Normal trucks <input type="number" id="fleet-normal" value="3" min="0" max="20"></label>
+          <label>Normal trucks <input type="number" id="fleet-normal" value="5" min="0" max="20"></label>
           <label>Capacity / truck (kg) <input type="number" id="fleet-capacity" value="1000" min="1" max="100000"></label>
           <label>Hazard trucks <input type="number" id="fleet-hazard" value="2" min="0" max="10"></label>
         </div>
+        <label class="speed">Speed
+          <input type="range" id="sim-speed" min="-2" max="2.5" step="0.25" value="0">
+          <output id="sim-speed-label" for="sim-speed">1x</output>
+        </label>
         <div class="row buttons">
           <button id="sim-step">+1 day</button>
           <input type="number" id="sim-days" value="10" min="1" max="60" title="Days to play">
           <button id="sim-play" class="primary">&#9654; Play days</button>
+        </div>
+        <div class="row buttons">
+          <button id="sim-pause" disabled aria-pressed="false">Pause</button>
           <button id="sim-stop" disabled>Stop</button>
           <button id="sim-reset">Reset</button>
         </div>
         <ul id="sim-history" class="due-list history"></ul>
-      </section>
+      </details>
 
-      <section>
-        <h2>City builder <small id="builder-count"></small></h2>
+      <details class="panel glass" open>
+        <summary><h2>Trucks <small id="truck-follow-note"></small></h2></summary>
+        <ul id="truck-list" class="truck-list"><li class="empty">Trucks appear here once a day is played.</li></ul>
+      </details>
+
+      <details class="panel glass" open>
+        <summary><h2>City builder <small id="builder-count"></small></h2></summary>
         <div class="row">
           <select id="builder-type">
             <option value="home">Household cluster</option>
@@ -75,22 +92,20 @@
         </div>
         <div id="builder-msg" class="builder-msg">New nodes are placed inside the localities and linked to the nearest roads.</div>
         <div id="builder-note" class="builder-note"></div>
-      </section>
+      </details>
 
-      <section>
-        <h2>Due for collection <small id="schedule-date"></small></h2>
+      <details class="panel glass" open>
+        <summary><h2>Due for collection <small id="schedule-date"></small></h2></summary>
         <ul id="due-list" class="due-list"></ul>
-      </section>
+      </details>
     </aside>
 
     <div class="canvas-wrap">
-      <div class="tabs">
-        <button class="tab active" data-tab="map">Map</button>
-        <button class="tab" data-tab="db">Database</button>
-        <button id="fit-all" class="tab-action" type="button" title="Zoom and centre so every node is visible">Fit all nodes</button>
+      <div id="map-stage" class="map-stage">
+        <div id="cy"></div>
+        <div id="map-busy" class="map-busy" hidden>Rebuilding the map…</div>
+        <div id="node-tip" class="node-tip" hidden></div>
       </div>
-      <div id="cy"></div>
-      <div id="node-tip" class="node-tip" hidden></div>
 
       <div id="db-panel" class="db-panel" hidden>
         <div class="db-toolbar">
@@ -127,44 +142,61 @@
         <div class="table-wrap"><table id="db-zones"></table></div>
         <h3>Collection log <small>(newest first)</small></h3>
         <div class="table-wrap"><table id="db-log"></table></div>
+        <p class="credit db-credit">Photo: <a href="https://commons.wikimedia.org/wiki/File:Matterhorn_reflection_in_the_Riffelsee_with_the_Milky_Way_galaxy.jpg" target="_blank" rel="noopener">Matterhorn and the Milky Way, Deralpinbergsteiger</a>, CC BY-SA 4.0</p>
       </div>
 
-      <div class="legend">
+      <div class="legend glass">
         <div class="legend-row">
-          <b>Shape</b>
-          <span><svg class="shape" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="2.5" width="11" height="11"/></svg>Depot (trucks start here)</span>
-          <span><svg class="shape" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/></svg>Household / business cluster</span>
-          <span><svg class="shape" viewBox="0 0 16 16" aria-hidden="true"><polygon points="8,2 14.5,13.5 1.5,13.5"/></svg>Disposal site</span>
-          <span><svg class="shape" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.5"/></svg>Road junction</span>
-          <span><svg class="shape" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="3.5" width="13" height="9" rx="3" fill="none" stroke-dasharray="2 2"/></svg>Locality (named box)</span>
+          <b>Buildings</b>
+          <span><img src="assets/sprites/depot.svg" alt="">Depot</span>
+          <span><img src="assets/sprites/house-a.svg" alt="">Homes</span>
+          <span><img src="assets/sprites/tower-a.svg" alt="">Shops and offices</span>
+          <span><img src="assets/sprites/factory.svg" alt="">Factories</span>
+          <span><img src="assets/sprites/clinic.svg" alt="">Hazardous site</span>
+          <span><img src="assets/sprites/disposal-sign.svg" alt="">Disposal site (routes end here)</span>
         </div>
         <div class="legend-row">
-          <b>Zone colour</b>
-          <span><i class="sw residential"></i>residential</span>
-          <span><i class="sw commercial"></i>commercial</span>
-          <span><i class="sw industrial"></i>industrial</span>
-          <span><i class="sw arterial"></i>arterial</span>
+          <b>Road types</b>
+          <span><i class="road arterial"></i>Arterial</span>
+          <span><i class="road industrial"></i>Industrial</span>
+          <span><i class="road commercial"></i>Commercial</span>
+          <span><i class="road residential"></i>Residential</span>
+        </div>
+        <div class="legend-row">
+          <b>Area types</b>
+          <span><i class="area residential"></i>Residential</span>
+          <span><i class="area commercial"></i>Commercial</span>
+          <span><i class="area industrial"></i>Industrial</span>
         </div>
         <div class="legend-row">
           <b>Status</b>
-          <span><i class="sw due"></i>due now</span>
-          <span><i class="sw overflow"></i>overflowing</span>
-          <span><i class="line route"></i>route</span>
-          <span><i class="line hazard"></i>hazard route</span>
+          <span><img src="assets/sprites/bubble-due.svg" alt="">Due</span>
+          <span><img src="assets/sprites/bubble-overflow.svg" alt="">Overflowing</span>
+          <span><i class="fill-sample"></i>10 fullest</span>
+          <span><i class="line route"></i>Truck route</span>
+          <span><i class="line hazard"></i>Hazard route</span>
+          <small class="credit credit-day">Photo: <a href="https://commons.wikimedia.org/wiki/File:Oeschinensee_panorama_view_with_turquoise_water.jpg" target="_blank" rel="noopener">Oeschinensee, Deralpinbergsteiger</a>, CC BY-SA 4.0</small>
+          <small class="credit credit-night">Photo: <a href="https://commons.wikimedia.org/wiki/File:Matterhorn_reflection_in_the_Riffelsee_with_the_Milky_Way_galaxy.jpg" target="_blank" rel="noopener">Matterhorn and the Milky Way, Deralpinbergsteiger</a>, CC BY-SA 4.0</small>
         </div>
       </div>
     </div>
   </main>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.2/cytoscape.min.js"></script>
+  <svg id="glass-filters" width="0" height="0" style="position:absolute" aria-hidden="true"></svg>
+
+  <script src="https://cdn.jsdelivr.net/npm/pixi.js@8.6.6/dist/pixi.min.js"></script>
   <script src="config.js"></script>
   <script src="js/api.js"></script>
+  <script src="js/glass.js"></script>
+  <script src="js/backdrop.js"></script>
+  <script src="js/iso-layout.js"></script>
+  <script src="js/sprites.js"></script>
+  <script src="js/map-bake.js"></script>
   <script src="js/graph-view.js"></script>
   <script src="js/schedule-view.js"></script>
   <script src="js/database-view.js"></script>
   <script src="js/city-builder.js"></script>
   <script src="js/simulation-view.js"></script>
-  <script src="js/theme.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

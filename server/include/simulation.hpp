@@ -36,7 +36,10 @@ struct LogEntry {
 struct DaySummary {
     int day;
     std::time_t time;
-    int overflowCount;     // homes still past 100% at the end of the day, after pickups
+    // Homes and bins past 100% full at three points in the day.
+    int overflowMorning;       // when the day starts
+    int overflowAfterPickups;  // once today's pickups are done
+    int overflowEndOfDay;      // 24 hours of filling later, which is the next day's morning
     int served;            // homes emptied by trucks today
     double totalCost;      // km driven today
 };

@@ -159,6 +159,9 @@ DayReport Simulation::playDay(Graph& g, const Scheduler& sched, bool autoCollect
     for (size_t i = 0; i < dueBins.size(); ++i) {
         rep.emptiedBins.push_back(dueBins[i]);
         collect(g, sched, dueBins[i], "emptied");
+        // Emptied first thing with no truck needed, so it never spends the day overflowing.
+        rep.overflowIds.erase(std::remove(rep.overflowIds.begin(), rep.overflowIds.end(), dueBins[i]),
+                              rep.overflowIds.end());
     }
     return rep;
 }
@@ -170,12 +173,16 @@ DayReport Simulation::advanceDay(Graph& g, const Scheduler& sched, bool autoColl
     DaySummary s;
     s.day = rep.day;
     s.time = rep.time;
-    // Homes still past 100% after today's pickups.
-    s.overflowCount = 0;
+    s.overflowMorning = static_cast<int>(rep.overflowIds.size());
+    s.overflowAfterPickups = 0;
+    s.overflowEndOfDay = 0;
+    const std::time_t endOfDay = rep.time + 86400;
     std::vector<std::string> ids = g.nodeIds();
     for (size_t i = 0; i < ids.size(); ++i) {
         const Node& n = g.getNode(ids[i]);
-        if (n.type == NodeType::Home && sched.percentFull(n, rep.time) > 100.0) ++s.overflowCount;
+        if (n.type != NodeType::Home && n.type != NodeType::Bin) continue;
+        if (sched.percentFull(n, rep.time) > 100.0) ++s.overflowAfterPickups;
+        if (sched.percentFull(n, endOfDay) > 100.0) ++s.overflowEndOfDay;
     }
     s.served = 0;
     for (size_t t = 0; t < rep.trucks.size(); ++t) s.served += static_cast<int>(rep.trucks[t].homes.size());

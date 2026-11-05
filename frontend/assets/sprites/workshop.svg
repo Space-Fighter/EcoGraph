@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="70" height="59" viewBox="-35 -39 70 59" data-ax="35" data-ay="39">
+<polygon points="-29.6,-21.6 3.2,-5.2 3.2,14.8 -29.6,-1.6" fill="#b27234" stroke="#20242e" stroke-width="0.9" stroke-linejoin="round"/>
+<polygon points="29.6,-18.4 3.2,-5.2 3.2,14.8 29.6,1.6" fill="#875627" stroke="#20242e" stroke-width="0.9" stroke-linejoin="round"/>
+<polygon points="-3.2,-34.8 29.6,-18.4 3.2,-5.2 -29.6,-21.6" fill="#e0a062" stroke="#20242e" stroke-width="0.9" stroke-linejoin="round"/>
+<polygon points="-24.4,-13.0 -9.6,-5.6 -9.6,8.4 -24.4,1.0" fill="#4d4a45" stroke="#20242e" stroke-width="0.9" stroke-linejoin="round"/>
+<polygon points="-24.4,-1.8 -9.6,5.6 -9.6,6.4 -24.4,-1.0" fill="#37342f"/>
+<polygon points="-24.4,-4.8 -9.6,2.6 -9.6,3.4 -24.4,-4.0" fill="#37342f"/>
+<polygon points="-24.4,-7.8 -9.6,-0.4 -9.6,0.4 -24.4,-7.0" fill="#37342f"/>
+<polygon points="-24.4,-10.8 -9.6,-3.4 -9.6,-2.6 -24.4,-10.0" fill="#37342f"/>
+<polygon points="23.6,-10.4 10.6,-3.9 10.6,4.1 23.6,-2.4" fill="#34506e"/>
+<polygon points="-3.2,-36.2 -32.4,-21.6 -14.6,-21.7 14.6,-36.3" fill="#444c53" stroke="#20242e" stroke-width="0.9" stroke-linejoin="round"/>
+<polygon points="-32.4,-21.6 3.2,-3.8 -14.6,-21.7" fill="#efe3c8" stroke="#20242e" stroke-width="0.9" stroke-linejoin="round"/>
+<polygon points="14.6,-36.3 -14.6,-21.7 3.2,-3.8 32.4,-18.4" fill="#525b63" stroke="#20242e" stroke-width="0.9" stroke-linejoin="round"/>
+<path d="M-6.4764 2.8000000000000007 V15.8 A3.6764 1.8382 0 0 0 0.8763999999999998 15.8 V2.8000000000000007 Z" fill="#b69622" stroke="#20242e" stroke-width="0.9"/>
+<ellipse cx="-2.8000000000000003" cy="2.8000000000000007" rx="3.6764" ry="1.8382" fill="#f3d157" stroke="#20242e" stroke-width="0.9"/>
+<path d="M-13.276400000000002 0.20000000000000107 V13.200000000000001 A3.6764 1.8382 0 0 0 -5.923600000000001 13.200000000000001 V0.20000000000000107 Z" fill="#303841" stroke="#20242e" stroke-width="0.9"/>
+<ellipse cx="-9.600000000000001" cy="0.20000000000000107" rx="3.6764" ry="1.8382" fill="#656e77" stroke="#20242e" stroke-width="0.9"/>
+<g class="lights"><polygon points="23.6,-10.4 10.6,-3.9 10.6,4.1 23.6,-2.4" fill="#ffd76a"/></g>
+</svg>

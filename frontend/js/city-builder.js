@@ -46,7 +46,7 @@ const CityBuilder = (() => {
     setBusy(true);
     try {
       const res = await Api.generateNodes(params);
-      GraphView.addElements(res.nodes, res.edges);
+      await GraphView.addElements(res.nodes, res.edges);
       total = res.totalNodes;
       added += res.nodes.length;
       const where = Array.from(new Set(res.nodes.map((n) => n.area))).join(', ');

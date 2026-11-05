@@ -1,6 +1,6 @@
 # EcoGraph — Smart Waste Collection Routing & Scheduling System
 
-> **EcoGraph** is an algorithmic, graph-based waste management system built with a high-performance **C++17 backend** and an interactive **Cytoscape.js visualizer**. It replaces inefficient fixed collection routes with **dynamic shortest-path routing**, **risk-weighted hazardous material dispatching**, **fill-rate-adaptive scheduling**, and **time-step simulation**.
+> **EcoGraph** is an algorithmic, graph-based waste management system built with a high-performance **C++17 backend** and an interactive **PixiJS isometric city map**. It replaces inefficient fixed collection routes with **dynamic shortest-path routing**, **risk-weighted hazardous material dispatching**, **fill-rate-adaptive scheduling**, and **time-step simulation**.
 
 ---
 
@@ -47,10 +47,11 @@ Municipal waste collection routes are traditionally static: trucks follow fixed 
   - Built-in simulation engine with advanceable days (1 to 60 days).
   - Features **Auto-Collection** toggles, overflow indicators, and historical collection logs.
 
-- **Interactive Cytoscape.js Frontend & Tabular Database Inspector**
+- **Interactive PixiJS Isometric Map, Liquid Glass Controls & Tabular Database Inspector**
   - Visual graph canvas with live truck movement animations.
   - Distinct styling and animations for hazardous vs. regular routes.
-  - Dark/Light mode theme engine.
+  - Day and night cycle on the map, with the page photo following the time of day.
+  - Speed slider, pause, and follow any truck during playback.
   - Real-time tabular database view with search, filtering, and zone summary metrics.
 
 ---
@@ -63,7 +64,7 @@ EcoGraph operates as a single persistent C++ process that serves both the JSON R
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │                           Browser (Frontend Web UI)                             │
 │  ┌──────────────────┐   ┌────────────────────────┐   ┌───────────────────────┐  │
-│  │  Cytoscape.js    │   │  Simulation & Schedule │   │  Waste Classification │  │
+│  │  PixiJS Map      │   │  Simulation & Schedule │   │  Waste Classification │  │
 │  │ Visual Canvas    │   │   Control Controllers  │   │  & Hazard Dispatch    │  │
 │  └─────────┬────────┘   └───────────┬────────────┘   └───────────┬───────────┘  │
 │            └────────────────────────┼────────────────────────────┘              │
@@ -313,16 +314,20 @@ EcoGraph/
 │   ├── index.html           # Main UI layout (Canvas, Sidebar Controls, DB Table)
 │   ├── config.js            # API base URL configuration
 │   ├── css/
-│   │   └── style.css        # Responsive styles, themes, animations, dark mode
+│   │   └── style.css        # Liquid glass, layout, day and night text colours
 │   └── js/
 │       ├── api.js           # Fetch wrapper for C++ REST API endpoints
 │       ├── app.js           # Application bootstrap & event bindings
 │       ├── city-builder.js  # Interactive city topology builder & node editor
 │       ├── database-view.js # Tabular data grid, search, zone statistics
-│       ├── graph-view.js    # Cytoscape.js graph rendering & truck path animation
+│       ├── graph-view.js    # PixiJS map: buildings, bubbles, trucks, camera, day and night
 │       ├── schedule-view.js # Schedule renderer & due list view
 │       ├── simulation-view.js# Time-step playback controls (+1 day, play, reset)
-│       └── theme.js         # Light/Dark mode state toggle
+│       ├── iso-layout.js    # Isometric plan and road routing (no drawing)
+│       ├── map-bake.js      # Paints the ground, roads and bridges into one texture
+│       ├── sprites.js       # Loads the SVG art into textures
+│       ├── glass.js         # Liquid glass refraction filters
+│       └── backdrop.js      # Chooses the day or night page photo
 │
 └── server/                  # C++ Backend Engine
     ├── CMakeLists.txt       # CMake build configuration

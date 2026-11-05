@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="73" height="125" viewBox="-38 -106 73 125" data-ax="38" data-ay="106">
+<path d="M-6.7871999999999995 -100.4 V-24.4 A6.7871999999999995 3.3935999999999997 0 0 0 6.7871999999999995 -24.4 V-100.4 Z" fill="#53443e" stroke="#20242e" stroke-width="0.9"/>
+<ellipse cx="0" cy="-100.4" rx="6.7871999999999995" ry="3.3935999999999997" fill="#8a7b75" stroke="#20242e" stroke-width="0.9"/>
+<path d="M-7.069999999999999 -96.4 V-88.4 A7.069999999999999 3.5349999999999997 0 0 0 7.069999999999999 -88.4 V-96.4 Z" fill="#a32428" stroke="#20242e" stroke-width="0.9"/>
+<ellipse cx="0" cy="-96.4" rx="7.069999999999999" ry="3.5349999999999997" fill="#de595d" stroke="#20242e" stroke-width="0.9"/>
+<polygon points="-35.6,-28.2 2.4,-9.2 2.4,16.8 -35.6,-2.2" fill="#5a3d34" stroke="#20242e" stroke-width="0.9" stroke-linejoin="round"/>
+<polygon points="32.4,-24.2 2.4,-9.2 2.4,16.8 32.4,1.8" fill="#442e27" stroke="#20242e" stroke-width="0.9" stroke-linejoin="round"/>
+<polygon points="-5.6,-43.2 32.4,-24.2 2.4,-9.2 -35.6,-28.2" fill="#886b62" stroke="#20242e" stroke-width="0.9" stroke-linejoin="round"/>
+<polygon points="-29.2,-14.0 -13.2,-6.0 -13.2,9.0 -29.2,1.0" fill="#2a1a15" stroke="#20242e" stroke-width="0.9" stroke-linejoin="round"/>
+<polygon points="-27.2,-9.0 -15.2,-3.0 -15.2,8.0 -27.2,2.0" fill="#ff7a1a"/>
+<polygon points="-24.8,-3.8 -17.6,-0.2 -17.6,6.8 -24.8,3.2" fill="#ffd23f"/>
+<polygon points="-9.6,-10.2 -1.2,-6.0 -1.2,4.0 -9.6,-0.2" fill="#f4f6f8" stroke="#20242e" stroke-width="0.9" stroke-linejoin="round"/>
+<polygon points="-6.4,-7.1 -4.4,-6.1 -4.4,0.9 -6.4,-0.1" fill="#d62f35"/>
+<polygon points="-8.2,-6.0 -2.6,-3.2 -2.6,-0.2 -8.2,-3.0" fill="#d62f35"/>
+<polygon points="-20.0,-30.0 -2.0,-21.0 -2.0,-15.0 -20.0,-24.0" fill="#41302a" stroke="#20242e" stroke-width="0.9" stroke-linejoin="round"/>
+<polygon points="16.0,-30.0 -2.0,-21.0 -2.0,-15.0 16.0,-24.0" fill="#312420" stroke="#20242e" stroke-width="0.9" stroke-linejoin="round"/>
+<polygon points="-2.0,-39.0 16.0,-30.0 -2.0,-21.0 -20.0,-30.0" fill="#6f5d58" stroke="#20242e" stroke-width="0.9" stroke-linejoin="round"/>
+</svg>

@@ -5,6 +5,7 @@ const DatabaseView = (() => {
   let data = null;
   let sort = { key: 'id', dir: 1 };
   let active = false;
+  let rowsById = null;
 
   const NODE_COLS = [
     ['id', 'ID'], ['name', 'Name'], ['area', 'Locality'], ['type', 'Type'], ['zone', 'Zone'],
@@ -172,18 +173,19 @@ const DatabaseView = (() => {
     table.appendChild(tbody);
   }
 
-  // One row per simulated day: homes still overflowing after that day's pickups.
+  // One row per simulated day: what was overflowing at the start, after pickups and at the end.
   function renderDays() {
     const table = $('db-days');
     table.replaceChildren();
-    header(table, [['day', 'Day'], ['date', 'Date'], ['overflowCount', 'Overflowing bins'], ['served', 'Homes served'],
+    header(table, [['day', 'Day'], ['date', 'Date'], ['overflowMorning', 'Overflowing: morning'], ['served', 'Homes served'],
+                   ['overflowAfterPickups', 'Overflowing: after pickups'], ['overflowEndOfDay', 'Overflowing: end of day'],
                    ['totalCost', 'Distance (km)']], false);
     const tbody = document.createElement('tbody');
     const days = data.days || [];
     if (!days.length) {
       const tr = document.createElement('tr');
       const td = cell('No days simulated yet. Use +1 day or Play days.');
-      td.colSpan = 5;
+      td.colSpan = 7;
       tr.appendChild(td);
       tbody.appendChild(tr);
     }
@@ -191,8 +193,10 @@ const DatabaseView = (() => {
       const tr = document.createElement('tr');
       tr.appendChild(cell(d.day, 'num'));
       tr.appendChild(cell(d.date));
-      tr.appendChild(cell(d.overflowCount, 'num'));
+      tr.appendChild(cell(d.overflowMorning, 'num'));
       tr.appendChild(cell(d.served, 'num'));
+      tr.appendChild(cell(d.overflowAfterPickups, 'num'));
+      tr.appendChild(cell(d.overflowEndOfDay, 'num'));
       tr.appendChild(cell(num(d.totalCost), 'num'));
       tbody.appendChild(tr);
     });
@@ -212,15 +216,26 @@ const DatabaseView = (() => {
   function showTab(name) {
     active = name === 'db';
     document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
-    $('cy').hidden = active;
+    $('map-stage').hidden = active;
     $('fit-all').hidden = active;
     document.querySelector('.legend').hidden = active;
     $('db-panel').hidden = !active;
+    GraphView.setVisible(!active);
+    Backdrop.setDatabaseOpen(active);
     if (active) refresh().catch((e) => { $('db-asof').textContent = e.message; });
-    else GraphView.resize();
+  }
+
+  // Fill level of one node for the map's hover sign. Fetched once per schedule change.
+  function fillOf(id) {
+    if (!rowsById) {
+      rowsById = Api.getDatabase().then((d) => new Map(d.nodes.map((n) => [n.id, n])));
+      rowsById.catch(() => { rowsById = null; });
+    }
+    return rowsById.then((rows) => rows.get(id));
   }
 
   function init() {
+    ScheduleView.onUpdate(() => { rowsById = null; });
     document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => showTab(t.dataset.tab)));
     ['db-search', 'db-type', 'db-zone', 'db-status'].forEach((id) => {
       $(id).addEventListener('input', () => { if (data) renderNodes(); });
@@ -230,5 +245,5 @@ const DatabaseView = (() => {
   // Called by other modules after the data changed (simulation step, collection...).
   function refreshIfVisible() { return active ? refresh() : Promise.resolve(); }
 
-  return { init, refresh, refreshIfVisible };
+  return { init, refresh, refreshIfVisible, fillOf };
 })();

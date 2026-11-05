@@ -557,7 +557,9 @@ void registerRoutes(httplib::Server& svr, AppState& state, const std::string& co
             const DaySummary& d = summary[i];
             days.push_back({{"day", d.day},
                             {"date", formatDate(d.time)},
-                            {"overflowCount", d.overflowCount},
+                            {"overflowMorning", d.overflowMorning},
+                            {"overflowAfterPickups", d.overflowAfterPickups},
+                            {"overflowEndOfDay", d.overflowEndOfDay},
                             {"served", d.served},
                             {"totalCost", d.totalCost}});
         }

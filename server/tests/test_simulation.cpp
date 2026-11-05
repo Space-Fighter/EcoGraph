@@ -218,6 +218,12 @@ static void testBinsAndManual() {
     CHECK(d1.emptiedBins.size() == 1 && d1.emptiedBins[0] == "BIN");
     CHECK(g.getNode("BIN").lastCollected == sim.now());
 
+    // A bin past 100% is emptied first thing, so the day does not report it as overflowing.
+    g.getNodeMutable("BIN").lastCollected = sim.now() - static_cast<std::time_t>(DAY);
+    DayReport d2 = sim.advanceDay(g, s, true, st, f);
+    CHECK(has(d2.emptiedBins, "BIN"));
+    CHECK(!has(d2.overflowIds, "BIN"));
+
     sim.collect(g, s, "H1", "manual");
     CHECK(sim.log().back().action == "manual" && sim.log().back().truck.empty());
     CHECK(s.percentFull(g.getNode("H1"), sim.now()) < 1e-6);
@@ -298,7 +304,31 @@ static void testUnreachableDoesNotUseCapacity() {
     CHECK(d5.carriedOver.size() == 2);  // the other two reachable homes wait for tomorrow
 }
 
+// The day's summary counts overflow at the start, after pickups, and after the day's filling.
+static void testDaySummaryOverflow() {
+    Graph g = makeGraph();
+    Scheduler s;
+    Simulation sim;
+    sim.start(BASE);
+    PriorityRouteBuilder st;
+    Fleet f;
+    f.normalTrucks = 0;
+    f.hazardTrucks = 2;
+    advanceTo(sim, g, s, 4, st, f);
+
+    sim.advanceDay(g, s, true, st, f);  // day 5: HZ1 is at 120%, H1-H3 sit at exactly 100%
+    const DaySummary d5 = sim.summary().back();
+    CHECK(d5.overflowMorning == 1);       // HZ1
+    CHECK(d5.overflowAfterPickups == 0);  // the hazard truck emptied HZ1
+    CHECK(d5.overflowEndOfDay == 3);      // a day of filling takes H1-H3 to 120%
+
+    // "End of day" and the next morning are the same moment.
+    DayReport d6 = sim.advanceDay(g, s, false, st, f);
+    CHECK(static_cast<int>(d6.overflowIds.size()) == d5.overflowEndOfDay);
+}
+
 int main() {
+    testDaySummaryOverflow();
     testClockAndDue();
     testTruckCapacityAndCarryOver();
     testHazardQueue();

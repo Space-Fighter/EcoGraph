@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.28 (MiKTeX 25.12) (preloaded format=pdflatex 2026.9.1)  10 NOV 2026 13:16
+This is pdfTeX, Version 3.141592653-2.6-1.40.28 (MiKTeX 25.12) (preloaded format=pdflatex 2026.9.1)  10 NOV 2026 13:33
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1150,29 +1150,7 @@ File: ts1ntxtlf.fd 2015/01/18 v1.0 fd file for TS1/ntxtlf
 LaTeX Font Info:    Font shape `TS1/ntxtlf/m/n' will be
 (Font)              scaled to size 11.0pt on input line 832.
  [10{C:/Users/Tejas Jain/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/tex-gyre
-/q-ts1.enc}] [11] [12]
-<shot_map.jpg, id=121, 3212.0pt x 2007.5pt>
-File: shot_map.jpg Graphic file (type jpg)
-<use shot_map.jpg>
-Package pdftex.def Info: shot_map.jpg  used on input line 987.
-(pdftex.def)             Requested size: 482.5634pt x 301.60211pt.
-<shot_routes.jpg, id=122, 3212.0pt x 2007.5pt>
-File: shot_routes.jpg Graphic file (type jpg)
-<use shot_routes.jpg>
-Package pdftex.def Info: shot_routes.jpg  used on input line 991.
-(pdftex.def)             Requested size: 482.5634pt x 301.60211pt.
- [13 <./shot_map.jpg> <./shot_routes.jpg>]
-<shot_db_days_nodes.jpg, id=128, 2489.3pt x 1433.355pt>
-File: shot_db_days_nodes.jpg Graphic file (type jpg)
-<use shot_db_days_nodes.jpg>
-Package pdftex.def Info: shot_db_days_nodes.jpg  used on input line 997.
-(pdftex.def)             Requested size: 491.0901pt x 282.77284pt.
-<shot_db_groups_log.jpg, id=129, 2489.3pt x 1465.475pt>
-File: shot_db_groups_log.jpg Graphic file (type jpg)
-<use shot_db_groups_log.jpg>
-Package pdftex.def Info: shot_db_groups_log.jpg  used on input line 1001.
-(pdftex.def)             Requested size: 491.0901pt x 289.1095pt.
- [14 <./shot_db_days_nodes.jpg> <./shot_db_groups_log.jpg>] (Phase-3.aux)
+/q-ts1.enc}] [11] [12] (Phase-3.aux)
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2020/03/25>
@@ -1186,13 +1164,13 @@ Package rerunfilecheck Info: File `Phase-3.out' has not changed.
 (rerunfilecheck)             Checksum: D41D8CD98F00B204E9800998ECF8427E;0.
  ) 
 Here is how much of TeX's memory you used:
- 24531 strings out of 467871
- 469756 string characters out of 5415921
- 882573 words of memory out of 5000000
- 52968 multiletter control sequences out of 15000+600000
+ 24497 strings out of 467871
+ 468967 string characters out of 5415921
+ 882531 words of memory out of 5000000
+ 52936 multiletter control sequences out of 15000+600000
  709411 words of font info for 98 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 84i,15n,94p,890b,959s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 84i,15n,94p,839b,959s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <C:/Users/Tejas Jain/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfont
 s/cm/cmmi8.pfb><C:/Users/Tejas Jain/AppData/Local/Programs/MiKTeX/fonts/type1/p
 ublic/amsfonts/cm/cmsy10.pfb><C:/Users/Tejas Jain/AppData/Local/Programs/MiKTeX
@@ -1206,9 +1184,9 @@ s/t1xtt.pfb><C:/Users/Tejas Jain/AppData/Local/Programs/MiKTeX/fonts/type1/publ
 ic/newtx/ztmb.pfb><C:/Users/Tejas Jain/AppData/Local/Programs/MiKTeX/fonts/type
 1/public/newtx/ztmr.pfb><C:/Users/Tejas Jain/AppData/Local/Programs/MiKTeX/font
 s/type1/public/newtx/ztmri.pfb>
-Output written on Phase-3.pdf (14 pages, 8628412 bytes).
+Output written on Phase-3.pdf (12 pages, 1556891 bytes).
 PDF statistics:
- 188 PDF objects out of 1000 (max. 8388607)
- 15 named destinations out of 1000 (max. 500000)
- 158 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 174 PDF objects out of 1000 (max. 8388607)
+ 13 named destinations out of 1000 (max. 500000)
+ 138 words of extra memory for PDF output out of 10000 (max. 10000000)
 

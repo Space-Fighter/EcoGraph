@@ -54,6 +54,17 @@
     \end{minipage}}\par
 }
 
+% second half of a box split across pages: same frame, no title
+\newcommand{\diagboxcont}[1]{%
+    \par\noindent
+    \fbox{\begin{minipage}{\dimexpr\textwidth-2\fboxsep-2\fboxrule\relax}
+        \vspace{4pt}
+        \fontsize{10}{12.5}\selectfont
+        #1
+        \vspace{4pt}
+    \end{minipage}}\par
+}
+
 % ============================================================
 % COLORS
 % ============================================================
@@ -193,6 +204,21 @@
     {\fontsize{10}{12}\selectfont #2\par}
 }
 
+% ---- Types box helpers ------------------------------------------
+% \ticon{sprite}{height}: one icon from the front end (icons/icon-<sprite>.png)
+\newcommand{\ticon}[2]{\includegraphics[height=#2]{icons/icon-#1.png}}
+% \typehead{title}: small heading inside the Types box
+\newcommand{\typehead}[1]{\par\vspace{2mm}{\color{GEUBlue}\bfseries\fontsize{10.5}{13}\selectfont #1}\par\vspace{1mm}}
+\newcommand{\typeheadfirst}[1]{{\color{GEUBlue}\bfseries\fontsize{10.5}{13}\selectfont #1}\par\vspace{1mm}}
+% \typecol{width}{icons}{label}: icons centred over a short label
+\newcommand{\typecol}[3]{\begin{minipage}[b]{#1}\centering #2\\[1mm]{\fontsize{9}{11}\selectfont #3}\end{minipage}}
+% \roadswatch{colour}: a short thick line in a road colour from the map legend
+\newcommand{\roadswatch}[1]{\tikz[baseline=-0.6ex]\draw[line width=3.2pt,color=#1] (0,0)--(0.9,0);}
+\definecolor{RoadArterial}{HTML}{FFB300}
+\definecolor{RoadIndustrial}{HTML}{A855F7}
+\definecolor{RoadCommercial}{HTML}{38BDF8}
+\definecolor{RoadResidential}{HTML}{FF6FAE}
+
 % ============================================================
 % DOCUMENT
 % ============================================================
@@ -206,7 +232,7 @@
 
 \includegraphics[width=8.0cm]{geulogo.png}
 
-\vspace{0.40cm}
+\vspace{0.70cm}
 
 \noindent
 \colorbox{GEUBannerBlue}{%
@@ -219,24 +245,29 @@
     \vspace{0.17cm}
 }}
 
-\vspace{0.40cm}
+\vspace{0.80cm}
 
 % PROJECT TITLE
 \sectiontitle{Project Title}
 
-\vspace{0.20cm}
+\vspace{0.05cm}
 
-\answerbox{EcoRouting Engine: Hazard-Aware Path Optimization and Fill-Rate-Adaptive Waste Scheduling}
 
 \vspace{0.40cm}
 
-% TEAM INFORMATION
+\answerbox{EcoRouting Engine: Hazard-Aware Path Optimization and Fill-Rate-Adaptive Waste Scheduling}
+
+\newpage
+
+% STUDENT / TEAM INFORMATION
+\vspace*{0.15cm}
+
 \sectiontitle{Student/Team Information}
 
-\vspace{0.20cm}
+\vspace{0.40cm}
 
 \noindent
-\begin{tabularx}{\textwidth}{|>{\RaggedRight\arraybackslash}p{0.60\textwidth}|>{\RaggedRight\arraybackslash}X|}
+\begin{tabularx}{\textwidth}{|>{\RaggedRight\arraybackslash}p{0.69\textwidth}|>{\RaggedRight\arraybackslash}X|}
 \hline
 \begin{minipage}[t]{\linewidth}
 \vspace{1.5mm}
@@ -255,9 +286,60 @@
 \end{minipage}
 \\
 \hline
-\memberrow{Team member 1 (Team Lead)}{Jain, Tejas}{2510011541}{2028228, Sec A}{aispace101@gmail.com}{tejas.jpeg}
-\memberrow{Team member 2}{Negi, Apoorv}{2510011088}{2027640, Sec D}{apoorvnegi17@gmail.com}{apoorv.jpeg}
-\memberrow{Team member 3}{Nigam, Yash}{2510010441}{2028289, Sec H}{nigamyash07@gmail.com}{yash.jpeg}
+\begin{minipage}[t][6.0cm][t]{\linewidth}
+\vspace{1.5mm}
+\textbf{Team member 1 (Team Lead)}
+\vspace{2.0cm}
+\end{minipage}
+&
+\begin{minipage}[t][6.0cm][t]{\linewidth}
+\vspace{1.5mm}
+\textit{Jain, Tejas}\\
+\textit{Student ID: 2510011541}\\
+\textit{Roll No. 2028228, Sec A}\\
+\textit{aispace101@gmail.com}
+
+\vspace{1.5mm}
+\includegraphics[width=3.0cm,height=3.2cm,keepaspectratio]{tejas.jpeg}
+\end{minipage}
+\\
+\hline
+\begin{minipage}[t][6.0cm][t]{\linewidth}
+\vspace{1.5mm}
+\textbf{Team member 2}
+\vspace{2.0cm}
+\end{minipage}
+&
+\begin{minipage}[t][6.0cm][t]{\linewidth}
+\vspace{1.5mm}
+\textit{Negi, Apoorv}\\
+\textit{Student ID: 2510011088}\\
+\textit{Roll No. 2027640, Sec D}\\
+\textit{apoorvnegi17@gmail.com}
+
+\vspace{1.5mm}
+\includegraphics[width=3.0cm,height=3.2cm,keepaspectratio]{apoorv.jpeg}
+\end{minipage}
+\\
+\hline
+\begin{minipage}[t][6.0cm][t]{\linewidth}
+\vspace{1.5mm}
+\textbf{Team member 3}
+\vspace{2.0cm}
+\end{minipage}
+&
+\begin{minipage}[t][6.0cm][t]{\linewidth}
+\vspace{1.5mm}
+\textit{Nigam, Yash}\\
+\textit{Student ID: 2510010441}\\
+\textit{Roll No. 2028289, Sec H}\\
+\textit{nigamyash07@gmail.com}
+
+\vspace{1.5mm}
+\includegraphics[width=3.0cm,height=3.2cm,keepaspectratio]{yash.jpeg}
+\end{minipage}
+\\
+\hline
 \end{tabularx}
 
 \newpage
@@ -285,9 +367,9 @@
 
 \vspace{0.12cm}
 
-\answerbox{Anyone who has watched a municipal garbage truck on its route notices the same thing: it drives the same streets every day, in the same order, whether or not there is anything to collect. Routes are fixed by habit rather than the actual shortest path between the depot, the homes on the list, and the disposal sites, wasting fuel, driver time, and public money. Two problems compound this. Hazardous waste -- medical sharps, expired chemicals, batteries -- is often collected the same way as ordinary household waste, even though it should be picked up immediately and kept off residential and commercial streets on its way to disposal; delays or careless routing here are a genuine safety and environmental risk. Second, every disposal site is treated as if it fills at the same rate, so a fixed weekly schedule either visits a disposal site that is nowhere near full or leaves an overflowing one unattended. We wanted a system that treats the city as the graph it actually is, and routes, restricts, and schedules collection accordingly.
+\answerbox{Watch a municipal garbage truck for a few days and you notice something odd: it takes the same streets in the same order every day, whether or not there is anything to pick up. The route comes from habit, not from the shortest path between the depot, the homes and the disposal sites, and that wastes fuel, driver hours and public money. Two more problems make it worse. Hazardous waste such as medical sharps, old chemicals and batteries is often picked up just like ordinary household waste, when it should be collected quickly and kept away from homes and markets on its way to disposal. And every disposal site is treated as if it fills at the same rate, so a fixed weekly schedule either visits one that is almost empty or misses one that is overflowing. We wanted a system that sees the city for what it really is, a graph, and plans collection around that.
 
-Our project is a working C++ backend that models the city as a weighted, zone-tagged graph and answers three questions on demand: the shortest route to collect from a given set of homes, which locations are actually due today based on fill-rate, and how to route hazardous waste safely away from residential streets -- all exposed through a REST API and shown live on a PixiJS frontend that animates the computed route. The system is hosted at \href{https://ecograph-xl8q.onrender.com}{\texttt{ecograph-xl8q.onrender.com}}.}
+EcoGraph is our answer. A C++ backend stores the city as a weighted graph in which every road is tagged with its zone, and it answers three questions whenever asked: what is the shortest route to collect from a set of homes, which homes actually need a visit today based on how fast they fill, and how to get hazardous waste to disposal while staying away from residential streets. All of this is available through a REST API, and a PixiJS front end shows the trucks driving their routes live. The system is online at \href{https://ecograph-xl8q.onrender.com}{\texttt{ecograph-xl8q.onrender.com}}.}
 
 \newpage
 
@@ -298,38 +380,66 @@ Our project is a working C++ backend that models the city as a weighted, zone-ta
 
 \vspace{0.12cm}
 
-\answerbox{\textbf{Design.} One C++17 process serves the REST API and the front end on one port. \texttt{controllers.cpp} handles HTTP and JSON behind a mutex; domain classes (\texttt{Graph}, Dijkstra, \texttt{Scheduler}, classifier, route builders, \texttt{Simulation}) work on an in-memory adjacency-list city loaded from \texttt{city.json}.
+\answerbox{\textbf{Design.} Everything runs in one C++17 program that serves both the REST API and the web page on the same port. \texttt{controllers.cpp} deals with HTTP and JSON and keeps shared data behind a mutex. The real logic lives in separate classes (\texttt{Graph}, Dijkstra, \texttt{Scheduler}, the waste classifier, the route builder and \texttt{Simulation}), which all work on an in-memory copy of the city, loaded from \texttt{city.json} and stored as an adjacency list.
 
-\textbf{Routing.} \texttt{RouteStrategy} is an abstract base class; its Priority subclass sets the stop order (priority mode: the fullest home comes first).
+\textbf{Routing.} \texttt{RouteStrategy} is an abstract base class. Its Priority subclass decides the stop order and always goes to the fullest home first.
 
-\textbf{Protocol.} REST over HTTP with JSON, 15 endpoints, one error format.
+\textbf{Protocol.} The front end talks to the server over plain REST with JSON: 15 endpoints.
 
-\textbf{Front end.} Plain JavaScript with no build step, plus a day-by-day simulation and a limited fleet.
+\textbf{Front end.} Plain JavaScript. Alongside the map it has a day-by-day simulation with rules to simulate a limited number of trucks.
 
-\textbf{Libraries.} cpp-httplib, nlohmann/json, PixiJS.
+\textbf{Libraries.} cpp-httplib for the server, nlohmann/json for JSON and PixiJS for drawing the map.
 
-\textbf{Deployment.} A multi-stage Docker image compiles the server, then copies only the binary, \texttt{city.json} and the front end into a slim runtime image. It runs as one long-lived container on Render, with the front end on the same origin as the API.
+\textbf{Deployment.} The Docker image is built in two stages: the first compiles the server, and the second keeps only the binary, \texttt{city.json} and the front-end files, so the final image stays small. It runs as a single container on Render, and the page and the API share one address.
 
 \vspace{1mm}
-{\color{GEUBlue}\bfseries\fontsize{12}{14}\selectfont System overview} \quad {\small(diagrams (a)--(g) on the next pages)}
+{\color{GEUBlue}\bfseries\fontsize{12}{14}\selectfont System overview} \quad {\small(diagrams (a)--(h) on the next pages)}
 
-\textbf{1.} The clock moves forward one day.
+\textbf{1.} Each simulated day starts by moving the clock forward one day.
 
-\textbf{2.} A home is due once the days since its last collection reach capacity / fill rate (1--14 days); the fullest home comes first (c).
+\textbf{2.} A home becomes due once the days since its last pickup reach capacity / fill rate (between 1 and 14 days). The fullest home goes first (d).
 
-\textbf{3.} Due disposal sites are emptied, hazardous homes go to the hazard trucks (f), and normal homes are ordered and packed onto trucks before routing (e).
+\textbf{3.} Due disposal sites are emptied, hazardous homes are handed to the hazard trucks (g), and the remaining homes are sorted and loaded onto trucks before routing (f).
 
-\textbf{4.} Each truck chains shortest paths in its list order:
+\textbf{4.} Each truck then joins shortest paths in the order of its list:
 \formula{\raggedright\ttfamily\small
 current = DEPOT;\ \ visited = \{ \}\\
 for each home in order:\\
 \hspace*{4mm}skip it if in visited\\
 \hspace*{4mm}path = Dijkstra(current $\to$ home);\ \ if none, mark unreachable\\
-\hspace*{4mm}empty later stops on the path, add them to visited\hfill\textrm{\small(en-route pickup, (d))}\\
+\hspace*{4mm}empty later stops on the path, add them to visited\hfill\textrm{\small(en-route pickup, (e))}\\
 \hspace*{4mm}empty home, add to visited;\ \ current = home\\
 then visit the nearest disposal site for each waste type collected}
 
-\textbf{5.} Served homes get ``last collected = today''; unreachable ones are reported as failed, and carried-over homes rank higher tomorrow.}
+\textbf{5.} Every served home is marked as collected today. Homes the truck can't reach are reported as failed, and homes that didn't fit on a truck move up the list for the next day.}
+
+\vspace{0.35cm}
+
+\diagbox{Deployment Setup}{%
+\begin{center}
+\begin{tikzpicture}[
+node distance=8mm and 9mm,
+box/.style={rectangle,rounded corners,draw=GEUBlue,fill=DiagFill,thick,minimum width=3.3cm,minimum height=13mm,align=center,font=\scriptsize\sffamily},
+stage/.style={rectangle,draw=GEUBlue,fill=white,thick,minimum width=3.3cm,minimum height=17mm,align=center,font=\scriptsize\sffamily},
+arrow/.style={-{Latex[length=2mm]},thick,draw=GEUBlue}
+]
+% from a commit to a running build
+\node[box] (dev) {Team pushes code\\to the \texttt{main} branch};
+\node[box,right=of dev] (gh) {GitHub repository\\\texttt{Space-Fighter/EcoGraph}};
+\node[box,right=of gh] (rd) {Render\\redeploys automatically\\(\texttt{render.yaml})};
+\node[box,right=of rd] (img) {Docker build\\(\texttt{Dockerfile})};
+\draw[arrow] (dev)--(gh); \draw[arrow] (gh)--(rd); \draw[arrow] (rd)--(img);
+% the two-stage image and what users reach
+\node[stage,below=of img] (s1) {\textbf{Stage 1: build}\\Debian + g++\\\texttt{build.sh} compiles the server\\every test must pass};
+\node[stage,left=of s1] (s2) {\textbf{Stage 2: runtime}\\keeps only \texttt{ecorouting},\\\texttt{data/city.json} and\\the \texttt{frontend/} folder};
+\node[stage,left=of s2] (ct) {\textbf{Container on Render}\\one C++ process\\serves page + API on \texttt{PORT}\\health check: \texttt{/health}};
+\node[stage,left=of ct] (br) {\textbf{User's browser}\\\texttt{ecograph-xl8q}\\\texttt{.onrender.com}\\page and API, one address};
+\draw[arrow] (img)--(s1);
+\draw[arrow] (s1)--node[above,font=\tiny]{copy}(s2);
+\draw[arrow] (s2)--node[above,font=\tiny]{run}(ct);
+\draw[arrow] (ct)--node[above,font=\tiny]{HTTPS}(br);
+\end{tikzpicture}
+\end{center}}
 
 \newpage
 
@@ -391,7 +501,78 @@ arrow/.style={-{Latex[length=2mm]},thick,draw=GEUBlue}
 
 \vspace{0.35cm}
 
-\diagbox{(c) Fill-Rate Scheduling}{%
+\diagbox{(c) Types}{%
+Every icon below is the one the map uses for that type.
+
+\typehead{Depot}
+\typecol{0.22\linewidth}{\ticon{depot}{1.5cm}}{Depot}%
+\hfill
+\begin{minipage}[b]{0.74\linewidth}
+The depot is the base for the whole fleet. Normal and hazard trucks both leave from here each day.
+\end{minipage}
+
+\typehead{Homes (collection points)}
+Each point on the map stands for a small cluster of buildings, drawn by the zone it sits in.
+
+\vspace{1mm}
+\noindent
+\typecol{0.24\linewidth}{\ticon{house-a}{1.0cm}\ticon{house-b}{1.0cm}\ticon{house-c}{1.0cm}}{Residential: houses}%
+\hfill
+\typecol{0.24\linewidth}{\ticon{tower-a}{1.5cm}\ticon{office}{1.0cm}\ticon{stall}{0.8cm}\ticon{coffee}{0.8cm}}{Commercial: shops and offices}%
+\hfill
+\typecol{0.22\linewidth}{\ticon{factory}{1.5cm}\ticon{warehouse}{0.9cm}}{Industrial: factories and warehouses}%
+\hfill
+\typecol{0.26\linewidth}{\ticon{clinic}{1.0cm}\ticon{lab}{0.9cm}\ticon{workshop}{0.9cm}\ticon{hazard-sign}{0.8cm}}{Hazardous sites: clinics, labs and workshops, marked with a warning sign}
+
+}
+
+\vspace{0.35cm}
+
+\diagboxcont{%
+\typeheadfirst{Waste types and their disposal sites}
+The classifier reads each home's waste description and matches keywords. Each waste type goes to its own kind of disposal site.
+
+\vspace{1mm}
+{\fontsize{9.5}{11.5}\selectfont
+\renewcommand{\arraystretch}{1.1}
+\begin{tabularx}{\linewidth}{@{}>{\centering\arraybackslash}m{1.6cm}>{\raggedright\arraybackslash}m{2.1cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}m{1.7cm}@{}}
+\hline
+\textbf{Disposal site} & \textbf{Waste type} & \textbf{Example keywords} & \textbf{Hazardous?}\\
+\hline
+\ticon{disposal-general}{1.1cm} & General & Anything that matches no other type & No\\
+\ticon{disposal-recyclable}{1.1cm} & Recyclable & plastic, bottle, can, glass, paper, cardboard, newspaper & No\\
+\ticon{disposal-compost}{1.1cm} & Compost & food, organic, vegetable, fruit, leaves, peel, garden & No\\
+\ticon{disposal-medical}{1.3cm} & Medical & syringe, bandage, needle, blood, gauze, surgical & \textbf{Yes}\\
+\ticon{disposal-chemical}{1.1cm} & Chemical & solvent, acid, battery, paint, pesticide, bleach & \textbf{Yes}\\
+\hline
+\end{tabularx}}
+
+\typehead{Trucks}
+\typecol{0.18\linewidth}{\ticon{truck-normal-se}{1.1cm}}{Normal truck}%
+\hfill
+\begin{minipage}[b]{0.30\linewidth}
+{\fontsize{9.5}{11.5}\selectfont Collects general, recyclable and compost waste from homes, shops and factories.}
+\end{minipage}%
+\hfill
+\typecol{0.18\linewidth}{\ticon{truck-hazard-se}{1.1cm}}{Hazard truck}%
+\hfill
+\begin{minipage}[b]{0.30\linewidth}
+{\fontsize{9.5}{11.5}\selectfont Collects medical and chemical waste and takes it to a medical or chemical disposal site.}
+\end{minipage}
+
+\typehead{Road types}
+{\fontsize{9.5}{11.5}\selectfont
+\begin{tabularx}{\linewidth}{@{}l>{\raggedright\arraybackslash}X l>{\raggedright\arraybackslash}X@{}}
+\roadswatch{RoadArterial} & Arterial: main roads between localities &
+\roadswatch{RoadIndustrial} & Industrial: roads in industrial belts\\[1mm]
+\roadswatch{RoadCommercial} & Commercial: roads through markets &
+\roadswatch{RoadResidential} & Residential: roads through neighbourhoods\\
+\end{tabularx}}
+}
+
+\vspace{0.35cm}
+
+\diagbox{(d) Fill-Rate Scheduling}{%
 \begin{center}
 \begin{tikzpicture}[font=\scriptsize]
 \draw[thick,GEUBlue,-{Latex[length=2mm]}] (0,0) -- (14,0) node[right]{days};
@@ -405,7 +586,7 @@ arrow/.style={-{Latex[length=2mm]},thick,draw=GEUBlue}
 
 \vspace{0.35cm}
 
-\diagbox{(d) En-Route Pickup}{%
+\diagbox{(e) En-Route Pickup}{%
 \begin{center}
 \begin{tikzpicture}[
 nd/.style={circle,draw=GEUBlue,fill=DiagFill,thick,minimum size=8mm,font=\scriptsize\bfseries},
@@ -433,7 +614,7 @@ lbl/.style={font=\tiny,draw=none,fill=none}
 
 \vspace{0.35cm}
 
-\diagbox{(e) Truck Fleet and Capacity}{%
+\diagbox{(f) Truck Fleet and Capacity}{%
 \begin{center}
 \begin{tikzpicture}[
 node distance=5mm and 6mm,
@@ -466,7 +647,7 @@ arrow/.style={-{Latex[length=2mm]},thick,draw=GEUBlue}
 
 \vspace{0.35cm}
 
-\diagbox{(f) Automatic Hazard Dispatch and Risk-Weighted Dijkstra}{%
+\diagbox{(g) Automatic Hazard Dispatch and Risk-Weighted Dijkstra}{%
 \begin{center}
 \begin{tikzpicture}[
 node distance=11mm,
@@ -504,7 +685,7 @@ lbl/.style={font=\tiny,draw=none,fill=none}
 
 \vspace{0.35cm}
 
-\diagbox{(g) Simulation Architecture}{%
+\diagbox{(h) Simulation Architecture}{%
 \begin{center}
 \begin{tikzpicture}[
 node distance=6mm and 7mm,
@@ -531,6 +712,7 @@ arrow/.style={-{Latex[length=2mm]},thick,draw=GEUBlue}
 \foreach \n in {sch,rs,hz,lg} \draw[thick,GEUBlue!50] (\n.south)--(st8.north);
 \end{tikzpicture}
 \end{center}}
+
 \newpage
 
 % ============================================================
@@ -551,25 +733,25 @@ arrow/.style={-{Latex[length=2mm]},thick,draw=GEUBlue}
 \textbf{Task Completed} &
 \textbf{Team Member}\\
 \hline
-\taskrow{Weighted, zone-tagged city graph as an adjacency list, with a JSON loader for the Dehradun map (70 nodes, 107 roads)}{Tejas Jain (Lead)}
-\taskrow{HTTP server on cpp-httplib serving the front end and 15 REST endpoints, with one error format and a mutex on shared state}{Tejas Jain}
-\taskrow{Plain and zone-constrained Dijkstra with path rebuilding}{Tejas Jain}
-\taskrow{Priority route builder (fullest home first) with en-route pickup and unloading at the nearest disposal site}{Tejas Jain}
-\taskrow{Keyword waste classifier and automatic hazard dispatch to the nearest medical or chemical disposal site, keeping off residential and commercial roads wherever another road exists}{Tejas Jain}
-\taskrow{Fill-rate scheduler with a max-heap of due locations}{Tejas Jain}
-\taskrow{Day-by-day simulation with limited fleet, truck capacity, carry-over and a collection log}{Tejas Jain, Apoorv Negi, Yash Nigam}
-\taskrow{Unit test suites for the backend, plus a check of the city data}{Yash Nigam, Apoorv Negi, Tejas Jain}
-\taskrow{README with build steps, folder layout and API reference}{Apoorv Negi, Yash Nigam}
-\taskrow{PixiJS map view with truck route animation, hazard-route styling and a shape legend}{Yash Nigam, Tejas Jain, Apoorv Negi}
-\taskrow{Schedule, simulation and database views and the light/dark theme}{Tejas Jain, Yash Nigam}
-\taskrow{Multi-stage Dockerfile and \texttt{.dockerignore}}{Yash Nigam, Tejas Jain}
-\taskrow{Deployment on Render as one long-lived container, health check on \texttt{/health}, automatic redeploy from \texttt{main}}{Tejas Jain}
-\taskrow{\texttt{PORT}, \texttt{CITY\_FILE} and \texttt{FRONTEND\_DIR} set in the image; front end on the API's origin with \texttt{ECO\_API\_BASE} empty}{Tejas Jain, Yash Nigam}
-\taskrow{One-line \texttt{docker run} instructions in the README}{Yash Nigam}
-\taskrow{Live demo link in the README}{Tejas Jain}
-\taskrow{Front-end improvements}{Tejas Jain}
-\taskrow{Code cleanup}{Tejas Jain, Apoorv Negi}
-\taskrow{Phase-I and Phase-II reports and presentations}{Apoorv Negi, Yash Nigam}
+\taskrow{Built the city as a weighted graph (adjacency list) with a zone on every road, and a loader that reads the Dehradun map (70 nodes, 107 roads) from JSON}{Tejas Jain (Lead)}
+\taskrow{Set up the cpp-httplib server that serves the web page and 15 REST endpoints, with a common error format and a mutex around shared data}{Tejas Jain}
+\taskrow{Wrote Dijkstra's algorithm and a zone-aware version, both able to rebuild the path}{Tejas Jain}
+\taskrow{Wrote the priority route builder (fullest home first), with en-route pickup and unloading at the nearest disposal site}{Tejas Jain}
+\taskrow{Wrote the keyword-based waste classifier and the automatic hazard dispatch to the nearest medical or chemical disposal site, which keeps off residential and commercial roads wherever another road exists}{Tejas Jain}
+\taskrow{Wrote the fill-rate scheduler, which keeps due homes in a max-heap}{Tejas Jain}
+\taskrow{Built the day-by-day simulation: limited trucks, truck capacity, carry-over to the next day and a collection log}{Tejas Jain, Apoorv Negi, Yash Nigam}
+\taskrow{Wrote unit tests for the backend and a check for the city data}{Yash Nigam, Apoorv Negi, Tejas Jain}
+\taskrow{Wrote the README: build steps, folder layout and API reference}{Apoorv Negi, Yash Nigam}
+\taskrow{Built the PixiJS map with truck animation, hazard routes and a legend}{Yash Nigam, Tejas Jain, Apoorv Negi}
+\taskrow{Built the schedule, simulation and database views and the light/dark theme}{Tejas Jain, Yash Nigam}
+\taskrow{Wrote the multi-stage Dockerfile and \texttt{.dockerignore}}{Yash Nigam, Tejas Jain}
+\taskrow{Deployed the app on Render as a single container, with a health check on \texttt{/health} and automatic redeploys from \texttt{main}}{Tejas Jain}
+\taskrow{Set \texttt{PORT}, \texttt{CITY\_FILE} and \texttt{FRONTEND\_DIR} in the image, and served the page from the same address as the API (\texttt{ECO\_API\_BASE} left empty)}{Tejas Jain, Yash Nigam}
+\taskrow{Added a one-line \texttt{docker run} command to the README}{Yash Nigam}
+\taskrow{Added the live demo link to the README}{Tejas Jain}
+\taskrow{Improved the front end}{Tejas Jain}
+\taskrow{Cleaned up the code}{Tejas Jain, Apoorv Negi}
+\taskrow{Wrote the Phase-I, Phase-II and Phase-III reports and presentations}{Apoorv Negi, Yash Nigam, Tejas Jain}
 \end{tabularx}
 
 \newpage
@@ -584,15 +766,50 @@ arrow/.style={-{Latex[length=2mm]},thick,draw=GEUBlue}
 
 \vspace{0.18cm}
 
-\answerbox{\textbf{Road classes beyond residential and commercial.} If roads were tagged only as residential or commercial, the hazard truck would have no safe road to prefer. Real cities also have main roads between localities and industrial belts where disposal sites sit, so we added \emph{arterial} and \emph{industrial} road classes. The hazard truck's route weights residential roads 15$\times$ and commercial roads 10$\times$, so it crosses the city on these classes and enters a neighbourhood or a market only for the stretch it cannot avoid.
+\answerbox{\textbf{Road classes beyond residential and commercial.} Our first map had only residential and commercial roads, which left the hazard truck with no safer road to choose. Real cities also have main roads linking localities, and industrial belts where disposal sites usually are, so we added \emph{arterial} and \emph{industrial} road types. When planning a hazard route, a residential road counts as 15 times its length and a commercial road as 10 times, so the truck sticks to main and industrial roads and enters a neighbourhood or market only for the stretch it can't avoid.
 
-\textbf{Trucks driving past houses on their own list.} At first the router followed the scheduler's order literally: given A, C, B with B on the road from A to C, the truck drove past B, reached C, then turned back for B. We added en-route pickup: each leg's path is checked for later stops, which are emptied on the way and skipped when the list reaches them.
+\textbf{Banning residential and commercial roads completely.} Our first hazard router simply refused to drive on any residential or commercial road. That only worked because we had given every hazardous site an extra main-road connection in the city file. A real clinic in a market or a lab in a colony can only be reached through its own local street, and with a full ban the truck had no way to get there, so the pickup failed. We replaced the ban with a weighted version of Dijkstra: each road's length is multiplied by a risk factor (industrial 1$\times$, arterial 1.5$\times$, commercial 10$\times$, residential 15$\times$). Populated streets are no longer forbidden, just very expensive, so the truck uses one only for the last stretch it can't avoid. Each hazard trip now also reports how many km it drove on populated roads (see the figure below).
 
-\textbf{Scheduling that never showed its effect.} With unlimited trucks, every due home was served every day, so nothing ever overflowed, and the priority order only changed the stop order, never who got served. We added a limited fleet with 1000 kg per truck and carry-over to the next day. Since an overflowing home heavier than a whole truck would never fit, an empty truck always accepts its first home.
+\textbf{Trucks driving past houses on their own list.} At first the router followed the scheduler's order exactly. If the list was A, C, B and B sat on the road from A to C, the truck drove straight past B, reached C, then came back for B. We fixed this with en-route pickup: for each leg we check whether a later stop lies on the path, collect it on the way, and skip it when the list gets there.
 
-\textbf{Shared state across requests.} cpp-httplib handles requests on several threads, and routing, collection and the simulation all change the same graph, so all shared state sits behind one mutex.
+\textbf{Scheduling that never showed its effect.} With unlimited trucks every due home was served every day, nothing ever overflowed, and the priority order only changed the order of stops, never who got served. So we limited each truck to 1000 kg and pushed whatever didn't fit to the next day. One catch: an overflowing home heavier than a whole truck would never fit, so an empty truck always takes its first home.
 
-\textbf{Compiler on Windows.} The old MinGW g++ could not build cpp-httplib, which needs proper thread support, so we moved to GCC 13.}
+\textbf{Shared state across requests.} cpp-httplib handles requests on several threads at once, and routing, collection and the simulation all change the same graph. We put all shared state behind one mutex so two requests can't step on each other.
+
+\textbf{Compiler on Windows.} The old MinGW g++ couldn't build cpp-httplib because it lacks proper thread support, so we switched to GCC 13.}
+
+\vspace{0.35cm}
+
+\diagbox{Hazard routing: full ban vs.\ weighted roads}{%
+\begin{center}
+\begin{tikzpicture}[
+nd/.style={draw=GEUBlue,fill=DiagFill,thick,rounded corners,minimum width=1.5cm,minimum height=7mm,font=\scriptsize,align=center},
+hz/.style={nd,draw=red!70!black,fill=red!6},
+lbl/.style={font=\tiny,draw=none,fill=none,align=center},
+arrow/.style={-{Latex[length=2mm]},very thick}
+]
+% ---- before: residential and commercial roads banned
+\node[font=\scriptsize\bfseries,anchor=west] at (-0.6,2.3) {Before: populated roads banned};
+\node[nd] (s1) at (0,0) {Depot};
+\node[nd] (j1) at (3.6,1.2) {Junction};
+\node[hz] (c1) at (5.6,-0.6) {Clinic in\\a market};
+\draw[thick,RoadArterial] (s1)--(j1) node[midway,above,sloped,lbl]{arterial 4 km};
+\draw[thick,red,dashed] (j1)--(c1) node[midway,right,lbl]{commercial\\0.6 km -- banned};
+\draw[thick,red,dashed] (s1)--(c1) node[midway,below,sloped,lbl]{residential 2 km -- banned};
+\node[lbl,text=red!70!black,font=\scriptsize\bfseries] at (2.6,-1.75) {No route: pickup fails};
+% ---- after: weighted roads
+\begin{scope}[xshift=8.6cm]
+\node[font=\scriptsize\bfseries,anchor=west] at (-0.6,2.3) {After: populated roads weighted};
+\node[nd] (s2) at (0,0) {Depot};
+\node[nd] (j2) at (3.6,1.2) {Junction};
+\node[hz] (c2) at (5.6,-0.6) {Clinic in\\a market};
+\draw[arrow,green!45!black] (s2)--(j2) node[midway,above,sloped,lbl]{arterial 4 km $\times$ 1.5 = 6};
+\draw[arrow,green!45!black] (j2)--(c2) node[midway,right,lbl]{commercial\\0.6 km $\times$ 10 = 6};
+\draw[thick,GEUBlue!40] (s2)--(c2) node[midway,below,sloped,lbl]{residential 2 km $\times$ 15 = 30};
+\node[lbl,text=green!35!black,font=\scriptsize\bfseries] at (2.6,-1.75) {Route found: cost 12, only 0.6 km on a populated road};
+\end{scope}
+\end{tikzpicture}
+\end{center}}
 
 \vspace{0.55cm}
 
@@ -604,14 +821,14 @@ arrow/.style={-{Latex[length=2mm]},thick,draw=GEUBlue}
 
 \vspace{0.18cm}
 
-\answerbox{We are handing over:
+\answerbox{Here is what we are handing over:
 \begin{itemize}
-\item A C++17 server that loads a city graph and answers routing, hazard dispatch, classification, scheduling and simulation requests over a REST/JSON API.
-\item A browser front end that draws the Dehradun map, animates each truck's route, highlights hazardous trips, and lets you run the city forward one day at a time.
-\item Unit tests for every core module, plus a sample city file someone else can modify.
-\item A hosted demo at \href{https://ecograph-xl8q.onrender.com}{\texttt{ecograph-xl8q.onrender.com}}, the README and API docs, and the Phase-II and Phase-III reports and presentations.
+\item A C++17 server that loads a city and answers routing, hazard dispatch, classification, scheduling and simulation requests through a REST/JSON API.
+\item A web page that draws the Dehradun map, animates every truck's route, highlights hazardous trips and lets you move the city forward one day at a time.
+\item Unit tests for every core module, and a sample city file that anyone can edit.
+\item A live demo at \href{https://ecograph-xl8q.onrender.com}{\texttt{ecograph-xl8q.onrender.com}}, the README and API docs, and the Phase-II and Phase-III reports and presentations.
 \end{itemize}
-The real outcome we care about is simple: given a list of homes, the system should produce a shorter route than a fixed one would, keep hazardous waste off residential and commercial streets wherever another road exists, and stop sending trucks to disposal sites that are nowhere near full.}
+In the end, what matters to us is simple. For any list of homes, the system should find a shorter route than a fixed one, keep hazardous waste off residential and commercial streets wherever another road exists, and stop sending trucks to disposal sites that are nowhere near full.}
 
 \vspace{0.55cm}
 
@@ -623,11 +840,11 @@ The real outcome we care about is simple: given a list of homes, the system shou
 
 \vspace{0.18cm}
 
-\answerbox{The project is now 100\% complete. At Phase-II it stood at roughly 80\%, with the deployment, further front-end improvements and some code cleanup left to do; all three are now finished: the graph model, both versions of Dijkstra, the route builders, the waste classifier, the fill-rate scheduler, the simulation, the REST API and the front end all work, and the same system runs online at the hosted link.
+\answerbox{The project is now 100\% complete. At Phase-II we were at about 80\%, with three things left: deployment, more work on the front end, and some code cleanup. All three are done. The graph model, both versions of Dijkstra, the route builder, the waste classifier, the fill-rate scheduler, the simulation, the REST API and the front end all work, and the same system is running online.
 
-Nothing in the build is behind schedule. Phase-I planned for deployment in Phase-III, and that is when it was done. The day-by-day simulation and limited truck fleet went beyond the original plan, because a single route on a static map didn't show whether the scheduling actually worked.
+Nothing fell behind. In Phase-I we planned to deploy in Phase-III, and that is when it happened. The day-by-day simulation and the limited truck fleet were extras: we added them because a single route on a static map couldn't show whether our scheduling really worked.
 
-The live link is in the README, and the system is ready for the Phase-III presentation and final demo.}
+The live link is in the README, and we are ready for the Phase-III presentation and the final demo.}
 
 \newpage
 
@@ -645,7 +862,7 @@ The live link is in the README, and the system is ready for the Phase-III presen
 
 \textbf{Hosted demo:} \href{https://ecograph-xl8q.onrender.com}{\texttt{https://ecograph-xl8q.onrender.com}}
 
-Layout: \texttt{server/} (C++ source, headers, tests, \texttt{data/city.json}) and \texttt{frontend/} (HTML, CSS, JS modules).
+\texttt{server/} holds the C++ code, headers, tests and \texttt{data/city.json}; \texttt{frontend/} holds the HTML, CSS and JavaScript modules.
 
 \textbf{Key files}
 
@@ -720,13 +937,13 @@ Add Render deployment config (\texttt{0b8130f}) & \texttt{render.yaml}, updates 
 \textbf{Notes}
 \\
 \hline
-\testrow{Unit: Dijkstra (\texttt{test\_dijkstra})}{Hand-solved graphs; unreachable target handled}
-\testrow{Unit: domain (\texttt{test\_domain})}{Classifier rules, scheduler intervals clamped to 1--14 days, Priority ordering and tie-breaks, constrained route avoids a forbidden road, hazard split}
-\testrow{Unit: simulation (\texttt{test\_simulation})}{Truck capacity limits, carry-over to next day, hazard trucks}
-\testrow{Unit: generator (\texttt{test\_generator})}{Generated nodes are unique, connected, reachable and placed inside their locality}
-\testrow{Data: city file (\texttt{test\_city\_data})}{Checks the Dehradun city file, including its depot, localities and hazard homes}
-\testrow{API checks on the hosted site (curl)}{\texttt{/health}, \texttt{/graph}, \texttt{/schedule}, \texttt{/classify}, \texttt{/route}, \texttt{/simulate/advance} return the expected JSON; bad JSON gets a clean 400 error}
-\testrow{Browser check on the hosted site}{Map, truck animation and database view load and run; screenshots on the next pages}
+\testrow{Unit: Dijkstra (\texttt{test\_dijkstra})}{Results match graphs we solved by hand, and an unreachable target is handled cleanly}
+\testrow{Unit: domain (\texttt{test\_domain})}{Classifier rules, scheduler intervals kept between 1 and 14 days, priority order and tie-breaks, the zone-aware route avoids a blocked road, hazard split}
+\testrow{Unit: simulation (\texttt{test\_simulation})}{Trucks never go over capacity, leftover homes carry over to the next day, hazard trucks work}
+\testrow{Unit: generator (\texttt{test\_generator})}{New nodes are unique, connected to the roads, reachable and placed inside their locality}
+\testrow{Data: city file (\texttt{test\_city\_data})}{The Dehradun city file has its depot, localities and hazard homes set up correctly}
+\testrow{API checks on the hosted site (curl)}{\texttt{/health}, \texttt{/graph}, \texttt{/schedule}, \texttt{/classify}, \texttt{/route} and \texttt{/simulate/advance} all return the expected JSON, and bad JSON gets a clean 400 error}
+\testrow{Browser check on the hosted site}{The map, truck animation and database view all load and run (screenshots on the next pages)}
 \end{tabularx}
 
 \vspace{0.55cm}
@@ -766,20 +983,20 @@ Add Render deployment config (\texttt{0b8130f}) & \texttt{render.yaml}, updates 
 
 \vspace{0.30cm}
 
-\shot{shot_map.png}{Map view: the Dehradun city at the start of the simulation (Day 0).}
+\shot{shot_map.jpg}{The Dehradun map at the start of the simulation (Day 0).}
 
 \vspace{0.40cm}
 
-\shot{shot_routes.jpg}{Map view during Day 1: truck routes in blue, hazard routes in dashed red, and each truck's stops and distance in the simulation panel.}
+\shot{shot_routes.jpg}{Day 1 in progress: truck routes in blue, hazard routes in dashed red, and each truck's stops and distance listed in the simulation panel.}
 
 \newpage
 
 \vspace*{0.20cm}
 
-\shot{shot_db_days_nodes.png}{Database view: day-by-day summary and the node table.}
+\shot{shot_db_days_nodes.jpg}{The Database tab: a day-by-day summary and the table of every node.}
 
 \vspace{0.40cm}
 
-\shot{shot_db_groups_log.png}{Database view: locality and zone summaries and the newest entries of the collection log.}
+\shot{shot_db_groups_log.jpg}{The Database tab: summaries by locality and by zone, and the latest entries in the collection log.}
 
 \end{document}

@@ -191,13 +191,13 @@ const DatabaseView = (() => {
     const table = $('db-days');
     table.replaceChildren();
     header(table, [['day', 'Day'], ['date', 'Date'], ['overflowMorning', 'Overflowing before trucks'], ['served', 'Homes served'],
-                   ['overflowAfterPickups', 'Overflowing after trucks'], ['totalCost', 'Distance (km)']], false);
+                   ['overflowAfterPickups', 'Overflowing after trucks']], false);
     const tbody = document.createElement('tbody');
     const days = data.days || [];
     if (!days.length) {
       const tr = document.createElement('tr');
       const td = cell('No days simulated yet. Use +1 day or Play days.');
-      td.colSpan = 6;
+      td.colSpan = 5;
       tr.appendChild(td);
       tbody.appendChild(tr);
     }
@@ -208,7 +208,6 @@ const DatabaseView = (() => {
       tr.appendChild(cell(d.overflowMorning, 'num'));
       tr.appendChild(cell(d.served, 'num'));
       tr.appendChild(cell(d.overflowAfterPickups, 'num'));
-      tr.appendChild(cell(num(d.totalCost), 'num'));
       tbody.appendChild(tr);
     });
     table.appendChild(tbody);

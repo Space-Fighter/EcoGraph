@@ -2,6 +2,8 @@
 
 > **EcoGraph** is an algorithmic, graph-based waste management system built with a high-performance **C++17 backend** and an interactive **PixiJS isometric city map**. It replaces inefficient fixed collection routes with **dynamic shortest-path routing**, **risk-weighted hazardous material dispatching**, **fill-rate-adaptive scheduling**, and **time-step simulation**.
 
+**Live demo:** [https://ecograph-xl8q.onrender.com](https://ecograph-xl8q.onrender.com)
+
 ---
 
 ## Project Overview
